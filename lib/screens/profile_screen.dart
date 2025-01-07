@@ -8,6 +8,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/auth_provider.dart';
 import '../models/user.dart';
 import '../services/user_service.dart';
+import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -368,7 +369,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 16),
 
-              /// Conviértelo a Dropdown para "Objetivo"
               _buildDropdownField(
                 label: 'Objetivo',
                 value: goal.isNotEmpty ? goal : null,
@@ -547,7 +547,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Fotos Adicionales:',
+          'Tus Fotos:',
           style: TextStyle(
             color: Colors.white,
             fontSize: 18,
@@ -557,7 +557,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(height: 10),
         photos.isEmpty
             ? const Text(
-          'No tienes fotos adicionales.',
+          'No tienes fotos.',
           style: TextStyle(color: Colors.white70),
         )
             : GridView.builder(
@@ -589,7 +589,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   right: 0,
                   child: GestureDetector(
                     onTap: () async {
-                      await _deletePhoto(photo.publicId);
+                      print(photo.id);
+                      await _deletePhoto(photo.id);
                     },
                     child: const CircleAvatar(
                       radius: 12,
@@ -715,18 +716,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: const Color.fromRGBO(64, 65, 65, 1),
       ),
       backgroundColor: const Color.fromRGBO(64, 65, 65, 1),
-
-      // Solo mostramos el FAB si hay cambios
       floatingActionButton: hasChanges
           ? FloatingActionButton.extended(
         onPressed: _saveProfile,
         backgroundColor: Colors.white,
         icon: const Icon(Icons.save, color: Colors.black),
-        label: const Text('Guardar Cambios',
-            style: TextStyle(color: Colors.black)),
+        label: const Text('Guardar Cambios', style: TextStyle(color: Colors.black)),
       )
           : null,
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -744,6 +741,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 textAlign: TextAlign.center,
               ),
             ],
+            // Espaciado antes del botón de cerrar sesión
+            const SizedBox(height: 20),
+            // Botón de cerrar sesión
+            ElevatedButton(
+              onPressed: () async {
+                await authProvider.logoutUser();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
+              ),
+              child: const Text(
+                'Cerrar sesión',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
           ],
         ),
       ),

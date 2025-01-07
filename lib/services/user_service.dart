@@ -9,13 +9,13 @@ import '../models/user.dart';
 
 class UserService {
   final String baseUrl =
-      'http://10.0.2.2:5000/api/users'; // Actualiza esta URL según tu configuración
+      'http://10.0.2.2:5000/api'; // Actualiza esta URL según tu configuración
   final String token;
 
   UserService({required this.token});
 
   Future<Map<String, dynamic>> uploadPhotos(List<File> photos) async {
-    final url = Uri.parse('$baseUrl/upload/photos');
+    final url = Uri.parse('$baseUrl/users/upload/photos');
     final request = http.MultipartRequest('POST', url);
     request.headers['Authorization'] = 'Bearer $token';
 
@@ -59,7 +59,7 @@ class UserService {
   // Método para eliminar una foto adicional
   Future<Map<String, dynamic>> deletePhoto(String publicId) async {
     final url = Uri.parse(
-        '$baseUrl/delete/photo/$publicId/photo'); // Asumiendo que el tipo es 'photo'
+        '$baseUrl/users/delete/photo/$publicId/photo'); // Asumiendo que el tipo es 'photo'
     final response = await http.delete(
       url,
       headers: {
@@ -82,7 +82,7 @@ class UserService {
   // Método para obtener matches sugeridos (Asegúrate de que esta ruta exista en el backend)
   Future<Map<String, dynamic>> getSuggestedMatches() async {
     final url =
-        Uri.parse('$baseUrl/suggested-matches'); // Actualiza según tu backend
+        Uri.parse('$baseUrl/matches/suggested'); // Actualiza según tu backend
     final response = await http.get(
       url,
       headers: {
@@ -105,7 +105,7 @@ class UserService {
 
   // Método para dar like a otro usuario
   Future<Map<String, dynamic>> likeUser(String likedUserId) async {
-    final url = Uri.parse('$baseUrl/like/$likedUserId');
+    final url = Uri.parse('$baseUrl/users/like/$likedUserId');
     final response = await http.post(
       url,
       headers: {
@@ -133,7 +133,7 @@ class UserService {
 
   // Método para subir foto de perfil
   Future<Map<String, dynamic>> uploadProfilePicture(File photo) async {
-    final url = Uri.parse('$baseUrl/upload/profile-picture');
+    final url = Uri.parse('$baseUrl/users/upload/profile-picture');
     final request = http.MultipartRequest('POST', url);
     request.headers['Authorization'] = 'Bearer $token';
 
@@ -174,7 +174,7 @@ class UserService {
   // Método para actualizar el perfil
   Future<Map<String, dynamic>> updateProfile(
       Map<String, dynamic> profileData) async {
-    final url = Uri.parse('$baseUrl/profile');
+    final url = Uri.parse('$baseUrl/users/profile');
     final response = await http.patch(
       url,
       headers: {

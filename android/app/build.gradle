@@ -6,39 +6,31 @@ plugins {
 }
 
 android {
-    namespace = "com.example.gymder"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    namespace "com.example.gymder"
 
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8
-    }
+    // Cambia este valor a 34
+    compileSdk = 34
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.gymder"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+
+        minSdk = 21     // (o el valor que uses)
+        targetSdk = 34  // Recomendada, pero no obligatoria
+
+        versionCode 1
+        versionName "1.0.0"
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.debug
+            signingConfig signingConfigs.debug
         }
     }
 }
 
+
+// Mantén el bloque flutter si así lo deseas, para enlazar el código Flutter con la app.
 flutter {
     source = "../.."
 }
+

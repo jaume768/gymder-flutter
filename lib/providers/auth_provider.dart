@@ -1,16 +1,20 @@
 // lib/providers/auth_provider.dart
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import 'package:http/http.dart' as http;
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   User? _user;
+  String? _token;
   bool _isAuthenticated = false;
   bool _isLoading = true;
 
   User? get user => _user;
+  String? get token => _token;
   bool get isAuthenticated => _isAuthenticated;
   bool get isLoading => _isLoading;
 
@@ -44,7 +48,6 @@ class AuthProvider with ChangeNotifier {
       _user = result['user'];
       _isAuthenticated = true;
       notifyListeners();
-      // Opcional: Puedes llamar a refreshUser aquí para obtener datos completos
       await refreshUser();
     }
     return result;
@@ -60,18 +63,59 @@ class AuthProvider with ChangeNotifier {
     required List<String> seeking,
     required String relationshipGoal,
   }) async {
-    final result = await _authService.register(
-      email: email,
-      password: password,
-      username: username,
-      firstName: firstName,
-      lastName: lastName,
-      gender: gender,
-      seeking: seeking,
-      relationshipGoal: relationshipGoal,
-    );
-    return result;
+    try {
+      // Delegar a authService:
+      final result = await _authService.register(
+        email: email,
+        password: password,
+        username: username,
+        firstName: firstName,
+        lastName: lastName,
+        gender: gender,
+        seeking: seeking,
+        relationshipGoal: relationshipGoal,
+      );
+
+      if (result['success'] == true) {
+        final token = result['token'];
+        if (token != null) {
+          // Podrías actualizar _token en AuthProvider
+          _token = token;
+
+          // Intentar obtener datos del usuario
+          final userData = await _authService.fetchUserData(token);
+          if (userData != null) {
+            _user = userData;
+            _isAuthenticated = true;
+            notifyListeners();
+          } else {
+            // Si falló la carga de datos de usuario
+            _isAuthenticated = false;
+            _token = null;
+            // O borras el token en storage si quieres
+            await _authService.logout();
+            notifyListeners();
+            return {
+              'success': false,
+              'message': 'Error: token inválido o usuario no encontrado. Por favor, inicia sesión.'
+            };
+          }
+        }
+        return result; // devuelves { success: true, message, token, user }
+      } else {
+        return {
+          'success': false,
+          'message': result['message'] ?? 'Error al registrar',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error de conexión: $e',
+      };
+    }
   }
+
 
   Future<void> logoutUser() async {
     await _authService.logout();
@@ -80,12 +124,10 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Método público para obtener el token
   Future<String?> getToken() async {
     return await _authService.getToken();
   }
 
-  // Método para refrescar los datos del usuario
   Future<void> refreshUser() async {
     String? token = await _authService.getToken();
     if (token != null) {

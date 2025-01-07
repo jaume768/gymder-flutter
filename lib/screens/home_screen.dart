@@ -1,6 +1,7 @@
 // lib/screens/home_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:gymder/screens/tiktok_like_screen.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'login_screen.dart';
@@ -36,10 +37,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final token = await authProvider.getToken(); // Uso del método público
 
     if (token == null) {
-      setState(() {
-        isLoading = false;
-        errorMessage = 'Token no encontrado. Por favor, inicia sesión nuevamente.';
-      });
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
       return;
     }
 
@@ -124,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
           style: TextStyle(fontSize: 18, color: Colors.white),
         ),
       )
-          : ProfileSwipeScreen(users: suggestedMatches))
+          : TikTokLikeScreen(users: suggestedMatches))
           : _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: const Color.fromRGBO(64, 65, 65, 1), // Fondo gris oscuro

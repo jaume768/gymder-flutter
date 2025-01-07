@@ -35,11 +35,22 @@ class AuthService {
       }),
     );
 
+    final data = jsonDecode(response.body);
+
     if (response.statusCode == 201) {
-      return {'success': true, 'message': 'Usuario registrado con éxito'};
+      final token = data['token'];
+      if (token != null) {
+        // Guardar en secure storage
+        await storage.write(key: 'token', value: token);
+      }
+      return {
+        'success': true,
+        'message': data['message'],
+        'token': token,
+        'user': data['user'], // si devuelves user
+      };
     }
 
-    final data = jsonDecode(response.body);
     return {
       'success': false,
       'message': data['message'] ?? 'Error al registrar usuario',

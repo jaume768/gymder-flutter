@@ -133,7 +133,7 @@ class UserService {
 
   // Método para subir foto de perfil
   Future<Map<String, dynamic>> uploadProfilePicture(File photo) async {
-    final url = Uri.parse('$baseUrl/upload/profile');
+    final url = Uri.parse('$baseUrl/upload/profile-picture');
     final request = http.MultipartRequest('POST', url);
     request.headers['Authorization'] = 'Bearer $token';
 

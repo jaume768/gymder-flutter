@@ -1,9 +1,14 @@
-// lib/screens/chat_screen.dart
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
+import 'package:mime/mime.dart';
+import 'package:http_parser/http_parser.dart';
 
 import '../providers/auth_provider.dart';
 
@@ -24,8 +29,10 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   late IO.Socket socket;
   final TextEditingController _messageController = TextEditingController();
-  List<Map<String, dynamic>> messages =
-      []; // Aquí guardamos {senderId, message, timestamp}
+  final ImagePicker _imagePicker = ImagePicker();
+
+  List<Map<String, dynamic>> messages = [];
+  bool _showEmojiPicker = false; // Para mostrar/ocultar el emoji picker
 
   @override
   void initState() {
@@ -34,50 +41,44 @@ class _ChatScreenState extends State<ChatScreen> {
     _fetchConversation(); // cargar historial previo
   }
 
+  // Conexión Socket.io
   void _connectToSocket() {
-    // Conéctate a tu servidor Node (verifica la dirección/puerto)
     socket = IO.io(
-        'http://10.0.2.2:5000', // o la IP donde corre tu backend
+        'http://10.0.2.2:5000', // Ajusta a tu IP/puerto
         IO.OptionBuilder()
             .setTransports(['websocket'])
             .disableAutoConnect()
-            .build());
+            .build()
+    );
 
     socket.connect();
 
-    // Cuando se conecta
     socket.onConnect((_) {
       print('Conectado al socket.io server');
-      // Unirse a la "sala" con joinRoom
       socket.emit('joinRoom', {
         'userId': widget.currentUserId,
         'matchedUserId': widget.matchedUserId,
       });
     });
 
-    // Escuchar mensajes entrantes
     socket.on('receiveMessage', (data) {
+      print('Mensaje entrante: $data');
       setState(() {
         messages.add({
           'senderId': data['senderId'],
-          'message': data['message'],
-          'timestamp': data['timestamp'],
+          'type': data['type'] ?? 'text',
+          'message': data['message'] ?? '',
+          'imageUrl': data['imageUrl'] ?? '',
+          'timestamp': data['timestamp']
         });
       });
     });
 
-    // Manejar errores
-    socket.on('errorMessage', (data) {
-      print('Error del servidor: $data');
-    });
-
-    // Cuando se desconecta
-    socket.onDisconnect((_) {
-      print('Desconectado del servidor');
-    });
+    socket.onDisconnect((_) => print('Desconectado del servidor'));
+    socket.on('errorMessage', (data) => print('Error del servidor: $data'));
   }
 
-  // Carga inicial del historial de chat usando tu endpoint /api/messages/conversation
+  // Carga inicial del historial
   Future<void> _fetchConversation() async {
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -87,16 +88,15 @@ class _ChatScreenState extends State<ChatScreen> {
         return;
       }
 
-      final url = Uri.parse('http://10.0.2.2:5000/api/messages/conversation'
-          '?user1=${widget.currentUserId}&user2=${widget.matchedUserId}');
-
-      final response = await http.get(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
+      final url = Uri.parse(
+          'http://10.0.2.2:5000/api/messages/conversation'
+              '?user1=${widget.currentUserId}&user2=${widget.matchedUserId}'
       );
+
+      final response = await http.get(url, headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      });
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -106,7 +106,9 @@ class _ChatScreenState extends State<ChatScreen> {
             messages = msgs.map((m) {
               return {
                 'senderId': m['sender'],
+                'type': m['type'],
                 'message': m['message'],
+                'imageUrl': m['imageUrl'],
                 'timestamp': m['createdAt']
               };
             }).toList();
@@ -116,26 +118,98 @@ class _ChatScreenState extends State<ChatScreen> {
         }
       } else {
         print('Error status code: ${response.statusCode}');
-        print('Response body: ${response.body}');
+        print('Body: ${response.body}');
       }
     } catch (e) {
       print('Error al obtener conversación: $e');
     }
   }
 
+  // Enviar mensaje de texto
   void _sendMessage() {
     final msg = _messageController.text.trim();
     if (msg.isEmpty) return;
 
-    // Emitimos al servidor
     socket.emit('sendMessage', {
       'senderId': widget.currentUserId,
       'receiverId': widget.matchedUserId,
+      'type': 'text',
       'message': msg,
     });
 
-    // Limpiamos el TextField
     _messageController.clear();
+  }
+
+  // Enviar foto elegida
+  Future<void> _sendImageMessage(File imageFile) async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = await authProvider.getToken();
+      if (token == null) {
+        print('No hay token, no puedo subir la imagen.');
+        return;
+      }
+
+      final url = Uri.parse('http://10.0.2.2:5000/api/messages/upload');
+      var request = http.MultipartRequest('POST', url);
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // Obtener el MIME type de la imagen
+      final mimeType = lookupMimeType(imageFile.path) ?? 'application/octet-stream';
+      final mimeTypeData = mimeType.split('/');
+      if (mimeTypeData.length != 2) {
+        throw Exception('Tipo de archivo desconocido para la imagen');
+      }
+
+      // Agregar la imagen al request con el contentType correcto
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'chatImage', // Asegúrate de que este sea el campo esperado por el backend
+          imageFile.path,
+          contentType: MediaType(mimeTypeData[0], mimeTypeData[1]),
+        ),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          final imageUrl = data['url'];
+          // Emitir el mensaje de tipo imagen a través de socket
+          socket.emit('sendMessage', {
+            'senderId': widget.currentUserId,
+            'receiverId': widget.matchedUserId,
+            'type': 'image',
+            'imageUrl': imageUrl,
+          });
+        } else {
+          print('Error al subir imagen chat: ${data['message']}');
+        }
+      } else {
+        print('Error al subir imagen chat: ${response.statusCode}');
+        print('Body: ${response.body}');
+      }
+    } catch (e) {
+      print('Error al enviar imagen: $e');
+    }
+  }
+
+  // Seleccionar imagen de la galería
+  Future<void> _pickImageFromGallery() async {
+    final pickedFile = await _imagePicker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      final file = File(pickedFile.path);
+      await _sendImageMessage(file);
+    }
+  }
+
+  // Toggle emoji picker
+  void _toggleEmojiPicker() {
+    setState(() {
+      _showEmojiPicker = !_showEmojiPicker;
+    });
   }
 
   @override
@@ -146,62 +220,123 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chat'),
         backgroundColor: Colors.black,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.photo),
+            onPressed: _pickImageFromGallery, // Seleccionar imagen
+          ),
+          IconButton(
+            icon: const Icon(Icons.emoji_emotions_outlined),
+            onPressed: _toggleEmojiPicker, // Mostrar / ocultar emojis
+          ),
+        ],
       ),
       backgroundColor: Colors.grey[900],
       body: Column(
         children: [
+          // Mensajes
           Expanded(
             child: ListView.builder(
+              padding: const EdgeInsets.only(bottom: 10),
               itemCount: messages.length,
               itemBuilder: (context, index) {
                 final msg = messages[index];
                 final isMe = msg['senderId'] == widget.currentUserId;
-                return Align(
-                  alignment:
-                      isMe ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Container(
-                    margin: EdgeInsets.symmetric(
-                      vertical: 4,
-                      horizontal: 8,
+                final type = msg['type'];
+
+                if (type == 'image') {
+                  // Mensaje tipo imagen
+                  final imgUrl = msg['imageUrl'] ?? '';
+                  return Align(
+                    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        color: isMe ? Colors.blue : Colors.grey[800],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: imgUrl.isNotEmpty
+                          ? Image.network(
+                        imgUrl,
+                        height: 200,
+                        width: 200,
+                        fit: BoxFit.cover,
+                      )
+                          : const Text('Imagen no disponible'),
                     ),
-                    padding: EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: isMe ? Colors.blue : Colors.grey[800],
-                      borderRadius: BorderRadius.circular(8),
+                  );
+                } else {
+                  // Mensaje tipo texto
+                  return Align(
+                    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: isMe ? Colors.blue : Colors.grey[800],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        msg['message'] ?? '',
+                        style: const TextStyle(color: Colors.white),
+                      ),
                     ),
-                    child: Text(
-                      msg['message'],
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                );
+                  );
+                }
               },
             ),
           ),
+
+          // Emoji Picker
+          if (_showEmojiPicker)
+            SizedBox(
+              height: 250,
+              child: EmojiPicker(
+                onEmojiSelected: (category, emoji) {
+                  setState(() {
+                    _messageController.text += emoji.emoji;
+                  });
+                },
+              ),
+            ),
+
           // Caja de texto para enviar mensaje
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _messageController,
-                  style: TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: 'Escribe un mensaje...',
-                    hintStyle: TextStyle(color: Colors.white54),
-                    filled: true,
-                    fillColor: Colors.grey[800],
+          SafeArea(
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'Escribe un mensaje...',
+                      hintStyle: const TextStyle(color: Colors.white54),
+                      filled: true,
+                      fillColor: Colors.grey[800],
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 12,
+                      ),
+                    ),
+                    onTap: () {
+                      if (_showEmojiPicker) {
+                        setState(() => _showEmojiPicker = false);
+                      }
+                    },
                   ),
                 ),
-              ),
-              IconButton(
-                icon: Icon(Icons.send, color: Colors.white),
-                onPressed: _sendMessage,
-              )
-            ],
+                IconButton(
+                  icon: const Icon(Icons.send, color: Colors.white),
+                  onPressed: _sendMessage,
+                )
+              ],
+            ),
           )
         ],
       ),

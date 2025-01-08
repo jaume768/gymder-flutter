@@ -1,4 +1,3 @@
-// lib/screens/single_user_view.dart
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/user.dart';
@@ -19,11 +18,9 @@ class SingleUserView extends StatefulWidget {
 
 class _SingleUserViewState extends State<SingleUserView>
     with SingleTickerProviderStateMixin {
-  // Controlador para fotos horizontales
   late PageController _horizontalPageController;
   int _currentPhotoIndex = 0;
 
-  // Controlador de animación para el corazón
   late AnimationController _heartAnimationController;
   late Animation<double> _heartAnimation;
 
@@ -34,7 +31,6 @@ class _SingleUserViewState extends State<SingleUserView>
     super.initState();
     _horizontalPageController = PageController();
 
-    // Configurar animación de escala del corazón
     _heartAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
@@ -52,12 +48,10 @@ class _SingleUserViewState extends State<SingleUserView>
   }
 
   void _handleDoubleTap() async {
-    // Mostrar corazón animado
     setState(() {
       _showHeart = true;
     });
     _heartAnimationController.forward(from: 0).then((_) {
-      // Opcional: Ocultar el corazón tras la animación
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
           setState(() {
@@ -81,7 +75,6 @@ class _SingleUserViewState extends State<SingleUserView>
       onDoubleTap: _handleDoubleTap,
       child: Stack(
         children: [
-          // --- FONDO: carrusel de fotos en horizontal ---
           PageView.builder(
             scrollDirection: Axis.horizontal,
             controller: _horizontalPageController,
@@ -92,7 +85,6 @@ class _SingleUserViewState extends State<SingleUserView>
               });
             },
             itemBuilder: (context, index) {
-              // Si no hay fotos adicionales, muestra un placeholder
               if (photos.isEmpty) {
                 return Container(
                   color: Colors.black54,
@@ -122,7 +114,7 @@ class _SingleUserViewState extends State<SingleUserView>
 
           if (photos.isNotEmpty)
             Positioned(
-              bottom: 12,
+              bottom: 92,
               left: 0,
               right: 0,
               child: Row(
@@ -146,7 +138,7 @@ class _SingleUserViewState extends State<SingleUserView>
           // --- DATOS del usuario (nombre, goal, etc.) ---
           Positioned(
             left: 20,
-            bottom: 60,
+            bottom: 120,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

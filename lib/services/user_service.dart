@@ -14,6 +14,33 @@ class UserService {
 
   UserService({required this.token});
 
+  // En user_service.dart
+  Future<Map<String, dynamic>> getMatches() async {
+    final url = Uri.parse('$baseUrl/matches');
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return {
+        'success': true,
+        'matches': data['matches'],
+      };
+    } else {
+      final data = jsonDecode(response.body);
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Error al obtener matches'
+      };
+    }
+  }
+
+
   Future<Map<String, dynamic>> uploadPhotos(List<File> photos) async {
     final url = Uri.parse('$baseUrl/users/upload/photos');
     final request = http.MultipartRequest('POST', url);

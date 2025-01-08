@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../services/user_service.dart';
+import 'chat_screen.dart';
 
 class TikTokLikeScreen extends StatefulWidget {
   final List<User> users;
@@ -16,15 +17,15 @@ class TikTokLikeScreen extends StatefulWidget {
 }
 
 class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
-  // Controlador para scroll vertical entre usuarios
   late PageController _verticalPageController;
-  // Para evitar múltiples “likes” simultáneos
   bool _isProcessing = false;
+  late List<User> _users; // Lista local de usuarios
 
   @override
   void initState() {
     super.initState();
     _verticalPageController = PageController();
+    _users = List.from(widget.users); // Inicializa la lista local con los usuarios recibidos
   }
 
   @override
@@ -33,12 +34,11 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
     super.dispose();
   }
 
-  /// Dar like y moverse al siguiente usuario
   Future<void> _handleLike(int userIndex) async {
     if (_isProcessing) return;
     _isProcessing = true;
 
-    final user = widget.users[userIndex];
+    final user = _users[userIndex];
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final token = await authProvider.getToken();
 
@@ -54,35 +54,42 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
     final result = await userService.likeUser(user.id);
 
     if (result['success'] == true) {
-      // Muestra snack de like
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Has dado like al usuario')),
       );
       if (result['matchedUser'] != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('¡Es un match!')),
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatScreen(
+              currentUserId: user.id,
+              matchedUserId: result['matchedUser'].id,
+            ),
+          ),
         );
-        // Aquí podrías abrir un modal, pantalla de chat, etc.
       }
     } else {
-      // Error
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(result['message'] ?? 'Error al dar like')),
       );
     }
 
-    // Ir al siguiente usuario
-    final nextPage = userIndex + 1;
-    if (nextPage < widget.users.length) {
-      _verticalPageController.animateToPage(
-        nextPage,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeIn,
-      );
-    } else {
-      // No hay más usuarios
+    // Remover el usuario "likeado" de la lista local
+    setState(() {
+      _users.removeAt(userIndex);
+    });
+
+    // Desplazarse al siguiente usuario si existe
+    if (_users.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No hay más usuarios')),
+      );
+    } else if (userIndex < _users.length) {
+      // Desplazar a la página del siguiente usuario
+      _verticalPageController.animateToPage(
+        userIndex,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeIn,
       );
     }
 
@@ -91,7 +98,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.users.isEmpty) {
+    if (_users.isEmpty) {
       return const Center(
         child: Text('No hay usuarios para mostrar.'),
       );
@@ -100,9 +107,9 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
     return PageView.builder(
       controller: _verticalPageController,
       scrollDirection: Axis.vertical,
-      itemCount: widget.users.length,
+      itemCount: _users.length,
       itemBuilder: (context, index) {
-        final user = widget.users[index];
+        final user = _users[index];
         return SingleUserView(
           user: user,
           onDoubleTapLike: () => _handleLike(index),

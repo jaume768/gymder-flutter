@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import 'login_screen.dart';
 import '../models/user.dart';
 import '../services/user_service.dart';
+import 'matches_chats_screen.dart';
 import 'profile_screen.dart';
 import 'chat_screen.dart';
 
@@ -57,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   final List<Widget> _widgetOptions = <Widget>[
-    const ChatScreen(),
+    const MatchesChatsScreen(),  // Aquí en vez de ChatScreen directo
     const SizedBox.shrink(),
     const ProfileScreen(),
   ];

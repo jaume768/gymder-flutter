@@ -120,7 +120,6 @@ class _SingleUserViewState extends State<SingleUserView>
             },
           ),
 
-          // --- INDICADOR de la foto actual (abajo al centro) ---
           if (photos.isNotEmpty)
             Positioned(
               bottom: 12,

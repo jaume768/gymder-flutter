@@ -1,5 +1,3 @@
-// lib/screens/home_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:gymder/screens/tiktok_like_screen.dart';
 import 'package:provider/provider.dart';
@@ -7,9 +5,8 @@ import '../providers/auth_provider.dart';
 import 'login_screen.dart';
 import '../models/user.dart';
 import '../services/user_service.dart';
-import 'profile_swipe_screen.dart';
 import 'profile_screen.dart';
-import 'chat_screen.dart'; // Crea este archivo si planeas implementarlo en el futuro
+import 'chat_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,9 +19,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<User> suggestedMatches = [];
   bool isLoading = true;
   String errorMessage = '';
-
-  // Índice del botón seleccionado en la barra de navegación inferior
-  int _selectedIndex = 1; // 0: Chat, 1: Corazón, 2: Perfil
+  int _selectedIndex = 1;
 
   @override
   void initState() {
@@ -34,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _fetchSuggestedMatches() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final token = await authProvider.getToken(); // Uso del método público
+    final token = await authProvider.getToken();
 
     if (token == null) {
       Navigator.pushReplacement(
@@ -49,7 +44,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (result['success']) {
       setState(() {
-        suggestedMatches = List<User>.from(result['matches'].map((x) => User.fromJson(x)));
+        suggestedMatches =
+        List<User>.from(result['matches'].map((x) => User.fromJson(x)));
         isLoading = false;
       });
     } else {
@@ -60,10 +56,8 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Lista de widgets para cada pestaña
   final List<Widget> _widgetOptions = <Widget>[
-    const ChatScreen(), // Implementa este widget cuando esté listo
-    // ProfileSwipeScreen se manejará dinámicamente
+    const ChatScreen(),
     const SizedBox.shrink(),
     const ProfileScreen(),
   ];
@@ -79,31 +73,14 @@ class _HomeScreenState extends State<HomeScreen> {
         MaterialPageRoute(builder: (_) => const ProfileScreen()),
       );
     }
-
-    // Puedes agregar funcionalidades para otros botones aquí en el futuro
+    // Puedes agregar lógica adicional para otros índices si es necesario.
   }
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Gymder'),
-        backgroundColor: const Color.fromRGBO(64, 65, 65, 1), // Fondo gris oscuro
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Cerrar Sesión',
-            onPressed: () async {
-              await authProvider.logoutUser();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-              );
-            },
-          ),
-        ],
-      ),
+      extendBody: true,
+      backgroundColor: Colors.black,
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : errorMessage.isNotEmpty
@@ -120,35 +97,68 @@ class _HomeScreenState extends State<HomeScreen> {
           : _selectedIndex == 1
           ? (suggestedMatches.isEmpty
           ? const Center(
-        child: Text(
-          'No hay más matches disponibles.',
-          style: TextStyle(fontSize: 18, color: Colors.white),
-        ),
-      )
+          child: Text(
+            'No hay más matches disponibles.',
+            style: TextStyle(fontSize: 18, color: Colors.white),
+          ))
           : TikTokLikeScreen(users: suggestedMatches))
           : _widgetOptions.elementAt(_selectedIndex),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color.fromRGBO(64, 65, 65, 1), // Fondo gris oscuro
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble, color: Colors.white),
-            label: 'Chat',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.favorite, color: Colors.white),
-            label: 'Matches',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person, color: Colors.white),
-            label: 'Perfil',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white54,
-        onTap: _onItemTapped,
+      bottomNavigationBar: Container(
+        color: Colors.transparent,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Icono Chat
+            GestureDetector(
+              onTap: () => _onItemTapped(0),
+              child: CircleAvatar(
+                radius: 24,
+                backgroundColor: _selectedIndex == 0
+                    ? Colors.white
+                    : Colors.grey.shade700,
+                child: Icon(
+                  Icons.chat_bubble,
+                  color: _selectedIndex == 0 ? Colors.black : Colors.white,
+                  size: 28,
+                ),
+              ),
+            ),
+            const SizedBox(width: 30),
+            // Icono Matches (corazón) - central y más grande
+            GestureDetector(
+              onTap: () => _onItemTapped(1),
+              child: CircleAvatar(
+                radius: 34,
+                backgroundColor: _selectedIndex == 1
+                    ? Colors.white
+                    : Colors.grey.shade700,
+                child: Icon(
+                  Icons.favorite,
+                  color: _selectedIndex == 1 ? Colors.black : Colors.white,
+                  size: 38,
+                ),
+              ),
+            ),
+            const SizedBox(width: 30),
+            // Icono Perfil
+            GestureDetector(
+              onTap: () => _onItemTapped(2),
+              child: CircleAvatar(
+                radius: 24,
+                backgroundColor: _selectedIndex == 2
+                    ? Colors.white
+                    : Colors.grey.shade700,
+                child: Icon(
+                  Icons.person,
+                  color: _selectedIndex == 2 ? Colors.black : Colors.white,
+                  size: 28,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-      backgroundColor: const Color.fromRGBO(64, 65, 65, 1), // Fondo gris oscuro
     );
   }
 }

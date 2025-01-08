@@ -7,10 +7,10 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
-import 'package:mime/mime.dart';
-import 'package:http_parser/http_parser.dart';
 
 import '../providers/auth_provider.dart';
+import 'package:mime/mime.dart';
+import 'package:http_parser/http_parser.dart';
 
 class ChatScreen extends StatefulWidget {
   final String currentUserId;
@@ -32,23 +32,23 @@ class _ChatScreenState extends State<ChatScreen> {
   final ImagePicker _imagePicker = ImagePicker();
 
   List<Map<String, dynamic>> messages = [];
-  bool _showEmojiPicker = false; // Para mostrar/ocultar el emoji picker
+  bool _showEmojiPicker = false;
 
   @override
   void initState() {
     super.initState();
     _connectToSocket();
-    _fetchConversation(); // cargar historial previo
+    _fetchConversation();
   }
 
   // Conexión Socket.io
   void _connectToSocket() {
     socket = IO.io(
-        'http://10.0.2.2:5000', // Ajusta a tu IP/puerto
-        IO.OptionBuilder()
-            .setTransports(['websocket'])
-            .disableAutoConnect()
-            .build()
+      'http://10.0.2.2:5000', // Ajusta a tu IP/puerto
+      IO.OptionBuilder()
+          .setTransports(['websocket'])
+          .disableAutoConnect()
+          .build(),
     );
 
     socket.connect();
@@ -62,7 +62,6 @@ class _ChatScreenState extends State<ChatScreen> {
     });
 
     socket.on('receiveMessage', (data) {
-      print('Mensaje entrante: $data');
       setState(() {
         messages.add({
           'senderId': data['senderId'],
@@ -78,7 +77,7 @@ class _ChatScreenState extends State<ChatScreen> {
     socket.on('errorMessage', (data) => print('Error del servidor: $data'));
   }
 
-  // Carga inicial del historial
+  // Carga inicial del historial (excluyendo mensajes "ocultos" en el backend)
   Future<void> _fetchConversation() async {
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -105,6 +104,7 @@ class _ChatScreenState extends State<ChatScreen> {
           setState(() {
             messages = msgs.map((m) {
               return {
+                '_id': m['_id'], // id del mensaje en la BD
                 'senderId': m['sender'],
                 'type': m['type'],
                 'message': m['message'],
@@ -212,6 +212,34 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  // Ocultar (borrar) el mensaje para el usuario actual
+  Future<void> _hideMessage(String messageId) async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = await authProvider.getToken();
+      if (token == null) return;
+
+      final url = Uri.parse('http://10.0.2.2:5000/api/messages/$messageId/hide');
+      final response = await http.delete(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        // Se ocultó con éxito
+        // Recargar la conversación para no mostrar el mensaje oculto
+        await _fetchConversation();
+      } else {
+        print('Error al ocultar mensaje: ${response.statusCode}');
+        print('Body: ${response.body}');
+      }
+    } catch (e) {
+      print('Error al ocultar mensaje: $e');
+    }
+  }
+
   @override
   void dispose() {
     socket.dispose();
@@ -220,7 +248,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chat'),
@@ -228,11 +255,11 @@ class _ChatScreenState extends State<ChatScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.photo),
-            onPressed: _pickImageFromGallery, // Seleccionar imagen
+            onPressed: _pickImageFromGallery,
           ),
           IconButton(
             icon: const Icon(Icons.emoji_emotions_outlined),
-            onPressed: _toggleEmojiPicker, // Mostrar / ocultar emojis
+            onPressed: _toggleEmojiPicker,
           ),
         ],
       ),
@@ -247,48 +274,61 @@ class _ChatScreenState extends State<ChatScreen> {
               itemBuilder: (context, index) {
                 final msg = messages[index];
                 final isMe = msg['senderId'] == widget.currentUserId;
-                final type = msg['type'];
+                final type = msg['type'] as String? ?? 'text';
 
-                if (type == 'image') {
-                  // Mensaje tipo imagen
-                  final imgUrl = msg['imageUrl'] ?? '';
-                  return Align(
+                return GestureDetector(
+                  onLongPress: () async {
+                    // Preguntar si quiere eliminar
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (_) {
+                        return AlertDialog(
+                          title: const Text('Eliminar mensaje'),
+                          content: const Text(
+                              '¿Deseas eliminar este mensaje solo para ti?'),
+                          actions: [
+                            TextButton(
+                              child: const Text('Cancelar'),
+                              onPressed: () => Navigator.pop(context, false),
+                            ),
+                            TextButton(
+                              child: const Text('Eliminar'),
+                              onPressed: () => Navigator.pop(context, true),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                    if (confirm == true && msg['_id'] != null) {
+                      _hideMessage(msg['_id']);
+                    }
+                  },
+                  child: Align(
                     alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                     child: Container(
-                      margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                      margin:
+                      const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
                       padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
                         color: isMe ? Colors.blue : Colors.grey[800],
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: imgUrl.isNotEmpty
+                      child: type == 'image'
+                          ? (msg['imageUrl'] != null
                           ? Image.network(
-                        imgUrl,
+                        msg['imageUrl'],
                         height: 200,
                         width: 200,
                         fit: BoxFit.cover,
                       )
-                          : const Text('Imagen no disponible'),
-                    ),
-                  );
-                } else {
-                  // Mensaje tipo texto
-                  return Align(
-                    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: isMe ? Colors.blue : Colors.grey[800],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
+                          : const Text('Imagen no disponible'))
+                          : Text(
                         msg['message'] ?? '',
                         style: const TextStyle(color: Colors.white),
                       ),
                     ),
-                  );
-                }
+                  ),
+                );
               },
             ),
           ),

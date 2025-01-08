@@ -125,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 30),
+            const SizedBox(width: 40),
             // Icono Matches (corazón) - central y más grande
             GestureDetector(
               onTap: () => _onItemTapped(1),
@@ -141,7 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 30),
+            const SizedBox(width: 40),
             // Icono Perfil
             GestureDetector(
               onTap: () => _onItemTapped(2),

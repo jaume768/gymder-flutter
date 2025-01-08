@@ -8,6 +8,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/auth_provider.dart';
 import '../models/user.dart';
 import '../services/user_service.dart';
+import 'home_screen.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -710,66 +711,73 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return const Center(child: Text('Usuario no encontrado.'));
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Perfil'),
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Perfil'),
+          backgroundColor: const Color.fromRGBO(64, 65, 65, 1),
+        ),
         backgroundColor: const Color.fromRGBO(64, 65, 65, 1),
-      ),
-      backgroundColor: const Color.fromRGBO(64, 65, 65, 1),
-      floatingActionButton: hasChanges
-          ? FloatingActionButton.extended(
-        onPressed: _saveProfile,
-        backgroundColor: Colors.white,
-        icon: const Icon(Icons.save, color: Colors.black),
-        label: const Text('Guardar Cambios', style: TextStyle(color: Colors.black)),
-      )
-          : null,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            _buildProfilePicture(user),
-            const SizedBox(height: 20),
-            _buildPersonalInfoForm(),
-            const SizedBox(height: 20),
-            _buildAdditionalPhotos(user),
-            if (errorMessage.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Text(
-                errorMessage,
-                style: const TextStyle(color: Colors.redAccent),
-                textAlign: TextAlign.center,
+        floatingActionButton: hasChanges
+            ? FloatingActionButton.extended(
+          onPressed: _saveProfile,
+          backgroundColor: Colors.white,
+          icon: const Icon(Icons.save, color: Colors.black),
+          label: const Text('Guardar Cambios', style: TextStyle(color: Colors.black)),
+        )
+            : null,
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              _buildProfilePicture(user),
+              const SizedBox(height: 20),
+              _buildPersonalInfoForm(),
+              const SizedBox(height: 20),
+              _buildAdditionalPhotos(user),
+              if (errorMessage.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Text(
+                  errorMessage,
+                  style: const TextStyle(color: Colors.redAccent),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () async {
+                  await authProvider.logoutUser();
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                ),
+                child: const Text(
+                  'Cerrar sesión',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
+              const SizedBox(height: 20),
             ],
-            // Espaciado antes del botón de cerrar sesión
-            const SizedBox(height: 20),
-            // Botón de cerrar sesión
-            ElevatedButton(
-              onPressed: () async {
-                await authProvider.logoutUser();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.0),
-                ),
-              ),
-              child: const Text(
-                'Cerrar sesión',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
+          ),
         ),
       ),
     );

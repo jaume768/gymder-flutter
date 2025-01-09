@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:gymder/screens/user_profile_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:http/http.dart' as http;
@@ -278,29 +279,40 @@ class _ChatScreenState extends State<ChatScreen> {
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
         title: isLoadingUser
-            ? const Text('Chat', style: TextStyle(color: Colors.white))
-            : Row(
-          children: [
-            CircleAvatar(
-              backgroundImage: matchedUser?.profilePicture != null
-                  ? NetworkImage(matchedUser!.profilePicture!.url)
-                  : null,
-              child: matchedUser?.profilePicture == null
-                  ? const Icon(Icons.person, color: Colors.white)
-                  : null,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              matchedUser?.username ?? 'Chat',
-              style: const TextStyle(color: Colors.white),
-            ),
-          ],
+            ? const Text('', style: TextStyle(color: Colors.white))
+            : GestureDetector(
+          onTap: () {
+            if (matchedUser != null) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => UserProfileScreen(userId: matchedUser!.id),
+                ),
+              );
+            }
+          },
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundImage: matchedUser?.profilePicture != null
+                    ? NetworkImage(matchedUser!.profilePicture!.url)
+                    : null,
+                child: matchedUser?.profilePicture == null
+                    ? const Icon(Icons.person, color: Colors.white)
+                    : null,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                matchedUser?.username ?? 'Chat',
+                style: const TextStyle(color: Colors.white),
+              ),
+            ],
+          ),
         ),
       ),
       backgroundColor: Colors.grey[900],
       body: Column(
         children: [
-          // Mensajes
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.only(bottom: 10),

@@ -7,6 +7,7 @@ import '../services/user_service.dart';
 import '../widgets/perfil/profile_picture_widget.dart';
 import '../widgets/perfil/personal_info_form.dart';
 import '../widgets/perfil/additional_photos_widget.dart';
+import 'blocked_users_screen.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
 
@@ -321,6 +322,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           title: const Text('Perfil', style: TextStyle(color: Colors.white)),
           backgroundColor: const Color.fromRGBO(64, 65, 65, 1),
           iconTheme: const IconThemeData(color: Colors.white),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.block, color: Colors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const BlockedUsersScreen()),
+                );
+              },
+            )
+          ],
         ),
         backgroundColor: const Color.fromRGBO(64, 65, 65, 1),
         floatingActionButton: hasChanges

@@ -40,6 +40,61 @@ class UserService {
     }
   }
 
+  Future<List<User>> getBlockedUsers() async {
+    final url = Uri.parse('$baseUrl/users/blocked');
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final blockedList = data['blockedUsers'] as List;
+      return blockedList.map((json) => User.fromJson(json)).toList();
+    } else {
+      throw Exception('Error al obtener usuarios bloqueados');
+    }
+  }
+
+  Future<Map<String, dynamic>> unblockUser(String targetUserId) async {
+    final url = Uri.parse('$baseUrl/users/unblock/$targetUserId');
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return {'success': true, 'message': data['message']};
+    } else {
+      return {'success': false, 'message': data['message']};
+    }
+  }
+
+  Future<Map<String, dynamic>> blockUser(String targetUserId) async {
+    final url = Uri.parse('$baseUrl/users/block/$targetUserId');
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return {'success': true, 'message': data['message']};
+    } else {
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Error al bloquear usuario'
+      };
+    }
+  }
 
   Future<Map<String, dynamic>> uploadPhotos(List<File> photos) async {
     final url = Uri.parse('$baseUrl/users/upload/photos');
@@ -54,7 +109,8 @@ class UserService {
       if (mimeTypeData.length != 2) {
         return {
           'success': false,
-          'message': 'Tipo de archivo desconocido para el archivo: ${photo.path}',
+          'message':
+              'Tipo de archivo desconocido para el archivo: ${photo.path}',
         };
       }
 
@@ -72,7 +128,8 @@ class UserService {
       final data = jsonDecode(response.body);
       return {
         'success': true,
-        'photos': List<Photo>.from(data['photos'].map((x) => Photo.fromJson(x))),
+        'photos':
+            List<Photo>.from(data['photos'].map((x) => Photo.fromJson(x))),
       };
     } else {
       final data = jsonDecode(response.body);

@@ -68,16 +68,15 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
       final token = await authProvider.getToken();
       if (token == null) return;
 
-      final url = Uri.parse('http://10.0.2.2:5000/api/messages/conversation/hide');
+      final url =
+          Uri.parse('http://10.0.2.2:5000/api/messages/conversation/hide');
       final response = await http.post(
         url,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'otherUserId': otherUserId
-        }),
+        body: jsonEncode({'otherUserId': otherUserId}),
       );
 
       if (response.statusCode == 200) {
@@ -105,106 +104,107 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : errorMessage.isNotEmpty
-          ? Center(
-        child: Text(
-          errorMessage,
-          style: const TextStyle(fontSize: 18, color: Colors.redAccent),
-        ),
-      )
-          : myMatches.isEmpty
-          ? const Center(
-        child: Text(
-          'No tienes matches todavía.',
-          style: TextStyle(color: Colors.white, fontSize: 20),
-        ),
-      )
-          : ListView.builder(
-        itemCount: myMatches.length,
-        itemBuilder: (context, index) {
-          final matchedUser = myMatches[index];
-          return GestureDetector(
-            onLongPress: () {
-              showDialog(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('Eliminar conversación'),
-                  content: Text(
-                      '¿Deseas eliminar el chat con ${matchedUser.username}?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      child: const Text('Cancelar'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(ctx).pop();
-                        _hideConversation(matchedUser.id);
-                      },
-                      child: const Text('Eliminar'),
-                    ),
-                  ],
-                ),
-              );
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 8),
-              child: Card(
-                color: Colors.grey[850],
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                elevation: 4,
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-                  leading: CircleAvatar(
-                    radius: 30,
-                    backgroundImage: matchedUser.profilePicture != null
-                        ? NetworkImage(
-                        matchedUser.profilePicture!.url)
-                        : null,
-                    child: matchedUser.profilePicture == null
-                        ? const Icon(Icons.person, size: 30)
-                        : null,
+              ? Center(
+                  child: Text(
+                    errorMessage,
+                    style:
+                        const TextStyle(fontSize: 18, color: Colors.redAccent),
                   ),
-                  title: Text(
-                    matchedUser.username,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  subtitle: const Text(
-                    'Toca para chatear',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
-                    ),
-                  ),
-                  onTap: () {
-                    final authProvider = Provider.of<AuthProvider>(
-                        context,
-                        listen: false);
-                    final currentUserId =
-                        authProvider.user!.id;
-
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ChatScreen(
-                          currentUserId: currentUserId,
-                          matchedUserId: matchedUser.id,
-                        ),
+                )
+              : myMatches.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No tienes matches todavía.',
+                        style: TextStyle(color: Colors.white, fontSize: 20),
                       ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          );
-        },
-      ),
+                    )
+                  : ListView.builder(
+                      itemCount: myMatches.length,
+                      itemBuilder: (context, index) {
+                        final matchedUser = myMatches[index];
+                        return GestureDetector(
+                          onLongPress: () {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Eliminar conversación'),
+                                content: Text(
+                                    '¿Deseas eliminar el chat con ${matchedUser.username}?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop(),
+                                    child: const Text('Cancelar'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.of(ctx).pop();
+                                      _hideConversation(matchedUser.id);
+                                    },
+                                    child: const Text('Eliminar'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            child: Card(
+                              color: Colors.grey[850],
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              elevation: 4,
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.all(16),
+                                leading: CircleAvatar(
+                                  radius: 30,
+                                  backgroundImage:
+                                      matchedUser.profilePicture != null
+                                          ? NetworkImage(
+                                              matchedUser.profilePicture!.url)
+                                          : null,
+                                  child: matchedUser.profilePicture == null
+                                      ? const Icon(Icons.person, size: 30)
+                                      : null,
+                                ),
+                                title: Text(
+                                  matchedUser.username,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                subtitle: const Text(
+                                  'Toca para chatear',
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                onTap: () {
+                                  final authProvider =
+                                      Provider.of<AuthProvider>(context,
+                                          listen: false);
+                                  final currentUserId = authProvider.user!.id;
+
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ChatScreen(
+                                        currentUserId: currentUserId,
+                                        matchedUserId: matchedUser.id,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
     );
   }
 }

@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 
 import '../providers/auth_provider.dart';
+import '../models/user.dart'; // Asegúrate de importar el modelo User
 import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
 
@@ -34,17 +35,20 @@ class _ChatScreenState extends State<ChatScreen> {
   List<Map<String, dynamic>> messages = [];
   bool _showEmojiPicker = false;
 
+  User? matchedUser;
+  bool isLoadingUser = true;
+
   @override
   void initState() {
     super.initState();
     _connectToSocket();
     _fetchConversation();
+    _fetchMatchedUser();
   }
 
-  // Conexión Socket.io
   void _connectToSocket() {
     socket = IO.io(
-      'http://10.0.2.2:5000', // Ajusta a tu IP/puerto
+      'http://10.0.2.2:5000',
       IO.OptionBuilder()
           .setTransports(['websocket'])
           .disableAutoConnect()
@@ -77,7 +81,37 @@ class _ChatScreenState extends State<ChatScreen> {
     socket.on('errorMessage', (data) => print('Error del servidor: $data'));
   }
 
-  // Carga inicial del historial (excluyendo mensajes "ocultos" en el backend)
+  Future<void> _fetchMatchedUser() async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = await authProvider.getToken();
+      if (token == null) return;
+
+      final url = Uri.parse('http://10.0.2.2:5000/api/users/profile/${widget.matchedUserId}');
+      final response = await http.get(url, headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      });
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        // Verificar directamente si 'user' existe en la respuesta
+        if (data != null && data['user'] != null) {
+          setState(() {
+            matchedUser = User.fromJson(data['user']);
+            isLoadingUser = false;
+          });
+        } else {
+          print('Usuario no encontrado en la respuesta.');
+        }
+      } else {
+        print('Error al obtener datos del usuario: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error al obtener datos del usuario: $e');
+    }
+  }
+
   Future<void> _fetchConversation() async {
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -104,7 +138,7 @@ class _ChatScreenState extends State<ChatScreen> {
           setState(() {
             messages = msgs.map((m) {
               return {
-                '_id': m['_id'], // id del mensaje en la BD
+                '_id': m['_id'],
                 'senderId': m['sender'],
                 'type': m['type'],
                 'message': m['message'],
@@ -125,7 +159,6 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  // Enviar mensaje de texto
   void _sendMessage() {
     final msg = _messageController.text.trim();
     if (msg.isEmpty) return;
@@ -140,7 +173,6 @@ class _ChatScreenState extends State<ChatScreen> {
     _messageController.clear();
   }
 
-  // Enviar foto elegida
   Future<void> _sendImageMessage(File imageFile) async {
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -154,17 +186,15 @@ class _ChatScreenState extends State<ChatScreen> {
       var request = http.MultipartRequest('POST', url);
       request.headers['Authorization'] = 'Bearer $token';
 
-      // Obtener el MIME type de la imagen
       final mimeType = lookupMimeType(imageFile.path) ?? 'application/octet-stream';
       final mimeTypeData = mimeType.split('/');
       if (mimeTypeData.length != 2) {
         throw Exception('Tipo de archivo desconocido para la imagen');
       }
 
-      // Agregar la imagen al request con el contentType correcto
       request.files.add(
         await http.MultipartFile.fromPath(
-          'chatImage', // Asegúrate de que este sea el campo esperado por el backend
+          'chatImage',
           imageFile.path,
           contentType: MediaType(mimeTypeData[0], mimeTypeData[1]),
         ),
@@ -177,7 +207,6 @@ class _ChatScreenState extends State<ChatScreen> {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
           final imageUrl = data['url'];
-          // Emitir el mensaje de tipo imagen a través de socket
           socket.emit('sendMessage', {
             'senderId': widget.currentUserId,
             'receiverId': widget.matchedUserId,
@@ -196,7 +225,6 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  // Seleccionar imagen de la galería
   Future<void> _pickImageFromGallery() async {
     final pickedFile = await _imagePicker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
@@ -205,14 +233,12 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  // Toggle emoji picker
   void _toggleEmojiPicker() {
     setState(() {
       _showEmojiPicker = !_showEmojiPicker;
     });
   }
 
-  // Ocultar (borrar) el mensaje para el usuario actual
   Future<void> _hideMessage(String messageId) async {
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -228,8 +254,6 @@ class _ChatScreenState extends State<ChatScreen> {
         },
       );
       if (response.statusCode == 200) {
-        // Se ocultó con éxito
-        // Recargar la conversación para no mostrar el mensaje oculto
         await _fetchConversation();
       } else {
         print('Error al ocultar mensaje: ${response.statusCode}');
@@ -243,6 +267,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void dispose() {
     socket.dispose();
+    _messageController.dispose();
     super.dispose();
   }
 
@@ -250,18 +275,27 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chat'),
         backgroundColor: Colors.black,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.photo),
-            onPressed: _pickImageFromGallery,
-          ),
-          IconButton(
-            icon: const Icon(Icons.emoji_emotions_outlined),
-            onPressed: _toggleEmojiPicker,
-          ),
-        ],
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: isLoadingUser
+            ? const Text('Chat', style: TextStyle(color: Colors.white))
+            : Row(
+          children: [
+            CircleAvatar(
+              backgroundImage: matchedUser?.profilePicture != null
+                  ? NetworkImage(matchedUser!.profilePicture!.url)
+                  : null,
+              child: matchedUser?.profilePicture == null
+                  ? const Icon(Icons.person, color: Colors.white)
+                  : null,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              matchedUser?.username ?? 'Chat',
+              style: const TextStyle(color: Colors.white),
+            ),
+          ],
+        ),
       ),
       backgroundColor: Colors.grey[900],
       body: Column(
@@ -278,7 +312,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
                 return GestureDetector(
                   onLongPress: () async {
-                    // Preguntar si quiere eliminar
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (_) {
@@ -306,8 +339,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: Align(
                     alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                     child: Container(
-                      margin:
-                      const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                      margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
                       padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
                         color: isMe ? Colors.blue : Colors.grey[800],
@@ -324,7 +356,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           : const Text('Imagen no disponible'))
                           : Text(
                         msg['message'] ?? '',
-                        style: const TextStyle(color: Colors.white),
+                        style: const TextStyle(color: Colors.white, fontSize: 19),
                       ),
                     ),
                   ),
@@ -346,10 +378,18 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
 
-          // Caja de texto para enviar mensaje
+          // Caja de texto para enviar mensaje con iconos de foto y emoji a la izquierda
           SafeArea(
             child: Row(
               children: [
+                IconButton(
+                  icon: const Icon(Icons.photo, color: Colors.white),
+                  onPressed: _pickImageFromGallery,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.emoji_emotions_outlined, color: Colors.white),
+                  onPressed: _toggleEmojiPicker,
+                ),
                 Expanded(
                   child: TextField(
                     controller: _messageController,
@@ -374,7 +414,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 IconButton(
                   icon: const Icon(Icons.send, color: Colors.white),
                   onPressed: _sendMessage,
-                )
+                ),
               ],
             ),
           )

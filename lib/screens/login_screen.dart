@@ -122,31 +122,31 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: isLoading
                               ? null
                               : () async {
-                            if (_formKey.currentState!.validate()) {
-                              _formKey.currentState!.save();
-                              setState(() {
-                                isLoading = true;
-                                errorMessage = '';
-                              });
-                              final result = await authProvider.login(
-                                  email: email, password: password);
-                              setState(() {
-                                isLoading = false;
-                              });
-                              if (result['success']) {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) => const HomeScreen()),
-                                );
-                              } else {
-                                setState(() {
-                                  errorMessage =
-                                      result['message'] ?? 'Error al iniciar sesión';
-                                });
-                              }
-                            }
-                          },
+                                  if (_formKey.currentState!.validate()) {
+                                    _formKey.currentState!.save();
+                                    setState(() {
+                                      isLoading = true;
+                                      errorMessage = '';
+                                    });
+                                    final result = await authProvider.login(
+                                        email: email, password: password);
+                                    setState(() {
+                                      isLoading = false;
+                                    });
+                                    if (result['success']) {
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) => const HomeScreen()),
+                                      );
+                                    } else {
+                                      setState(() {
+                                        errorMessage = result['message'] ??
+                                            'Error al iniciar sesión';
+                                      });
+                                    }
+                                  }
+                                },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white, // Fondo blanco
                             shape: RoundedRectangleBorder(
@@ -155,17 +155,17 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           child: isLoading
                               ? const CircularProgressIndicator(
-                            valueColor:
-                            AlwaysStoppedAnimation<Color>(Colors.black),
-                          )
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.black),
+                                )
                               : const Text(
-                            'Iniciar Sesión',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                                  'Iniciar Sesión',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                         ),
                       ),
                       const SizedBox(height: 20),

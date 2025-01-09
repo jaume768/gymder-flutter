@@ -62,7 +62,6 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
     }
   }
 
-  // Ocultar/Eliminar la conversación completa
   Future<void> _hideConversation(String otherUserId) async {
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -84,8 +83,6 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
-          print('Conversación ocultada');
-          // Podrías eliminar al usuario de la lista local
           setState(() {
             myMatches.removeWhere((u) => u.id == otherUserId);
           });
@@ -103,88 +100,111 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (errorMessage.isNotEmpty) {
-      return Center(
+    return Scaffold(
+      backgroundColor: Colors.grey[900],
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : errorMessage.isNotEmpty
+          ? Center(
         child: Text(
           errorMessage,
-          style: const TextStyle(color: Colors.red, fontSize: 16),
+          style: const TextStyle(fontSize: 18, color: Colors.redAccent),
         ),
-      );
-    }
-    if (myMatches.isEmpty) {
-      return const Center(
+      )
+          : myMatches.isEmpty
+          ? const Center(
         child: Text(
           'No tienes matches todavía.',
-          style: TextStyle(color: Colors.white, fontSize: 18),
+          style: TextStyle(color: Colors.white, fontSize: 20),
         ),
-      );
-    }
-
-    return ListView.builder(
-      itemCount: myMatches.length,
-      itemBuilder: (context, index) {
-        final matchedUser = myMatches[index];
-        return GestureDetector(
-          onLongPress: () {
-            // Preguntar si se quiere eliminar la conversación
-            showDialog(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: const Text('Eliminar conversación'),
-                content: Text('¿Deseas eliminar el chat con ${matchedUser.username}?'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    child: const Text('Cancelar'),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(ctx).pop();
-                      _hideConversation(matchedUser.id);
-                    },
-                    child: const Text('Eliminar'),
-                  ),
-                ],
-              ),
-            );
-          },
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundImage: matchedUser.profilePicture != null
-                  ? NetworkImage(matchedUser.profilePicture!.url)
-                  : null,
-              child: matchedUser.profilePicture == null
-                  ? const Icon(Icons.person)
-                  : null,
-            ),
-            title: Text(
-              matchedUser.username,
-              style: const TextStyle(color: Colors.white),
-            ),
-            subtitle: const Text(
-              'Toca para chatear',
-              style: TextStyle(color: Colors.white70),
-            ),
-            onTap: () {
-              final authProvider = Provider.of<AuthProvider>(context, listen: false);
-              final currentUserId = authProvider.user!.id;
-
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ChatScreen(
-                    currentUserId: currentUserId,
-                    matchedUserId: matchedUser.id,
-                  ),
+      )
+          : ListView.builder(
+        itemCount: myMatches.length,
+        itemBuilder: (context, index) {
+          final matchedUser = myMatches[index];
+          return GestureDetector(
+            onLongPress: () {
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Eliminar conversación'),
+                  content: Text(
+                      '¿Deseas eliminar el chat con ${matchedUser.username}?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: const Text('Cancelar'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        _hideConversation(matchedUser.id);
+                      },
+                      child: const Text('Eliminar'),
+                    ),
+                  ],
                 ),
               );
             },
-          ),
-        );
-      },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 8),
+              child: Card(
+                color: Colors.grey[850],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                elevation: 4,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16),
+                  leading: CircleAvatar(
+                    radius: 30,
+                    backgroundImage: matchedUser.profilePicture != null
+                        ? NetworkImage(
+                        matchedUser.profilePicture!.url)
+                        : null,
+                    child: matchedUser.profilePicture == null
+                        ? const Icon(Icons.person, size: 30)
+                        : null,
+                  ),
+                  title: Text(
+                    matchedUser.username,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'Toca para chatear',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 16,
+                    ),
+                  ),
+                  onTap: () {
+                    final authProvider = Provider.of<AuthProvider>(
+                        context,
+                        listen: false);
+                    final currentUserId =
+                        authProvider.user!.id;
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ChatScreen(
+                          currentUserId: currentUserId,
+                          matchedUserId: matchedUser.id,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }

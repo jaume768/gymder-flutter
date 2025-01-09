@@ -75,16 +75,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// Verifica si los valores actuales difieren de los originales
   void _checkChanges() {
     setState(() {
-      hasChanges = (
-          firstName != originalFirstName ||
-              lastName != originalLastName ||
-              goal != originalGoal ||
-              gender != originalGender ||
-              relationshipGoal != originalRelationshipGoal ||
-              // Comparación de listas (seeking)
-              seeking.length != originalSeeking.length ||
-              !seeking.every((item) => originalSeeking.contains(item))
-      );
+      hasChanges = (firstName != originalFirstName ||
+          lastName != originalLastName ||
+          goal != originalGoal ||
+          gender != originalGender ||
+          relationshipGoal != originalRelationshipGoal ||
+          // Comparación de listas (seeking)
+          seeking.length != originalSeeking.length ||
+          !seeking.every((item) => originalSeeking.contains(item)));
     });
   }
 
@@ -115,7 +113,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (token == null) {
       setState(() {
         isUploading = false;
-        errorMessage = 'Token no encontrado. Por favor, inicia sesión nuevamente.';
+        errorMessage =
+            'Token no encontrado. Por favor, inicia sesión nuevamente.';
       });
       return;
     }
@@ -125,14 +124,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (result['success']) {
         await authProvider.refreshUser();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Foto de perfil actualizada exitosamente')),
+          const SnackBar(
+              content: Text('Foto de perfil actualizada exitosamente')),
         );
         setState(() {
           _imageFile = null;
         });
       } else {
         setState(() {
-          errorMessage = result['message'] ?? 'Error al subir la foto de perfil';
+          errorMessage =
+              result['message'] ?? 'Error al subir la foto de perfil';
         });
       }
     } catch (e) {
@@ -154,12 +155,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (pickedFiles != null) {
       if (pickedFiles.length > 5) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Puedes seleccionar un máximo de 5 fotos')),
+          const SnackBar(
+              content: Text('Puedes seleccionar un máximo de 5 fotos')),
         );
         return;
       }
       setState(() {
-        _additionalImages = pickedFiles.map((pickedFile) => File(pickedFile.path)).toList();
+        _additionalImages =
+            pickedFiles.map((pickedFile) => File(pickedFile.path)).toList();
       });
     }
   }
@@ -176,7 +179,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (token == null) {
       setState(() {
         isUploading = false;
-        errorMessage = 'Token no encontrado. Por favor, inicia sesión nuevamente.';
+        errorMessage =
+            'Token no encontrado. Por favor, inicia sesión nuevamente.';
       });
       return;
     }
@@ -186,14 +190,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (result['success']) {
         await authProvider.refreshUser();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Fotos adicionales subidas exitosamente')),
+          const SnackBar(
+              content: Text('Fotos adicionales subidas exitosamente')),
         );
         setState(() {
           _additionalImages = [];
         });
       } else {
         setState(() {
-          errorMessage = result['message'] ?? 'Error al subir fotos adicionales';
+          errorMessage =
+              result['message'] ?? 'Error al subir fotos adicionales';
         });
       }
     } catch (e) {
@@ -221,7 +227,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (token == null) {
       setState(() {
         isUploading = false;
-        errorMessage = 'Token no encontrado. Por favor, inicia sesión nuevamente.';
+        errorMessage =
+            'Token no encontrado. Por favor, inicia sesión nuevamente.';
       });
       return;
     }
@@ -279,7 +286,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (token == null) {
       setState(() {
         isUploading = false;
-        errorMessage = 'Token no encontrado. Por favor, inicia sesión nuevamente.';
+        errorMessage =
+            'Token no encontrado. Por favor, inicia sesión nuevamente.';
       });
       return;
     }
@@ -317,9 +325,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             backgroundImage: _imageFile != null
                 ? FileImage(_imageFile!)
                 : (user.profilePicture != null
-                ? CachedNetworkImageProvider(user.profilePicture!.url)
-                : const AssetImage('assets/images/default_profile.png')
-            as ImageProvider),
+                    ? CachedNetworkImageProvider(user.profilePicture!.url)
+                    : const AssetImage('assets/images/default_profile.png')
+                        as ImageProvider),
           ),
           Positioned(
             bottom: 0,
@@ -334,7 +342,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 padding: const EdgeInsets.all(8),
                 child:
-                const Icon(Icons.camera_alt, color: Colors.black, size: 24),
+                    const Icon(Icons.camera_alt, color: Colors.black, size: 24),
               ),
             ),
           ),
@@ -369,7 +377,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 validatorMsg: 'Por favor ingresa tu apellido',
               ),
               const SizedBox(height: 16),
-
               _buildDropdownField(
                 label: 'Objetivo',
                 value: goal.isNotEmpty ? goal : null,
@@ -384,7 +391,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 validatorMsg: 'Por favor selecciona tu objetivo',
               ),
               const SizedBox(height: 16),
-
               _buildDropdownField(
                 label: 'Género',
                 value: gender.isNotEmpty ? gender : null,
@@ -405,7 +411,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 validatorMsg: 'Por favor selecciona tu género',
               ),
               const SizedBox(height: 16),
-
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -424,7 +429,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   'Otro'
                 ].map((option) {
                   return FilterChip(
-                    label: Text(option, style: const TextStyle(color: Colors.black)),
+                    label: Text(option,
+                        style: const TextStyle(color: Colors.black)),
                     selected: seeking.contains(option),
                     backgroundColor: Colors.white54,
                     selectedColor: Colors.white,
@@ -438,7 +444,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 }).toList(),
               ),
               const SizedBox(height: 16),
-
               _buildDropdownField(
                 label: 'Objetivo de Relación',
                 value: relationshipGoal.isNotEmpty ? relationshipGoal : null,
@@ -484,11 +489,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         errorStyle: const TextStyle(color: Colors.redAccent),
       ),
       validator: (value) =>
-      (value == null || value.isEmpty) ? validatorMsg : null,
+          (value == null || value.isEmpty) ? validatorMsg : null,
       onSaved: onSaved,
       onChanged: (value) {
         setState(() {
-          onSaved(value); // actualiza la variable local (firstName, lastName, etc.)
+          onSaved(
+              value);
         });
         _checkChanges();
       },
@@ -538,7 +544,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }).toList(),
       onChanged: enabled ? onChanged : null,
       validator: (value) =>
-      (value == null || value.isEmpty) ? validatorMsg : null,
+          (value == null || value.isEmpty) ? validatorMsg : null,
     );
   }
 
@@ -558,53 +564,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(height: 10),
         photos.isEmpty
             ? const Text(
-          'No tienes fotos.',
-          style: TextStyle(color: Colors.white70),
-        )
+                'No tienes fotos.',
+                style: TextStyle(color: Colors.white70),
+              )
             : GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: photos.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 5,
-            mainAxisSpacing: 5,
-          ),
-          itemBuilder: (context, index) {
-            final photo = photos[index];
-            return Stack(
-              children: [
-                CachedNetworkImage(
-                  imageUrl: photo.url,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  height: double.infinity,
-                  placeholder: (context, url) => Container(
-                    color: Colors.grey[300],
-                  ),
-                  errorWidget: (context, url, error) =>
-                  const Icon(Icons.error),
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: photos.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 5,
+                  mainAxisSpacing: 5,
                 ),
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: GestureDetector(
-                    onTap: () async {
-                      print(photo.id);
-                      await _deletePhoto(photo.id);
-                    },
-                    child: const CircleAvatar(
-                      radius: 12,
-                      backgroundColor: Colors.red,
-                      child:
-                      Icon(Icons.close, size: 14, color: Colors.white),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
+                itemBuilder: (context, index) {
+                  final photo = photos[index];
+                  return Stack(
+                    children: [
+                      CachedNetworkImage(
+                        imageUrl: photo.url,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                        placeholder: (context, url) => Container(
+                          color: Colors.grey[300],
+                        ),
+                        errorWidget: (context, url, error) =>
+                            const Icon(Icons.error),
+                      ),
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: GestureDetector(
+                          onTap: () async {
+                            print(photo.id);
+                            await _deletePhoto(photo.id);
+                          },
+                          child: const CircleAvatar(
+                            radius: 12,
+                            backgroundColor: Colors.red,
+                            child: Icon(Icons.close,
+                                size: 14, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
         const SizedBox(height: 10),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -637,7 +643,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: _additionalImages.length,
                     gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
+                        const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 3,
                       crossAxisSpacing: 5,
                       mainAxisSpacing: 5,
@@ -682,16 +688,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     child: isUploading
                         ? const CircularProgressIndicator(
-                      valueColor:
-                      AlwaysStoppedAnimation<Color>(Colors.black),
-                    )
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.black),
+                          )
                         : const Text(
-                      'Subir Fotos Adicionales',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 16,
-                      ),
-                    ),
+                            'Subir Fotos Adicionales',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 16,
+                            ),
+                          ),
                   ),
                 ],
               ),
@@ -721,17 +727,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Perfil'),
+          title: const Text(
+            'Perfil',
+            style: TextStyle(color: Colors.white),
+          ),
           backgroundColor: const Color.fromRGBO(64, 65, 65, 1),
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
         backgroundColor: const Color.fromRGBO(64, 65, 65, 1),
         floatingActionButton: hasChanges
             ? FloatingActionButton.extended(
-          onPressed: _saveProfile,
-          backgroundColor: Colors.white,
-          icon: const Icon(Icons.save, color: Colors.black),
-          label: const Text('Guardar Cambios', style: TextStyle(color: Colors.black)),
-        )
+                onPressed: _saveProfile,
+                backgroundColor: Colors.white,
+                icon: const Icon(Icons.save, color: Colors.black),
+                label: const Text('Guardar Cambios',
+                    style: TextStyle(color: Colors.black)),
+              )
             : null,
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
@@ -761,7 +772,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.redAccent,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12.0),
                   ),

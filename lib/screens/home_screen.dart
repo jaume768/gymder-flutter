@@ -46,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (result['success']) {
       setState(() {
         suggestedMatches =
-        List<User>.from(result['matches'].map((x) => User.fromJson(x)));
+            List<User>.from(result['matches'].map((x) => User.fromJson(x)));
         isLoading = false;
       });
     } else {
@@ -58,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   final List<Widget> _widgetOptions = <Widget>[
-    const MatchesChatsScreen(),  // Aquí en vez de ChatScreen directo
+    const MatchesChatsScreen(), // Aquí en vez de ChatScreen directo
     const SizedBox.shrink(),
     const ProfileScreen(),
   ];
@@ -85,25 +85,25 @@ class _HomeScreenState extends State<HomeScreen> {
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : errorMessage.isNotEmpty
-          ? Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text(
-            errorMessage,
-            style: const TextStyle(color: Colors.red, fontSize: 16),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      )
-          : _selectedIndex == 1
-          ? (suggestedMatches.isEmpty
-          ? const Center(
-          child: Text(
-            'No hay más matches disponibles.',
-            style: TextStyle(fontSize: 18, color: Colors.white),
-          ))
-          : TikTokLikeScreen(users: suggestedMatches))
-          : _widgetOptions.elementAt(_selectedIndex),
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      errorMessage,
+                      style: const TextStyle(color: Colors.red, fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                )
+              : _selectedIndex == 1
+                  ? (suggestedMatches.isEmpty
+                      ? const Center(
+                          child: Text(
+                          'No hay más matches disponibles.',
+                          style: TextStyle(fontSize: 18, color: Colors.white),
+                        ))
+                      : TikTokLikeScreen(users: suggestedMatches))
+                  : _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: Container(
         color: Colors.transparent,
         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -115,9 +115,8 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () => _onItemTapped(0),
               child: CircleAvatar(
                 radius: 24,
-                backgroundColor: _selectedIndex == 0
-                    ? Colors.white
-                    : Colors.grey.shade700,
+                backgroundColor:
+                    _selectedIndex == 0 ? Colors.white : Colors.grey.shade700,
                 child: Icon(
                   Icons.chat_bubble,
                   color: _selectedIndex == 0 ? Colors.black : Colors.white,
@@ -131,9 +130,8 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () => _onItemTapped(1),
               child: CircleAvatar(
                 radius: 34,
-                backgroundColor: _selectedIndex == 1
-                    ? Colors.white
-                    : Colors.grey.shade700,
+                backgroundColor:
+                    _selectedIndex == 1 ? Colors.white : Colors.grey.shade700,
                 child: Icon(
                   Icons.favorite,
                   color: _selectedIndex == 1 ? Colors.black : Colors.white,
@@ -147,9 +145,8 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () => _onItemTapped(2),
               child: CircleAvatar(
                 radius: 24,
-                backgroundColor: _selectedIndex == 2
-                    ? Colors.white
-                    : Colors.grey.shade700,
+                backgroundColor:
+                    _selectedIndex == 2 ? Colors.white : Colors.grey.shade700,
                 child: Icon(
                   Icons.person,
                   color: _selectedIndex == 2 ? Colors.black : Colors.white,

@@ -1,10 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:gymder/screens/premium_purchase_page.dart';
 import 'package:gymder/screens/single_user_view.dart';
 import 'package:provider/provider.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../services/user_service.dart';
 import 'chat_screen.dart';
+
+class PremiumScrollPhysics extends ScrollPhysics {
+  final bool allowUpwardScroll;
+
+  const PremiumScrollPhysics(
+      {ScrollPhysics? parent, required this.allowUpwardScroll})
+      : super(parent: parent);
+
+  @override
+  PremiumScrollPhysics applyTo(ScrollPhysics? ancestor) {
+    return PremiumScrollPhysics(
+      parent: buildParent(ancestor),
+      allowUpwardScroll: allowUpwardScroll,
+    );
+  }
+
+  @override
+  double applyBoundaryConditions(ScrollMetrics position, double value) {
+    if (!allowUpwardScroll) {
+      if (value < position.pixels) {
+        return value - position.pixels;
+      }
+    }
+    return super.applyBoundaryConditions(position, value);
+  }
+}
 
 class TikTokLikeScreen extends StatefulWidget {
   final List<User> users;
@@ -113,78 +141,148 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
     _isProcessing = false;
   }
 
+  void _showPremiumDialog(String title, String content) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Text(
+          title,
+          style:
+              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          content,
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancelar",
+                style: TextStyle(color: Colors.blueAccent)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const PremiumPurchasePage(),
+                ),
+              );
+            },
+            child: const Text("Comprar",
+                style: TextStyle(color: Colors.blueAccent)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentList = showRandom ? _randomUsers : _likedUsers;
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: currentList.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No hay usuarios para mostrar.',
-                      style: TextStyle(color: Colors.white),
+    return Consumer<AuthProvider>(
+      builder: (context, auth, child) {
+        return Scaffold(
+          backgroundColor: Colors.black,
+          body: Stack(
+            children: [
+              Positioned.fill(
+                child: currentList.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'No hay usuarios para mostrar.',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      )
+                    : NotificationListener<UserScrollNotification>(
+                        onNotification: (notification) {
+                          if (!auth.user!.isPremium &&
+                              notification.direction ==
+                                  ScrollDirection.forward) {
+                            _showPremiumDialog(
+                              "Función Premium",
+                              "Para hacer scroll hacia arriba y volver al usuario anterior necesitas ser premium. ¿Deseas comprarlo?",
+                            );
+                          }
+                          return false;
+                        },
+                        child: PageView.builder(
+                          controller: _verticalPageController,
+                          scrollDirection: Axis.vertical,
+                          physics: PremiumScrollPhysics(
+                              allowUpwardScroll: auth.user?.isPremium ?? false),
+                          itemCount: currentList.length,
+                          itemBuilder: (context, index) {
+                            final user = currentList[index];
+                            return SingleUserView(
+                              user: user,
+                              onDoubleTapLike:
+                                  showRandom ? () => _handleLike(index) : () {},
+                            );
+                          },
+                        ),
+                      ),
+              ),
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 10,
+                left: 0,
+                right: 0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            showRandom ? Colors.white : Colors.black45,
+                        foregroundColor:
+                            showRandom ? Colors.black : Colors.white,
+                        elevation: 0,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          showRandom = true;
+                        });
+                      },
+                      child: const Text('Random'),
                     ),
-                  )
-                : PageView.builder(
-                    controller: _verticalPageController,
-                    scrollDirection: Axis.vertical,
-                    itemCount: currentList.length,
-                    itemBuilder: (context, index) {
-                      final user = currentList[index];
-                      return SingleUserView(
-                        user: user,
-                        onDoubleTapLike:
-                            showRandom ? () => _handleLike(index) : () {},
-                      );
-                    },
-                  ),
-          ),
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 10,
-            left: 0,
-            right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: showRandom ? Colors.white : Colors.black45,
-                    foregroundColor: showRandom ? Colors.black : Colors.white,
-                    elevation: 0,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      showRandom = true;
-                    });
-                  },
-                  child: const Text('Random'),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            !showRandom ? Colors.white : Colors.black45,
+                        foregroundColor:
+                            !showRandom ? Colors.black : Colors.white,
+                        elevation: 0,
+                      ),
+                      onPressed: () {
+                        if (!(auth.user?.isPremium ?? false)) {
+                          _showPremiumDialog(
+                            "Función Premium",
+                            "Para ver a las personas que le gustas necesitas ser premium. ¿Deseas comprarlo?",
+                          );
+                        } else {
+                          setState(() {
+                            showRandom = false;
+                          });
+                          if (_likedUsers.isEmpty) {
+                            _fetchLikedUsers();
+                          }
+                        }
+                      },
+                      child: const Text('Le gustas'),
+                    ),
+                  ],
                 ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        !showRandom ? Colors.white : Colors.black45,
-                    foregroundColor: !showRandom ? Colors.black : Colors.white,
-                    elevation: 0,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      showRandom = false;
-                    });
-                    if (_likedUsers.isEmpty) {
-                      _fetchLikedUsers();
-                    }
-                  },
-                  child: const Text('Le gustas'),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

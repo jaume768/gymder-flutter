@@ -14,6 +14,32 @@ class UserService {
 
   UserService({required this.token});
 
+  Future<Map<String, dynamic>> getUserLikes() async {
+    final url = Uri.parse('$baseUrl/users/likes');
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return {
+        'success': true,
+        'usersWhoLiked': data['usersWhoLiked'],
+      };
+    } else {
+      final data = jsonDecode(response.body);
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Error al obtener likes'
+      };
+    }
+  }
+
+
   // En user_service.dart
   Future<Map<String, dynamic>> getMatches() async {
     final url = Uri.parse('$baseUrl/matches');

@@ -56,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       TextFormField(
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
-                          labelText: 'Correo Electrónico',
+                          labelText: 'Correo o Nombre de usuario',
                           labelStyle: const TextStyle(color: Colors.white),
                           enabledBorder: OutlineInputBorder(
                             borderSide: const BorderSide(color: Colors.white54),
@@ -68,15 +68,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           errorStyle: const TextStyle(color: Colors.redAccent),
                         ),
-                        keyboardType: TextInputType.emailAddress,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Por favor ingresa tu correo';
-                          }
-                          // Validar formato de correo
-                          final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
-                          if (!emailRegex.hasMatch(value)) {
-                            return 'Ingresa un correo válido';
+                            return 'Por favor ingresa tu correo o nombre de usuario';
                           }
                           return null;
                         },

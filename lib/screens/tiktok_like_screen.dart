@@ -1,4 +1,3 @@
-// lib/screens/tiktok_like_screen.dart
 import 'package:flutter/material.dart';
 import 'package:gymder/screens/single_user_view.dart';
 import 'package:provider/provider.dart';
@@ -9,7 +8,6 @@ import 'chat_screen.dart';
 
 class TikTokLikeScreen extends StatefulWidget {
   final List<User> users;
-
   const TikTokLikeScreen({Key? key, required this.users}) : super(key: key);
 
   @override
@@ -19,13 +17,15 @@ class TikTokLikeScreen extends StatefulWidget {
 class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
   late PageController _verticalPageController;
   bool _isProcessing = false;
-  late List<User> _users; // Lista local de usuarios
+  bool showRandom = true;
+  late List<User> _randomUsers;
+  List<User> _likedUsers = [];
 
   @override
   void initState() {
     super.initState();
     _verticalPageController = PageController();
-    _users = List.from(widget.users); // Inicializa la lista local con los usuarios recibidos
+    _randomUsers = List.from(widget.users);
   }
 
   @override
@@ -34,11 +34,31 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
     super.dispose();
   }
 
+  Future<void> _fetchLikedUsers() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final token = await authProvider.getToken();
+    if (token == null) return;
+
+    final userService = UserService(token: token);
+    final result = await userService.getUserLikes();
+
+    if (result['success'] == true) {
+      setState(() {
+        _likedUsers = List<User>.from(
+            result['usersWhoLiked'].map((x) => User.fromJson(x)));
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message'] ?? 'Error al obtener likes')),
+      );
+    }
+  }
+
   Future<void> _handleLike(int userIndex) async {
     if (_isProcessing) return;
     _isProcessing = true;
 
-    final user = _users[userIndex];
+    final user = _randomUsers[userIndex];
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final token = await authProvider.getToken();
 
@@ -74,18 +94,15 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
       );
     }
 
-    // Remover el usuario "likeado" de la lista local
     setState(() {
-      _users.removeAt(userIndex);
+      _randomUsers.removeAt(userIndex);
     });
 
-    // Desplazarse al siguiente usuario si existe
-    if (_users.isEmpty) {
+    if (_randomUsers.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No hay más usuarios')),
       );
-    } else if (userIndex < _users.length) {
-      // Desplazar a la página del siguiente usuario
+    } else if (userIndex < _randomUsers.length) {
       _verticalPageController.animateToPage(
         userIndex,
         duration: const Duration(milliseconds: 400),
@@ -98,23 +115,76 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_users.isEmpty) {
-      return const Center(
-        child: Text('No hay usuarios para mostrar.'),
-      );
-    }
+    final currentList = showRandom ? _randomUsers : _likedUsers;
 
-    return PageView.builder(
-      controller: _verticalPageController,
-      scrollDirection: Axis.vertical,
-      itemCount: _users.length,
-      itemBuilder: (context, index) {
-        final user = _users[index];
-        return SingleUserView(
-          user: user,
-          onDoubleTapLike: () => _handleLike(index),
-        );
-      },
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: currentList.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No hay usuarios para mostrar.',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  )
+                : PageView.builder(
+                    controller: _verticalPageController,
+                    scrollDirection: Axis.vertical,
+                    itemCount: currentList.length,
+                    itemBuilder: (context, index) {
+                      final user = currentList[index];
+                      return SingleUserView(
+                        user: user,
+                        onDoubleTapLike:
+                            showRandom ? () => _handleLike(index) : () {},
+                      );
+                    },
+                  ),
+          ),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 10,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: showRandom ? Colors.white : Colors.black45,
+                    foregroundColor: showRandom ? Colors.black : Colors.white,
+                    elevation: 0,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      showRandom = true;
+                    });
+                  },
+                  child: const Text('Random'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        !showRandom ? Colors.white : Colors.black45,
+                    foregroundColor: !showRandom ? Colors.black : Colors.white,
+                    elevation: 0,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      showRandom = false;
+                    });
+                    if (_likedUsers.isEmpty) {
+                      _fetchLikedUsers();
+                    }
+                  },
+                  child: const Text('Le gustas'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

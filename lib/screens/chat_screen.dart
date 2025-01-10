@@ -88,7 +88,8 @@ class _ChatScreenState extends State<ChatScreen> {
       final token = await authProvider.getToken();
       if (token == null) return;
 
-      final url = Uri.parse('http://10.0.2.2:5000/api/users/profile/${widget.matchedUserId}');
+      final url = Uri.parse(
+          'http://10.0.2.2:5000/api/users/profile/${widget.matchedUserId}');
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -122,10 +123,8 @@ class _ChatScreenState extends State<ChatScreen> {
         return;
       }
 
-      final url = Uri.parse(
-          'http://10.0.2.2:5000/api/messages/conversation'
-              '?user1=${widget.currentUserId}&user2=${widget.matchedUserId}'
-      );
+      final url = Uri.parse('http://10.0.2.2:5000/api/messages/conversation'
+          '?user1=${widget.currentUserId}&user2=${widget.matchedUserId}');
 
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
@@ -187,7 +186,8 @@ class _ChatScreenState extends State<ChatScreen> {
       var request = http.MultipartRequest('POST', url);
       request.headers['Authorization'] = 'Bearer $token';
 
-      final mimeType = lookupMimeType(imageFile.path) ?? 'application/octet-stream';
+      final mimeType =
+          lookupMimeType(imageFile.path) ?? 'application/octet-stream';
       final mimeTypeData = mimeType.split('/');
       if (mimeTypeData.length != 2) {
         throw Exception('Tipo de archivo desconocido para la imagen');
@@ -227,7 +227,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _pickImageFromGallery() async {
-    final pickedFile = await _imagePicker.pickImage(source: ImageSource.gallery);
+    final pickedFile =
+        await _imagePicker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       final file = File(pickedFile.path);
       await _sendImageMessage(file);
@@ -246,7 +247,8 @@ class _ChatScreenState extends State<ChatScreen> {
       final token = await authProvider.getToken();
       if (token == null) return;
 
-      final url = Uri.parse('http://10.0.2.2:5000/api/messages/$messageId/hide');
+      final url =
+          Uri.parse('http://10.0.2.2:5000/api/messages/$messageId/hide');
       final response = await http.delete(
         url,
         headers: {
@@ -281,34 +283,35 @@ class _ChatScreenState extends State<ChatScreen> {
         title: isLoadingUser
             ? const Text('', style: TextStyle(color: Colors.white))
             : GestureDetector(
-          onTap: () {
-            if (matchedUser != null) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => UserProfileScreen(userId: matchedUser!.id),
+                onTap: () {
+                  if (matchedUser != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            UserProfileScreen(userId: matchedUser!.id),
+                      ),
+                    );
+                  }
+                },
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundImage: matchedUser?.profilePicture != null
+                          ? NetworkImage(matchedUser!.profilePicture!.url)
+                          : null,
+                      child: matchedUser?.profilePicture == null
+                          ? const Icon(Icons.person, color: Colors.white)
+                          : null,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      matchedUser?.username ?? 'Chat',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ],
                 ),
-              );
-            }
-          },
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundImage: matchedUser?.profilePicture != null
-                    ? NetworkImage(matchedUser!.profilePicture!.url)
-                    : null,
-                child: matchedUser?.profilePicture == null
-                    ? const Icon(Icons.person, color: Colors.white)
-                    : null,
               ),
-              const SizedBox(width: 8),
-              Text(
-                matchedUser?.username ?? 'Chat',
-                style: const TextStyle(color: Colors.white),
-              ),
-            ],
-          ),
-        ),
       ),
       backgroundColor: Colors.grey[900],
       body: Column(
@@ -349,9 +352,11 @@ class _ChatScreenState extends State<ChatScreen> {
                     }
                   },
                   child: Align(
-                    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                    alignment:
+                        isMe ? Alignment.centerRight : Alignment.centerLeft,
                     child: Container(
-                      margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                      margin: const EdgeInsets.symmetric(
+                          vertical: 5, horizontal: 10),
                       padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
                         color: isMe ? Colors.blue : Colors.grey[800],
@@ -359,17 +364,18 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                       child: type == 'image'
                           ? (msg['imageUrl'] != null
-                          ? Image.network(
-                        msg['imageUrl'],
-                        height: 200,
-                        width: 200,
-                        fit: BoxFit.cover,
-                      )
-                          : const Text('Imagen no disponible'))
+                              ? Image.network(
+                                  msg['imageUrl'],
+                                  height: 200,
+                                  width: 200,
+                                  fit: BoxFit.cover,
+                                )
+                              : const Text('Imagen no disponible'))
                           : Text(
-                        msg['message'] ?? '',
-                        style: const TextStyle(color: Colors.white, fontSize: 19),
-                      ),
+                              msg['message'] ?? '',
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 19),
+                            ),
                     ),
                   ),
                 );
@@ -399,7 +405,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   onPressed: _pickImageFromGallery,
                 ),
                 IconButton(
-                  icon: const Icon(Icons.emoji_emotions_outlined, color: Colors.white),
+                  icon: const Icon(Icons.emoji_emotions_outlined,
+                      color: Colors.white),
                   onPressed: _toggleEmojiPicker,
                 ),
                 Expanded(

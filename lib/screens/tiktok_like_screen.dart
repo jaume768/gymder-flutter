@@ -8,27 +8,37 @@ import '../providers/auth_provider.dart';
 import '../services/user_service.dart';
 import 'chat_screen.dart';
 
-class PremiumScrollPhysics extends ScrollPhysics {
-  final bool allowUpwardScroll;
+class LimitedScrollPhysics extends ScrollPhysics {
+  final bool premium;
+  final int scrollCount;
+  final int maxDownwardScroll;
 
-  const PremiumScrollPhysics(
-      {ScrollPhysics? parent, required this.allowUpwardScroll})
-      : super(parent: parent);
+  const LimitedScrollPhysics({
+    ScrollPhysics? parent,
+    required this.premium,
+    required this.scrollCount,
+    required this.maxDownwardScroll,
+  }) : super(parent: parent);
 
   @override
-  PremiumScrollPhysics applyTo(ScrollPhysics? ancestor) {
-    return PremiumScrollPhysics(
+  LimitedScrollPhysics applyTo(ScrollPhysics? ancestor) {
+    return LimitedScrollPhysics(
       parent: buildParent(ancestor),
-      allowUpwardScroll: allowUpwardScroll,
+      premium: premium,
+      scrollCount: scrollCount,
+      maxDownwardScroll: maxDownwardScroll,
     );
   }
 
   @override
   double applyBoundaryConditions(ScrollMetrics position, double value) {
-    if (!allowUpwardScroll) {
-      if (value < position.pixels) {
-        return value - position.pixels;
-      }
+    if (!premium && value < position.pixels) {
+      return value - position.pixels;
+    }
+    if (!premium &&
+        scrollCount >= maxDownwardScroll &&
+        value > position.pixels) {
+      return value - position.pixels;
     }
     return super.applyBoundaryConditions(position, value);
   }
@@ -49,11 +59,20 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
   late List<User> _randomUsers;
   List<User> _likedUsers = [];
 
+  int scrollCount = 0;
+  int likeCount = 0;
+  int previousPageIndex = 0;
+  DateTime? scrollLimitReachedTime;
+  DateTime? likeLimitReachedTime;
+  final Duration limitDuration = const Duration(hours: 10);
+  final Duration likeLimitDuration = const Duration(hours: 10);
+
   @override
   void initState() {
     super.initState();
     _verticalPageController = PageController();
     _randomUsers = List.from(widget.users);
+    previousPageIndex = 0;
   }
 
   @override
@@ -139,6 +158,61 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
     }
 
     _isProcessing = false;
+
+    final authProviderForLike =
+    Provider.of<AuthProvider>(context, listen: false);
+    if (!(authProviderForLike.user?.isPremium ?? false)) {
+      int localMaxScroll =
+      (authProviderForLike.user?.gender == 'Masculino') ? 25 : 45;
+      int localMaxLike =
+      (authProviderForLike.user?.gender == 'Masculino') ? 10 : 20;
+
+      setState(() {
+        scrollCount++;
+        likeCount++;
+      });
+
+      _checkScrollLimit(localMaxScroll);
+      _checkLikeLimit(localMaxLike);
+    }
+  }
+
+  void _checkScrollLimit(int maxScrollLimit) {
+    if (scrollCount >= maxScrollLimit) {
+      scrollLimitReachedTime ??= DateTime.now();
+      Duration timePassed = DateTime.now().difference(scrollLimitReachedTime!);
+      if (timePassed < limitDuration) {
+        Duration remaining = limitDuration - timePassed;
+        _showPremiumDialog(
+          "Límite de scroll alcanzado",
+          "Has llegado al número máximo de scrolls. Espera ${remaining.inHours} horas y ${remaining.inMinutes % 60} minutos o mira un video para expandirlo.",
+        );
+      } else {
+        setState(() {
+          scrollCount = 0;
+          scrollLimitReachedTime = null;
+        });
+      }
+    }
+  }
+
+  void _checkLikeLimit(int maxLikeLimit) {
+    if (likeCount >= maxLikeLimit) {
+      likeLimitReachedTime ??= DateTime.now();
+      Duration timePassed = DateTime.now().difference(likeLimitReachedTime!);
+      if (timePassed < likeLimitDuration) {
+        Duration remaining = likeLimitDuration - timePassed;
+        _showPremiumDialog(
+          "Límite de likes alcanzado",
+          "Has llegado al número máximo de likes. Espera ${remaining.inHours} horas y ${remaining.inMinutes % 60} minutos o mira un video para expandirlo.",
+        );
+      } else {
+        setState(() {
+          likeCount = 0;
+          likeLimitReachedTime = null;
+        });
+      }
+    }
   }
 
   void _showPremiumDialog(String title, String content) {
@@ -188,6 +262,8 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
 
     return Consumer<AuthProvider>(
       builder: (context, auth, child) {
+        final int maxScrollLimit = (auth.user?.gender == 'Masculino') ? 25 : 45;
+
         return Scaffold(
           backgroundColor: Colors.black,
           body: Stack(
@@ -210,14 +286,32 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
                               "Para hacer scroll hacia arriba y volver al usuario anterior necesitas ser premium. ¿Deseas comprarlo?",
                             );
                           }
+                          if (!auth.user!.isPremium &&
+                              notification.direction ==
+                                  ScrollDirection.reverse) {
+                            _checkScrollLimit(maxScrollLimit);
+                          }
                           return false;
                         },
                         child: PageView.builder(
                           controller: _verticalPageController,
                           scrollDirection: Axis.vertical,
-                          physics: PremiumScrollPhysics(
-                              allowUpwardScroll: auth.user?.isPremium ?? false),
+                          physics: LimitedScrollPhysics(
+                            premium: auth.user?.isPremium ?? false,
+                            scrollCount: scrollCount,
+                            maxDownwardScroll: maxScrollLimit,
+                          ),
                           itemCount: currentList.length,
+                          onPageChanged: (pageIndex) {
+                            if (!auth.user!.isPremium &&
+                                pageIndex > previousPageIndex) {
+                              setState(() {
+                                scrollCount++;
+                              });
+                              _checkScrollLimit(maxScrollLimit);
+                            }
+                            previousPageIndex = pageIndex;
+                          },
                           itemBuilder: (context, index) {
                             final user = currentList[index];
                             return SingleUserView(

@@ -97,7 +97,8 @@ class AuthProvider with ChangeNotifier {
             notifyListeners();
             return {
               'success': false,
-              'message': 'Error: token inválido o usuario no encontrado. Por favor, inicia sesión.'
+              'message':
+                  'Error: token inválido o usuario no encontrado. Por favor, inicia sesión.'
             };
           }
         }
@@ -116,6 +117,34 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> loginWithGoogle(String googleIdToken) async {
+    try {
+      final url = Uri.parse('http://10.0.2.2:5000/api/users/auth/google');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'token': googleIdToken}),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        // Guardamos token en SecureStorage
+        await _authService.storage.write(key: 'token', value: data['token']);
+
+        // Actualizamos user en Provider
+        _user = User.fromJson(data['user']);
+        _isAuthenticated = true;
+        notifyListeners();
+
+        return {'success': true, 'message': data['message']};
+      } else {
+        return {'success': false, 'message': data['message']};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Error de conexión: $e'};
+    }
+  }
 
   Future<void> logoutUser() async {
     await _authService.logout();

@@ -8,7 +8,9 @@ import 'home_screen.dart';
 import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({Key? key}) : super(key: key);
+  final bool fromGoogle;
+
+  const RegisterScreen({Key? key, this.fromGoogle = false}) : super(key: key);
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -23,6 +25,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String email = '';
   String password = '';
   String username = '';
+
   /// -- NUEVO: variables para nombre y apellido
   String firstName = '';
   String lastName = '';
@@ -98,11 +101,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
         break;
       case 1:
-      /// -- AÑADIMOS VALIDACIONES para firstName y lastName
+
+        /// -- AÑADIMOS VALIDACIONES para firstName y lastName
         if (username.isEmpty || firstName.isEmpty || lastName.isEmpty) {
           setState(() {
-            errorMessage =
-            'Ingresa tu username, nombre y apellido';
+            errorMessage = 'Ingresa tu username, nombre y apellido';
           });
           return false;
         }
@@ -183,8 +186,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       email: email,
       password: password,
       username: username,
-      firstName: firstName,   // <-- se envía
-      lastName: lastName,     // <-- se envía
+      firstName: firstName, // <-- se envía
+      lastName: lastName, // <-- se envía
       gender: gender,
       seeking: seeking,
       relationshipGoal: relationshipGoal,
@@ -208,8 +211,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         } else {
           setState(() {
             isLoading = false;
-            errorMessage =
-                uploadResult['message'] ?? 'Error al subir fotos';
+            errorMessage = uploadResult['message'] ?? 'Error al subir fotos';
           });
         }
       } else {
@@ -299,12 +301,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               child: isLoading
                   ? const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-              )
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                    )
                   : const Text(
-                'Finalizar',
-                style: TextStyle(color: Colors.black),
-              ),
+                      'Finalizar',
+                      style: TextStyle(color: Colors.black),
+                    ),
             ),
         ],
       ),
@@ -316,6 +318,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // ========================
 
   Widget _buildStep0() {
+    if (widget.fromGoogle) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _nextStep();
+      });
+      return const Center(
+        child: Text(
+          'Redirigiendo...',
+          style: TextStyle(color: Colors.white),
+        ),
+      );
+    }
     return _buildStepTemplate(
       title: 'Bienvenido',
       subtitle: 'Ingresa tu correo electrónico y contraseña',
@@ -341,7 +354,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Text(errorMessage,
                   style: const TextStyle(color: Colors.redAccent)),
             ),
-          const SizedBox(height: 20),  // Espacio adicional
+          const SizedBox(height: 20), // Espacio adicional
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -370,7 +383,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
-
 
   /// STEP 1: Pedir Username, FirstName, LastName
   Widget _buildStep1() {
@@ -512,7 +524,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             children: seekingOptions.map((option) {
               final isSelected = seeking.contains(option);
               return FilterChip(
-                label: Text(option, style: const TextStyle(color: Colors.black)),
+                label:
+                    Text(option, style: const TextStyle(color: Colors.black)),
                 selected: isSelected,
                 backgroundColor: Colors.white54,
                 selectedColor: Colors.white,

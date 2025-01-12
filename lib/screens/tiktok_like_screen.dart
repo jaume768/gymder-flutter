@@ -163,9 +163,9 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
     Provider.of<AuthProvider>(context, listen: false);
     if (!(authProviderForLike.user?.isPremium ?? false)) {
       int localMaxScroll =
-      (authProviderForLike.user?.gender == 'Masculino') ? 25 : 45;
+      (authProviderForLike.user?.gender == 'Masculino') ? 40 : 75;
       int localMaxLike =
-      (authProviderForLike.user?.gender == 'Masculino') ? 10 : 20;
+      (authProviderForLike.user?.gender == 'Masculino') ? 20 : 40;
 
       setState(() {
         scrollCount++;
@@ -328,7 +328,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
                 left: 0,
                 right: 0,
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(

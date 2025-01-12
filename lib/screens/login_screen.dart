@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,6 +18,94 @@ class _LoginScreenState extends State<LoginScreen> {
   String password = '';
   bool isLoading = false;
   String errorMessage = '';
+
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: [
+      'email',
+    ],
+    serverClientId:
+        '559547590565-fglo48susn9evd2607gklgti1s8eo1vb.apps.googleusercontent.com',
+  );
+
+  Future<void> _handleGoogleSignIn() async {
+    // 1) Arrancas la animación de carga
+    if (!mounted) return;
+    setState(() {
+      isLoading = true;
+      errorMessage = '';
+    });
+
+    try {
+      // 2) signIn
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        // El usuario canceló
+        if (!mounted) return;
+        setState(() => isLoading = false);
+        return;
+      }
+
+      // 3) obtener idToken
+      final googleAuth = await googleUser.authentication;
+      final idToken = googleAuth.idToken;
+      if (idToken == null) {
+        if (!mounted) return;
+        setState(() {
+          isLoading = false;
+          errorMessage = 'No se recibió idToken.';
+        });
+        return;
+      }
+
+      // 4) login con tu backend
+      final result = await Provider.of<AuthProvider>(context, listen: false)
+          .loginWithGoogle(idToken);
+
+      if (!mounted) return;
+      if (!result['success']) {
+        // Si falló, paramos
+        setState(() {
+          isLoading = false;
+          errorMessage =
+              result['message'] ?? 'Error al iniciar sesión con Google';
+        });
+        return;
+      }
+
+      // 5) todo ok, refrescas user
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.refreshUser();
+
+      // 6) si ya no está montado, retornas
+      if (!mounted) return;
+
+      // 7) Navegamos SIN volver a setState(false)
+      final user = authProvider.user;
+      if (user?.gender == 'Pendiente' ||
+          user?.relationshipGoal == 'Pendiente') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (_) => const RegisterScreen(fromGoogle: true)),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      }
+
+      // OJO: aquí no hacemos setState(false) después de la navegación
+      // porque la pantalla de Login ya no existe en el árbol
+    } catch (e) {
+      // 8) error atrapado
+      if (!mounted) return;
+      setState(() {
+        isLoading = false;
+        errorMessage = 'Error al iniciar sesión con Google: $e';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +212,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                       errorMessage = '';
                                     });
                                     final result = await authProvider.login(
-                                        email: email, password: password);
+                                      email: email,
+                                      password: password,
+                                    );
                                     setState(() {
                                       isLoading = false;
                                     });
@@ -131,7 +222,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                       Navigator.pushReplacement(
                                         context,
                                         MaterialPageRoute(
-                                            builder: (_) => const HomeScreen()),
+                                          builder: (_) => const HomeScreen(),
+                                        ),
                                       );
                                     } else {
                                       setState(() {
@@ -163,12 +255,46 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
+                      // Botón Iniciar Sesión con Google
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton.icon(
+                          icon: Image.asset(
+                            'assets/images/google_logo.png', // O un icon de Google
+                            height: 24,
+                            width: 24,
+                          ),
+                          label: const Text(
+                            'Inicia Sesión con Google',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          onPressed: isLoading
+                              ? null
+                              : () async {
+                                  await _handleGoogleSignIn();
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white, // Botón blanco
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.0),
+                            ),
+                          ),
+                        ),
+                      ),
                       // Mensaje de Error
                       if (errorMessage.isNotEmpty)
-                        Text(
-                          errorMessage,
-                          style: const TextStyle(color: Colors.redAccent),
-                          textAlign: TextAlign.center,
+                        Padding(
+                          padding: const EdgeInsets.only(top: 16.0),
+                          child: Text(
+                            errorMessage,
+                            style: const TextStyle(color: Colors.redAccent),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       const SizedBox(height: 20),
                       // Opción para Registrarse
@@ -184,7 +310,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (_) => const RegisterScreen()),
+                                  builder: (_) => const RegisterScreen(),
+                                ),
                               );
                             },
                             child: const Text(

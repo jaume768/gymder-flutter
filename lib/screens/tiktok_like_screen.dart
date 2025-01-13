@@ -5,6 +5,7 @@ import 'package:gymder/screens/single_user_view.dart';
 import 'package:provider/provider.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
+import '../services/match_service.dart';
 import '../services/user_service.dart';
 import 'chat_screen.dart';
 
@@ -160,12 +161,12 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
     _isProcessing = false;
 
     final authProviderForLike =
-    Provider.of<AuthProvider>(context, listen: false);
+        Provider.of<AuthProvider>(context, listen: false);
     if (!(authProviderForLike.user?.isPremium ?? false)) {
       int localMaxScroll =
-      (authProviderForLike.user?.gender == 'Masculino') ? 40 : 75;
+          (authProviderForLike.user?.gender == 'Masculino') ? 40 : 75;
       int localMaxLike =
-      (authProviderForLike.user?.gender == 'Masculino') ? 20 : 40;
+          (authProviderForLike.user?.gender == 'Masculino') ? 20 : 40;
 
       setState(() {
         scrollCount++;
@@ -325,50 +326,101 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
               ),
               Positioned(
                 top: MediaQuery.of(context).padding.top + 10,
-                left: 0,
+                left: 60,
                 right: 0,
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            showRandom ? Colors.white : Colors.black45,
-                        foregroundColor:
-                            showRandom ? Colors.black : Colors.white,
-                        elevation: 0,
+                    Expanded(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  showRandom ? Colors.white : Colors.black45,
+                              foregroundColor:
+                                  showRandom ? Colors.black : Colors.white,
+                              elevation: 0,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                showRandom = true;
+                              });
+                            },
+                            child: const Text('Random'),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            "|",
+                            style: TextStyle(color: Colors.white, fontSize: 20),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  !showRandom ? Colors.white : Colors.black45,
+                              foregroundColor:
+                                  !showRandom ? Colors.black : Colors.white,
+                              elevation: 0,
+                            ),
+                            onPressed: () {
+                              if (!(auth.user?.isPremium ?? false)) {
+                                _showPremiumDialog(
+                                  "Función Premium",
+                                  "Para ver a las personas que le gustas necesitas ser premium. ¿Deseas comprarlo?",
+                                );
+                              } else {
+                                setState(() {
+                                  showRandom = false;
+                                });
+                                if (_likedUsers.isEmpty) {
+                                  _fetchLikedUsers();
+                                }
+                              }
+                            },
+                            child: const Text('Le gustas'),
+                          ),
+                        ],
                       ),
-                      onPressed: () {
-                        setState(() {
-                          showRandom = true;
-                        });
-                      },
-                      child: const Text('Random'),
                     ),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            !showRandom ? Colors.white : Colors.black45,
-                        foregroundColor:
-                            !showRandom ? Colors.black : Colors.white,
-                        elevation: 0,
-                      ),
-                      onPressed: () {
-                        if (!(auth.user?.isPremium ?? false)) {
-                          _showPremiumDialog(
-                            "Función Premium",
-                            "Para ver a las personas que le gustas necesitas ser premium. ¿Deseas comprarlo?",
-                          );
-                        } else {
+                    IconButton(
+                      onPressed: () async {
+                        final result = await showModalBottomSheet<List<User>>(
+                          context: context,
+                          backgroundColor: Colors.transparent,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(20),
+                            ),
+                          ),
+                          builder: (context) {
+                            return Container(
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Color(0xFF0D0D0D), // Negro intenso
+                                    Color(0xFF1C1C1C), // Gris oscuro
+                                  ],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                ),
+                                borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(20),
+                                ),
+                              ),
+                              child: const FilterModalContent(),
+                            );
+                          },
+                        );
+
+                        if (result != null && result is List<User>) {
                           setState(() {
-                            showRandom = false;
+                            _randomUsers = result;
+                            showRandom = true;
                           });
-                          if (_likedUsers.isEmpty) {
-                            _fetchLikedUsers();
-                          }
                         }
                       },
-                      child: const Text('Le gustas'),
+                      icon: const Icon(Icons.settings, color: Colors.white),
                     ),
                   ],
                 ),
@@ -377,6 +429,234 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+class FilterModalContent extends StatefulWidget {
+  const FilterModalContent({Key? key}) : super(key: key);
+
+  @override
+  _FilterModalContentState createState() => _FilterModalContentState();
+}
+
+class _FilterModalContentState extends State<FilterModalContent> {
+  RangeValues ageRange = const RangeValues(18, 50);
+  RangeValues weightRange = const RangeValues(50, 100);
+  RangeValues heightRange = const RangeValues(150, 200);
+  String selectedGymStage = 'Mantenimiento';
+  String selectedRelationshipType = 'Amistad';
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              "Filtrar",
+              style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white),
+            ),
+            const SizedBox(height: 40),
+            _buildRangeSlider(
+              label: "Rango de edad",
+              values: ageRange,
+              min: 18,
+              max: 100,
+              divisions: 82,
+              onChanged: (values) {
+                setState(() {
+                  ageRange = values;
+                });
+              },
+            ),
+            _buildRangeSlider(
+              label: "Rango de peso (kg)",
+              values: weightRange,
+              min: 40,
+              max: 150,
+              divisions: 120,
+              onChanged: (values) {
+                setState(() {
+                  weightRange = values;
+                });
+              },
+            ),
+            _buildRangeSlider(
+              label: "Rango de altura (cm)",
+              values: heightRange,
+              min: 100,
+              max: 250,
+              divisions: 150,
+              onChanged: (values) {
+                setState(() {
+                  heightRange = values;
+                });
+              },
+            ),
+            const SizedBox(height: 10),
+            _buildDropdown(
+              label: "Etapa en el gym",
+              value: selectedGymStage,
+              items: const ['Mantenimiento', 'Volumen', 'Definición'],
+              onChanged: (String? newValue) {
+                setState(() {
+                  selectedGymStage = newValue!;
+                });
+              },
+            ),
+            const SizedBox(height: 10),
+            _buildDropdown(
+              label: "Tipo de relación",
+              value: selectedRelationshipType,
+              items: const [
+                'Amistad',
+                'Relación',
+                'Casual',
+                'Otro',
+                'Pendiente'
+              ],
+              onChanged: (String? newValue) {
+                setState(() {
+                  selectedRelationshipType = newValue!;
+                });
+              },
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30)),
+              ),
+              onPressed: () async {
+                Map<String, String> filters = {
+                  'ageMin': ageRange.start.round().toString(),
+                  'ageMax': ageRange.end.round().toString(),
+                  'weightMin': weightRange.start.round().toString(),
+                  'weightMax': weightRange.end.round().toString(),
+                  'heightMin': heightRange.start.round().toString(),
+                  'heightMax': heightRange.end.round().toString(),
+                  'gymStage': selectedGymStage,
+                  'relationshipGoal': selectedRelationshipType,
+                };
+
+                final authProvider =
+                    Provider.of<AuthProvider>(context, listen: false);
+                final token = await authProvider.getToken();
+
+                if (token != null) {
+                  final matchService = MatchService(token: token);
+                  final result = await matchService
+                      .getSuggestedMatchesWithFilters(filters);
+
+                  if (result['success'] == true) {
+                    List<dynamic> matchesJson = result['matches'];
+                    List<User> matches =
+                        matchesJson.map((json) => User.fromJson(json)).toList();
+
+                    Navigator.of(context).pop(matches);
+                    return;
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content: Text(
+                              result['message'] ?? 'Error al obtener matches')),
+                    );
+                  }
+                }
+
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                "Aplicar",
+                style: TextStyle(color: Colors.black),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRangeSlider({
+    required String label,
+    required RangeValues values,
+    required double min,
+    required double max,
+    required int divisions,
+    required ValueChanged<RangeValues> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: Colors.white)),
+        RangeSlider(
+          values: values,
+          min: min,
+          max: max,
+          divisions: divisions,
+          labels:
+              RangeLabels("${values.start.round()}", "${values.end.round()}"),
+          activeColor: Colors.cyanAccent,
+          inactiveColor: Colors.grey,
+          onChanged: onChanged,
+        ),
+        const SizedBox(height: 10),
+      ],
+    );
+  }
+
+  Widget _buildDropdown({
+    required String label,
+    required String value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: Colors.white)),
+        const SizedBox(height: 5),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: Colors.white24,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: DropdownButton<String>(
+            value: value,
+            dropdownColor: Colors.grey[850],
+            style: const TextStyle(color: Colors.white),
+            isExpanded: true,
+            underline: const SizedBox(),
+            items: items
+                .map<DropdownMenuItem<String>>((String val) => DropdownMenuItem(
+                      value: val,
+                      child: Text(val),
+                    ))
+                .toList(),
+            onChanged: onChanged,
+          ),
+        ),
+        const SizedBox(height: 10),
+      ],
     );
   }
 }

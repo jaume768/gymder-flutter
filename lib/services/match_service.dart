@@ -10,10 +10,12 @@ class MatchService {
 
   MatchService({required this.token});
 
-  Future<Map<String, dynamic>> getSuggestedMatches() async {
-    final url = Uri.parse('$baseUrl/suggested');
+  Future<Map<String, dynamic>> getSuggestedMatchesWithFilters(
+      Map<String, String> filters) async {
+    final uri =
+        Uri.parse('$baseUrl/suggested').replace(queryParameters: filters);
     final response = await http.get(
-      url,
+      uri,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -22,11 +24,13 @@ class MatchService {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      List<User> matches = List<User>.from(data['matches'].map((x) => User.fromJson(x)));
       return {'success': true, 'matches': data['matches']};
     } else {
       final data = jsonDecode(response.body);
-      return {'success': false, 'message': data['message'] ?? 'Error al obtener matches'};
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Error al obtener matches'
+      };
     }
   }
 }

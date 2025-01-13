@@ -137,7 +137,12 @@ class AuthProvider with ChangeNotifier {
         _isAuthenticated = true;
         notifyListeners();
 
-        return {'success': true, 'message': data['message']};
+        // Devolver el indicador newAccount además del resultado exitoso
+        return {
+          'success': true,
+          'message': data['message'],
+          'newAccount': data['newAccount'] ?? false // Obtener el flag
+        };
       } else {
         return {'success': false, 'message': data['message']};
       }

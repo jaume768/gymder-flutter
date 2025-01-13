@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gymder/screens/register_screen.dart';
 import 'package:gymder/screens/tiktok_like_screen.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -79,6 +80,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final user = authProvider.user;
+
+    if (user != null && (user.gender == 'Pendiente' || user.relationshipGoal == 'Pendiente')) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const RegisterScreen(fromGoogle: true)),
+        );
+      });
+      // Muestra un indicador mientras se redirige
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     return Scaffold(
       extendBody: true,
       backgroundColor: Colors.black,

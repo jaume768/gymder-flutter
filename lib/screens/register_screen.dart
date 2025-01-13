@@ -17,7 +17,7 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final PageController _pageController = PageController();
+  late PageController _pageController;
 
   int _currentStep = 0;
   final int _totalSteps = 9;
@@ -43,6 +43,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool isLoading = false;
 
   final ImagePicker _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.fromGoogle) {
+      _currentStep = 1;
+      _pageController = PageController(initialPage: 1);
+    } else {
+      _pageController = PageController();
+    }
+  }
 
   Future<void> _pickImages() async {
     final pickedFiles = await _picker.pickMultiImage();
@@ -77,6 +88,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _previousStep() {
+    // Evitar retroceso de paso 1 a 0 si viene de Google
+    if (widget.fromGoogle && _currentStep == 1) return;
+
     if (_currentStep > 0) {
       setState(() {
         errorMessage = '';
@@ -101,8 +115,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
         break;
       case 1:
-
-        /// -- AÑADIMOS VALIDACIONES para firstName y lastName
         if (username.isEmpty || firstName.isEmpty || lastName.isEmpty) {
           setState(() {
             errorMessage = 'Ingresa tu username, nombre y apellido';
@@ -181,50 +193,93 @@ class _RegisterScreenState extends State<RegisterScreen> {
       errorMessage = '';
     });
 
-    // 1) Registrar usuario
-    final result = await authProvider.register(
-      email: email,
-      password: password,
-      username: username,
-      firstName: firstName, // <-- se envía
-      lastName: lastName, // <-- se envía
-      gender: gender,
-      seeking: seeking,
-      relationshipGoal: relationshipGoal,
-    );
+    if (widget.fromGoogle) {
+      final token = await authProvider.getToken();
+      if (token == null) {
+        setState(() {
+          isLoading = false;
+          errorMessage = 'No se encontró token';
+        });
+        return;
+      }
+      final userService = UserService(token: token);
+      final updateResult = await userService.updateProfile({
+        'username': username,
+        'firstName': firstName,
+        'lastName': lastName,
+        'gender': gender,
+        'seeking': seeking,
+        'relationshipGoal': relationshipGoal,
+      });
+      if (!(updateResult['success'] ?? false)) {
+        setState(() {
+          isLoading = false;
+          errorMessage =
+              updateResult['message'] ?? 'Error al actualizar el perfil';
+        });
+        return;
+      }
+      final uploadResult = await userService.uploadPhotos(selectedPhotos);
+      if (uploadResult['success'] == true) {
+        // Refrescar los datos del usuario para que HomeScreen no redirija de nuevo
+        await authProvider.refreshUser();
+        setState(() {
+          isLoading = false;
+        });
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      } else {
+        setState(() {
+          isLoading = false;
+          errorMessage = uploadResult['message'] ?? 'Error al subir fotos';
+        });
+      }
+    } else {
+      // Flujo normal de registro
+      final result = await authProvider.register(
+        email: email,
+        password: password,
+        username: username,
+        firstName: firstName,
+        lastName: lastName,
+        gender: gender,
+        seeking: seeking,
+        relationshipGoal: relationshipGoal,
+      );
 
-    if (result['success'] == true) {
-      // 2) Subir fotos con el token devuelto
-      final token = result['token'];
-      if (token != null) {
-        final userService = UserService(token: token);
-        final uploadResult = await userService.uploadPhotos(selectedPhotos);
-        if (uploadResult['success'] == true) {
-          setState(() {
-            isLoading = false;
-          });
-          // 3) Ir a HomeScreen
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const HomeScreen()),
-          );
+      if (result['success'] == true) {
+        final token = result['token'];
+        if (token != null) {
+          final userService = UserService(token: token);
+          final uploadResult = await userService.uploadPhotos(selectedPhotos);
+          if (uploadResult['success'] == true) {
+            setState(() {
+              isLoading = false;
+            });
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+            );
+          } else {
+            setState(() {
+              isLoading = false;
+              errorMessage = uploadResult['message'] ?? 'Error al subir fotos';
+            });
+          }
         } else {
           setState(() {
             isLoading = false;
-            errorMessage = uploadResult['message'] ?? 'Error al subir fotos';
+            errorMessage = 'No se recibió token tras registrar';
           });
         }
       } else {
         setState(() {
           isLoading = false;
-          errorMessage = 'No se recibió token tras registrar';
+          errorMessage = result['message'] ?? 'Error al registrar';
         });
       }
-    } else {
-      setState(() {
-        isLoading = false;
-        errorMessage = result['message'] ?? 'Error al registrar';
-      });
     }
   }
 
@@ -276,7 +331,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          if (_currentStep > 0)
+          if (_currentStep > 0 && !(widget.fromGoogle && _currentStep == 1))
             ElevatedButton(
               onPressed: _previousStep,
               style: ElevatedButton.styleFrom(
@@ -318,17 +373,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // ========================
 
   Widget _buildStep0() {
-    if (widget.fromGoogle) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _nextStep();
-      });
-      return const Center(
-        child: Text(
-          'Redirigiendo...',
-          style: TextStyle(color: Colors.white),
-        ),
-      );
-    }
     return _buildStepTemplate(
       title: 'Bienvenido',
       subtitle: 'Ingresa tu correo electrónico y contraseña',

@@ -36,16 +36,13 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // 2) signIn
       final googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
-        // El usuario canceló
         if (!mounted) return;
         setState(() => isLoading = false);
         return;
       }
 
-      // 3) obtener idToken
       final googleAuth = await googleUser.authentication;
       final idToken = googleAuth.idToken;
       if (idToken == null) {
@@ -57,13 +54,11 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      // 4) login con tu backend
       final result = await Provider.of<AuthProvider>(context, listen: false)
           .loginWithGoogle(idToken);
 
       if (!mounted) return;
       if (!result['success']) {
-        // Si falló, paramos
         setState(() {
           isLoading = false;
           errorMessage =
@@ -72,17 +67,13 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      // 5) todo ok, refrescas user
+      final isNewAccount = result['newAccount'] ?? false;
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       await authProvider.refreshUser();
 
-      // 6) si ya no está montado, retornas
       if (!mounted) return;
 
-      // 7) Navegamos SIN volver a setState(false)
-      final user = authProvider.user;
-      if (user?.gender == 'Pendiente' ||
-          user?.relationshipGoal == 'Pendiente') {
+      if (isNewAccount) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -94,11 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
       }
-
-      // OJO: aquí no hacemos setState(false) después de la navegación
-      // porque la pantalla de Login ya no existe en el árbol
     } catch (e) {
-      // 8) error atrapado
       if (!mounted) return;
       setState(() {
         isLoading = false;

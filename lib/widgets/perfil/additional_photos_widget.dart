@@ -26,6 +26,8 @@ class AdditionalPhotosWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final photos = user.photos ?? [];
+    const int totalSlots = 6; // Máximo de fotos permitidas
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -38,52 +40,58 @@ class AdditionalPhotosWidget extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        photos.isEmpty
-            ? const Text(
-                'No tienes fotos.',
-                style: TextStyle(color: Colors.white70),
-              )
-            : GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: photos.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 5,
-                  mainAxisSpacing: 5,
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: totalSlots,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 5,
+            mainAxisSpacing: 5,
+          ),
+          itemBuilder: (context, index) {
+            if (index < photos.length) {
+              // Mostrar foto existente
+              final photo = photos[index];
+              return Stack(
+                children: [
+                  CachedNetworkImage(
+                    imageUrl: photo.url,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                    placeholder: (context, url) => Container(
+                      color: Colors.grey[300],
+                    ),
+                    errorWidget: (context, url, error) =>
+                    const Icon(Icons.error),
+                  ),
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: GestureDetector(
+                      onTap: () => onDeletePhoto(photo.id),
+                      child: const CircleAvatar(
+                        radius: 12,
+                        backgroundColor: Colors.red,
+                        child:
+                        Icon(Icons.close, size: 14, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            } else {
+              // Mostrar placeholder para foto faltante
+              return Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.white54),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                itemBuilder: (context, index) {
-                  final photo = photos[index];
-                  return Stack(
-                    children: [
-                      CachedNetworkImage(
-                        imageUrl: photo.url,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                        placeholder: (context, url) => Container(
-                          color: Colors.grey[300],
-                        ),
-                        errorWidget: (context, url, error) =>
-                            const Icon(Icons.error),
-                      ),
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: GestureDetector(
-                          onTap: () => onDeletePhoto(photo.id),
-                          child: const CircleAvatar(
-                            radius: 12,
-                            backgroundColor: Colors.red,
-                            child: Icon(Icons.close,
-                                size: 14, color: Colors.white),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
+              );
+            }
+          },
+        ),
         const SizedBox(height: 10),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -135,8 +143,8 @@ class AdditionalPhotosWidget extends StatelessWidget {
                           child: const CircleAvatar(
                             radius: 12,
                             backgroundColor: Colors.red,
-                            child: Icon(Icons.close,
-                                size: 14, color: Colors.white),
+                            child:
+                            Icon(Icons.close, size: 14, color: Colors.white),
                           ),
                         ),
                       ),
@@ -153,15 +161,16 @@ class AdditionalPhotosWidget extends StatelessWidget {
                 ),
                 child: isUploading
                     ? const CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-                      )
+                  valueColor:
+                  AlwaysStoppedAnimation<Color>(Colors.black),
+                )
                     : const Text(
-                        'Subir Fotos Adicionales',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 16,
-                        ),
-                      ),
+                  'Subir Fotos Adicionales',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 16,
+                  ),
+                ),
               ),
             ],
           ],

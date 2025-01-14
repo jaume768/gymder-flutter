@@ -7,8 +7,7 @@ import 'login_screen.dart';
 import '../models/user.dart';
 import '../services/user_service.dart';
 import 'matches_chats_screen.dart';
-import 'profile_screen.dart';
-import 'chat_screen.dart';
+import 'my_profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -59,9 +58,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   final List<Widget> _widgetOptions = <Widget>[
-    const MatchesChatsScreen(), // Aquí en vez de ChatScreen directo
+    const MatchesChatsScreen(),
     const SizedBox.shrink(),
-    const ProfileScreen(),
+    const MyProfileScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -72,10 +71,13 @@ class _HomeScreenState extends State<HomeScreen> {
     if (index == 2) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const ProfileScreen()),
-      );
+        MaterialPageRoute(builder: (_) => const MyProfileScreen()),
+      ).then((_) {
+        setState(() {
+          _selectedIndex = 1;
+        });
+      });
     }
-    // Puedes agregar lógica adicional para otros índices si es necesario.
   }
 
   @override
@@ -83,14 +85,15 @@ class _HomeScreenState extends State<HomeScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.user;
 
-    if (user != null && (user.gender == 'Pendiente' || user.relationshipGoal == 'Pendiente')) {
+    if (user != null &&
+        (user.gender == 'Pendiente' || user.relationshipGoal == 'Pendiente')) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const RegisterScreen(fromGoogle: true)),
+          MaterialPageRoute(
+              builder: (_) => const RegisterScreen(fromGoogle: true)),
         );
       });
-      // Muestra un indicador mientras se redirige
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
@@ -141,7 +144,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(width: 40),
-            // Icono Matches (corazón) - central y más grande
             GestureDetector(
               onTap: () => _onItemTapped(1),
               child: CircleAvatar(
@@ -156,7 +158,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(width: 40),
-            // Icono Perfil
             GestureDetector(
               onTap: () => _onItemTapped(2),
               child: CircleAvatar(

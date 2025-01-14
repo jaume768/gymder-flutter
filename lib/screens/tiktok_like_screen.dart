@@ -74,6 +74,9 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
     _verticalPageController = PageController();
     _randomUsers = List.from(widget.users);
     previousPageIndex = 0;
+
+    // Cargar los usuarios que te han dado like al iniciar
+    _fetchLikedUsers();
   }
 
   @override
@@ -95,6 +98,8 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
         _likedUsers = List<User>.from(
             result['usersWhoLiked'].map((x) => User.fromJson(x)));
       });
+      // Opcional: imprimir para debug
+      print("Usuarios que me dieron like: ${_likedUsers.length}");
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(result['message'] ?? 'Error al obtener likes')),
@@ -161,12 +166,12 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
     _isProcessing = false;
 
     final authProviderForLike =
-        Provider.of<AuthProvider>(context, listen: false);
+    Provider.of<AuthProvider>(context, listen: false);
     if (!(authProviderForLike.user?.isPremium ?? false)) {
       int localMaxScroll =
-          (authProviderForLike.user?.gender == 'Masculino') ? 40 : 75;
+      (authProviderForLike.user?.gender == 'Masculino') ? 40 : 75;
       int localMaxLike =
-          (authProviderForLike.user?.gender == 'Masculino') ? 20 : 40;
+      (authProviderForLike.user?.gender == 'Masculino') ? 20 : 40;
 
       setState(() {
         scrollCount++;
@@ -227,7 +232,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
         title: Text(
           title,
           style:
-              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         content: Text(
           content,
@@ -259,176 +264,171 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = Provider.of<AuthProvider>(context);
+    final int maxScrollLimit = (auth.user?.gender == 'Masculino') ? 25 : 45;
     final currentList = showRandom ? _randomUsers : _likedUsers;
 
-    return Consumer<AuthProvider>(
-      builder: (context, auth, child) {
-        final int maxScrollLimit = (auth.user?.gender == 'Masculino') ? 25 : 45;
-
-        return Scaffold(
-          backgroundColor: Colors.black,
-          body: Stack(
-            children: [
-              Positioned.fill(
-                child: currentList.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'No hay usuarios para mostrar.',
-                          style: TextStyle(color: Colors.white),
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: currentList.isEmpty
+                ? const Center(
+              child: Text(
+                'No hay usuarios para mostrar.',
+                style: TextStyle(color: Colors.white),
+              ),
+            )
+                : NotificationListener<UserScrollNotification>(
+              onNotification: (notification) {
+                if (!auth.user!.isPremium &&
+                    notification.direction ==
+                        ScrollDirection.forward) {
+                  _showPremiumDialog(
+                    "Función Premium",
+                    "Para hacer scroll hacia arriba y volver al usuario anterior necesitas ser premium. ¿Deseas comprarlo?",
+                  );
+                }
+                if (!auth.user!.isPremium &&
+                    notification.direction ==
+                        ScrollDirection.reverse) {
+                  _checkScrollLimit(maxScrollLimit);
+                }
+                return false;
+              },
+              child: PageView.builder(
+                controller: _verticalPageController,
+                scrollDirection: Axis.vertical,
+                physics: LimitedScrollPhysics(
+                  premium: auth.user?.isPremium ?? false,
+                  scrollCount: scrollCount,
+                  maxDownwardScroll: maxScrollLimit,
+                ),
+                itemCount: currentList.length,
+                onPageChanged: (pageIndex) {
+                  if (!auth.user!.isPremium &&
+                      pageIndex > previousPageIndex) {
+                    setState(() {
+                      scrollCount++;
+                    });
+                    _checkScrollLimit(maxScrollLimit);
+                  }
+                  previousPageIndex = pageIndex;
+                },
+                itemBuilder: (context, index) {
+                  final user = currentList[index];
+                  return SingleUserView(
+                    user: user,
+                    onDoubleTapLike:
+                    showRandom ? () => _handleLike(index) : () {},
+                  );
+                },
+              ),
+            ),
+          ),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 10,
+            left: 60,
+            right: 0,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                          showRandom ? Colors.white : Colors.black45,
+                          foregroundColor:
+                          showRandom ? Colors.black : Colors.white,
+                          elevation: 0,
                         ),
-                      )
-                    : NotificationListener<UserScrollNotification>(
-                        onNotification: (notification) {
-                          if (!auth.user!.isPremium &&
-                              notification.direction ==
-                                  ScrollDirection.forward) {
+                        onPressed: () {
+                          setState(() {
+                            showRandom = true;
+                          });
+                        },
+                        child: const Text('Random'),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        "|",
+                        style: TextStyle(color: Colors.white, fontSize: 20),
+                      ),
+                      const SizedBox(width: 8),
+                      // Botón "Le gustas" modificado para mostrar el número de likes
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: !showRandom ? Colors.white : Colors.black45,
+                          foregroundColor: !showRandom ? Colors.black : Colors.white,
+                          elevation: 0,
+                        ),
+                        onPressed: () {
+                          if (!(auth.user?.isPremium ?? false)) {
                             _showPremiumDialog(
                               "Función Premium",
-                              "Para hacer scroll hacia arriba y volver al usuario anterior necesitas ser premium. ¿Deseas comprarlo?",
+                              "Para ver a las personas que le gustas necesitas ser premium. ¿Deseas comprarlo?",
                             );
-                          }
-                          if (!auth.user!.isPremium &&
-                              notification.direction ==
-                                  ScrollDirection.reverse) {
-                            _checkScrollLimit(maxScrollLimit);
-                          }
-                          return false;
-                        },
-                        child: PageView.builder(
-                          controller: _verticalPageController,
-                          scrollDirection: Axis.vertical,
-                          physics: LimitedScrollPhysics(
-                            premium: auth.user?.isPremium ?? false,
-                            scrollCount: scrollCount,
-                            maxDownwardScroll: maxScrollLimit,
-                          ),
-                          itemCount: currentList.length,
-                          onPageChanged: (pageIndex) {
-                            if (!auth.user!.isPremium &&
-                                pageIndex > previousPageIndex) {
-                              setState(() {
-                                scrollCount++;
-                              });
-                              _checkScrollLimit(maxScrollLimit);
+                          } else {
+                            setState(() {
+                              showRandom = false;
+                            });
+                            if (_likedUsers.isEmpty) {
+                              _fetchLikedUsers();
                             }
-                            previousPageIndex = pageIndex;
-                          },
-                          itemBuilder: (context, index) {
-                            final user = currentList[index];
-                            return SingleUserView(
-                              user: user,
-                              onDoubleTapLike:
-                                  showRandom ? () => _handleLike(index) : () {},
-                            );
-                          },
+                          }
+                        },
+                        child: Text('Le gustas (${_likedUsers.length})'),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () async {
+                    final result = await showModalBottomSheet<List<User>>(
+                      context: context,
+                      backgroundColor: Colors.transparent,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(20),
                         ),
                       ),
-              ),
-              Positioned(
-                top: MediaQuery.of(context).padding.top + 10,
-                left: 60,
-                right: 0,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  showRandom ? Colors.white : Colors.black45,
-                              foregroundColor:
-                                  showRandom ? Colors.black : Colors.white,
-                              elevation: 0,
+                      builder: (context) {
+                        return Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Color(0xFF0D0D0D), // Negro intenso
+                                Color(0xFF1C1C1C), // Gris oscuro
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
                             ),
-                            onPressed: () {
-                              setState(() {
-                                showRandom = true;
-                              });
-                            },
-                            child: const Text('Random'),
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            "|",
-                            style: TextStyle(color: Colors.white, fontSize: 20),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  !showRandom ? Colors.white : Colors.black45,
-                              foregroundColor:
-                                  !showRandom ? Colors.black : Colors.white,
-                              elevation: 0,
-                            ),
-                            onPressed: () {
-                              if (!(auth.user?.isPremium ?? false)) {
-                                _showPremiumDialog(
-                                  "Función Premium",
-                                  "Para ver a las personas que le gustas necesitas ser premium. ¿Deseas comprarlo?",
-                                );
-                              } else {
-                                setState(() {
-                                  showRandom = false;
-                                });
-                                if (_likedUsers.isEmpty) {
-                                  _fetchLikedUsers();
-                                }
-                              }
-                            },
-                            child: const Text('Le gustas'),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () async {
-                        final result = await showModalBottomSheet<List<User>>(
-                          context: context,
-                          backgroundColor: Colors.transparent,
-                          shape: const RoundedRectangleBorder(
                             borderRadius: BorderRadius.vertical(
                               top: Radius.circular(20),
                             ),
                           ),
-                          builder: (context) {
-                            return Container(
-                              decoration: const BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Color(0xFF0D0D0D), // Negro intenso
-                                    Color(0xFF1C1C1C), // Gris oscuro
-                                  ],
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                ),
-                                borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(20),
-                                ),
-                              ),
-                              child: const FilterModalContent(),
-                            );
-                          },
+                          child: const FilterModalContent(),
                         );
-
-                        if (result != null && result is List<User>) {
-                          setState(() {
-                            _randomUsers = result;
-                            showRandom = true;
-                          });
-                        }
                       },
-                      icon: const Icon(Icons.settings, color: Colors.white),
-                    ),
-                  ],
+                    );
+
+                    if (result != null && result is List<User>) {
+                      setState(() {
+                        _randomUsers = result;
+                        showRandom = true;
+                      });
+                    }
+                  },
+                  icon: const Icon(Icons.settings, color: Colors.white),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }
@@ -541,7 +541,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30)),
               ),
@@ -558,7 +558,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
                 };
 
                 final authProvider =
-                    Provider.of<AuthProvider>(context, listen: false);
+                Provider.of<AuthProvider>(context, listen: false);
                 final token = await authProvider.getToken();
 
                 if (token != null) {
@@ -569,7 +569,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
                   if (result['success'] == true) {
                     List<dynamic> matchesJson = result['matches'];
                     List<User> matches =
-                        matchesJson.map((json) => User.fromJson(json)).toList();
+                    matchesJson.map((json) => User.fromJson(json)).toList();
 
                     Navigator.of(context).pop(matches);
                     return;
@@ -613,7 +613,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
           max: max,
           divisions: divisions,
           labels:
-              RangeLabels("${values.start.round()}", "${values.end.round()}"),
+          RangeLabels("${values.start.round()}", "${values.end.round()}"),
           activeColor: Colors.cyanAccent,
           inactiveColor: Colors.grey,
           onChanged: onChanged,
@@ -648,9 +648,9 @@ class _FilterModalContentState extends State<FilterModalContent> {
             underline: const SizedBox(),
             items: items
                 .map<DropdownMenuItem<String>>((String val) => DropdownMenuItem(
-                      value: val,
-                      child: Text(val),
-                    ))
+              value: val,
+              child: Text(val),
+            ))
                 .toList(),
             onChanged: onChanged,
           ),

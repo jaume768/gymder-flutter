@@ -166,12 +166,12 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
     _isProcessing = false;
 
     final authProviderForLike =
-    Provider.of<AuthProvider>(context, listen: false);
+        Provider.of<AuthProvider>(context, listen: false);
     if (!(authProviderForLike.user?.isPremium ?? false)) {
       int localMaxScroll =
-      (authProviderForLike.user?.gender == 'Masculino') ? 40 : 75;
+          (authProviderForLike.user?.gender == 'Masculino') ? 40 : 75;
       int localMaxLike =
-      (authProviderForLike.user?.gender == 'Masculino') ? 20 : 40;
+          (authProviderForLike.user?.gender == 'Masculino') ? 20 : 40;
 
       setState(() {
         scrollCount++;
@@ -181,6 +181,52 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
       _checkScrollLimit(localMaxScroll);
       _checkLikeLimit(localMaxLike);
     }
+  }
+
+  Future<void> _handleLikeFromLeGustas(int userIndex) async {
+    if (_isProcessing) return;
+    _isProcessing = true;
+
+    final user = _likedUsers[userIndex];
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final token = await authProvider.getToken();
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Token no encontrado. Inicia sesión.')),
+      );
+      _isProcessing = false;
+      return;
+    }
+
+    final userService = UserService(token: token);
+    final result = await userService.likeUser(user.id);
+
+    if (result['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Has dado like al usuario')),
+      );
+      if (result['matchedUser'] != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatScreen(
+              currentUserId: user.id,
+              matchedUserId: result['matchedUser'].id,
+            ),
+          ),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message'] ?? 'Error al dar like')),
+      );
+    }
+
+    setState(() {
+      _likedUsers.removeAt(userIndex);
+    });
+
+    _isProcessing = false;
   }
 
   void _checkScrollLimit(int maxScrollLimit) {
@@ -232,7 +278,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
         title: Text(
           title,
           style:
-          const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         content: Text(
           content,
@@ -275,57 +321,56 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
           Positioned.fill(
             child: currentList.isEmpty
                 ? const Center(
-              child: Text(
-                'No hay usuarios para mostrar.',
-                style: TextStyle(color: Colors.white),
-              ),
-            )
+                    child: Text(
+                      'No hay usuarios para mostrar.',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  )
                 : NotificationListener<UserScrollNotification>(
-              onNotification: (notification) {
-                if (!auth.user!.isPremium &&
-                    notification.direction ==
-                        ScrollDirection.forward) {
-                  _showPremiumDialog(
-                    "Función Premium",
-                    "Para hacer scroll hacia arriba y volver al usuario anterior necesitas ser premium. ¿Deseas comprarlo?",
-                  );
-                }
-                if (!auth.user!.isPremium &&
-                    notification.direction ==
-                        ScrollDirection.reverse) {
-                  _checkScrollLimit(maxScrollLimit);
-                }
-                return false;
-              },
-              child: PageView.builder(
-                controller: _verticalPageController,
-                scrollDirection: Axis.vertical,
-                physics: LimitedScrollPhysics(
-                  premium: auth.user?.isPremium ?? false,
-                  scrollCount: scrollCount,
-                  maxDownwardScroll: maxScrollLimit,
-                ),
-                itemCount: currentList.length,
-                onPageChanged: (pageIndex) {
-                  if (!auth.user!.isPremium &&
-                      pageIndex > previousPageIndex) {
-                    setState(() {
-                      scrollCount++;
-                    });
-                    _checkScrollLimit(maxScrollLimit);
-                  }
-                  previousPageIndex = pageIndex;
-                },
-                itemBuilder: (context, index) {
-                  final user = currentList[index];
-                  return SingleUserView(
-                    user: user,
-                    onDoubleTapLike:
-                    showRandom ? () => _handleLike(index) : () {},
-                  );
-                },
-              ),
-            ),
+                    onNotification: (notification) {
+                      if (!auth.user!.isPremium &&
+                          notification.direction == ScrollDirection.forward) {
+                        _showPremiumDialog(
+                          "Función Premium",
+                          "Para hacer scroll hacia arriba y volver al usuario anterior necesitas ser premium. ¿Deseas comprarlo?",
+                        );
+                      }
+                      if (!auth.user!.isPremium &&
+                          notification.direction == ScrollDirection.reverse) {
+                        _checkScrollLimit(maxScrollLimit);
+                      }
+                      return false;
+                    },
+                    child: PageView.builder(
+                      controller: _verticalPageController,
+                      scrollDirection: Axis.vertical,
+                      physics: LimitedScrollPhysics(
+                        premium: auth.user?.isPremium ?? false,
+                        scrollCount: scrollCount,
+                        maxDownwardScroll: maxScrollLimit,
+                      ),
+                      itemCount: currentList.length,
+                      onPageChanged: (pageIndex) {
+                        if (!auth.user!.isPremium &&
+                            pageIndex > previousPageIndex) {
+                          setState(() {
+                            scrollCount++;
+                          });
+                          _checkScrollLimit(maxScrollLimit);
+                        }
+                        previousPageIndex = pageIndex;
+                      },
+                      itemBuilder: (context, index) {
+                        final user = currentList[index];
+                        return SingleUserView(
+                          user: user,
+                          onDoubleTapLike: showRandom
+                              ? () => _handleLike(index)
+                              : () => _handleLikeFromLeGustas(index),
+                        );
+                      },
+                    ),
+                  ),
           ),
           Positioned(
             top: MediaQuery.of(context).padding.top + 10,
@@ -340,9 +385,9 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
-                          showRandom ? Colors.white : Colors.black45,
+                              showRandom ? Colors.white : Colors.black45,
                           foregroundColor:
-                          showRandom ? Colors.black : Colors.white,
+                              showRandom ? Colors.black : Colors.white,
                           elevation: 0,
                         ),
                         onPressed: () {
@@ -361,8 +406,10 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
                       // Botón "Le gustas" modificado para mostrar el número de likes
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: !showRandom ? Colors.white : Colors.black45,
-                          foregroundColor: !showRandom ? Colors.black : Colors.white,
+                          backgroundColor:
+                              !showRandom ? Colors.white : Colors.black45,
+                          foregroundColor:
+                              !showRandom ? Colors.black : Colors.white,
                           elevation: 0,
                         ),
                         onPressed: () {
@@ -541,7 +588,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 padding:
-                const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                    const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30)),
               ),
@@ -558,7 +605,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
                 };
 
                 final authProvider =
-                Provider.of<AuthProvider>(context, listen: false);
+                    Provider.of<AuthProvider>(context, listen: false);
                 final token = await authProvider.getToken();
 
                 if (token != null) {
@@ -569,7 +616,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
                   if (result['success'] == true) {
                     List<dynamic> matchesJson = result['matches'];
                     List<User> matches =
-                    matchesJson.map((json) => User.fromJson(json)).toList();
+                        matchesJson.map((json) => User.fromJson(json)).toList();
 
                     Navigator.of(context).pop(matches);
                     return;
@@ -613,7 +660,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
           max: max,
           divisions: divisions,
           labels:
-          RangeLabels("${values.start.round()}", "${values.end.round()}"),
+              RangeLabels("${values.start.round()}", "${values.end.round()}"),
           activeColor: Colors.cyanAccent,
           inactiveColor: Colors.grey,
           onChanged: onChanged,
@@ -648,9 +695,9 @@ class _FilterModalContentState extends State<FilterModalContent> {
             underline: const SizedBox(),
             items: items
                 .map<DropdownMenuItem<String>>((String val) => DropdownMenuItem(
-              value: val,
-              child: Text(val),
-            ))
+                      value: val,
+                      child: Text(val),
+                    ))
                 .toList(),
             onChanged: onChanged,
           ),

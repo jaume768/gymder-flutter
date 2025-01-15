@@ -107,7 +107,7 @@ class _SingleUserViewState extends State<SingleUserView>
                   child: CircularProgressIndicator(),
                 ),
                 errorWidget: (context, url, error) =>
-                const Center(child: Icon(Icons.error)),
+                    const Center(child: Icon(Icons.error)),
               );
             },
           ),

@@ -62,7 +62,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                   backgroundImage: user.profilePicture != null
                       ? CachedNetworkImageProvider(user.profilePicture!.url)
                       : const AssetImage('assets/images/default_profile.png')
-                  as ImageProvider,
+                          as ImageProvider,
                 ),
                 Positioned(
                   bottom: 0,
@@ -82,7 +82,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                       ),
                       padding: const EdgeInsets.all(8),
                       child:
-                      const Icon(Icons.edit, color: Colors.white, size: 24),
+                          const Icon(Icons.edit, color: Colors.white, size: 24),
                     ),
                   ),
                 ),
@@ -165,7 +165,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                       placeholder: (context, url) =>
                           Container(color: Colors.grey[800]),
                       errorWidget: (context, url, error) =>
-                      const Icon(Icons.error, color: Colors.white),
+                          const Icon(Icons.error, color: Colors.white),
                     ),
                   );
                 },

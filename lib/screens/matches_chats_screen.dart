@@ -167,7 +167,11 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Padding(
-                          padding: EdgeInsets.only(top: 82.0, left: 16.0, right: 16.0, bottom: 1.0), // Aumenta el margen superior
+                          padding: EdgeInsets.only(
+                              top: 82.0,
+                              left: 16.0,
+                              right: 16.0,
+                              bottom: 1.0), // Aumenta el margen superior
                           child: Text(
                             'Mensajes',
                             style: TextStyle(

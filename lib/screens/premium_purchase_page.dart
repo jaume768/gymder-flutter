@@ -13,8 +13,7 @@ class PremiumPurchasePage extends StatefulWidget {
 
 class _PremiumPurchasePageState extends State<PremiumPurchasePage> {
   final InAppPurchase _iap = InAppPurchase.instance;
-  final String _premiumProductId =
-      'your_premium_product_id'; // Reemplaza con tu productId real
+  final String _premiumProductId = 'gymswipe_premium';
   bool _available = false;
   List<ProductDetails> _products = [];
   late Stream<List<PurchaseDetails>> _subscription;
@@ -69,10 +68,18 @@ class _PremiumPurchasePageState extends State<PremiumPurchasePage> {
     if (token == null) return;
 
     final userService = UserService(token: token);
-    "final result = await userService.subscribePremium();";
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Ahora eres usuario Premium')),
-    );
+    final result = await userService.subscribePremium();
+
+    if (result['success'] == true) {
+      await authProvider.refreshUser();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ahora eres usuario Premium')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message'] ?? 'Error en la suscripción')),
+      );
+    }
   }
 
   void _buyPremium() {
@@ -87,12 +94,24 @@ class _PremiumPurchasePageState extends State<PremiumPurchasePage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Compra Premium')),
       body: Center(
-        child: _available && _products.isNotEmpty
+        child: _available
+            ? (_products.isNotEmpty
             ? ElevatedButton(
-                onPressed: _buyPremium,
-                child: const Text('Comprar Premium'),
-              )
-            : const CircularProgressIndicator(),
+          onPressed: _buyPremium,
+          child: const Text('Comprar Premium'),
+        )
+            : Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('No se encontraron productos.'),
+            ElevatedButton(
+              onPressed: _initialize,
+              child: const Text('Reintentar'),
+            ),
+          ],
+        )
+        )
+            : const Text('Las compras in-app no están disponibles.'),
       ),
     );
   }

@@ -1,7 +1,7 @@
+import 'package:app/screens/premium_purchase_page.dart';
+import 'package:app/screens/single_user_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:gymder/screens/premium_purchase_page.dart';
-import 'package:gymder/screens/single_user_view.dart';
 import 'package:provider/provider.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';

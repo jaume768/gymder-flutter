@@ -1,6 +1,6 @@
+import 'package:app/screens/register_screen.dart';
+import 'package:app/screens/tiktok_like_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:gymder/screens/register_screen.dart';
-import 'package:gymder/screens/tiktok_like_screen.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'login_screen.dart';

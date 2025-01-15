@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:app/screens/user_profile_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:gymder/screens/user_profile_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:http/http.dart' as http;

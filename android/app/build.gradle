@@ -6,31 +6,44 @@ plugins {
 }
 
 android {
-    namespace "com.example.gymder"
+    namespace "com.gymswipe.app"
 
-    // Cambia este valor a 34
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.gymder"
+        applicationId = "com.gymswipe.app"
 
-        minSdk = 21     // (o el valor que uses)
-        targetSdk = 34  // Recomendada, pero no obligatoria
+        minSdk = 21
+        targetSdk = 34
 
         versionCode 1
         versionName "1.0.0"
     }
 
+    signingConfigs {
+        release {
+            // Carga las propiedades del archivo key.properties
+            def keystoreProperties = new Properties()
+            def keystorePropertiesFile = rootProject.file("key.properties")
+            keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+
+            keyAlias keystoreProperties["keyAlias"]
+            keyPassword keystoreProperties["keyPassword"]
+            storeFile file(keystoreProperties["storeFile"])
+            storePassword keystoreProperties["storePassword"]
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
+            shrinkResources true  // Reduce el tamaño de la app eliminando recursos no usados
+            minifyEnabled true    // Activa el Proguard para optimizar el código
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }
 
-
-// Mantén el bloque flutter si así lo deseas, para enlazar el código Flutter con la app.
 flutter {
     source = "../.."
 }
-

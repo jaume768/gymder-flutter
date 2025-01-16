@@ -6,7 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user.dart';
 
 class AuthService {
-  final String baseUrl = 'http://10.0.2.2:5000/api/users';
+  final String baseUrl = 'https://gymder-api-production.up.railway.app/api/users';
   final FlutterSecureStorage storage = FlutterSecureStorage();
 
   Future<Map<String, dynamic>> register({
@@ -18,6 +18,9 @@ class AuthService {
     required String gender,
     required List<String> seeking,
     required String relationshipGoal,
+    double? height,
+    double? weight,
+    String? gymStage,
   }) async {
     final url = Uri.parse('$baseUrl/register');
     final response = await http.post(
@@ -32,6 +35,9 @@ class AuthService {
         'gender': gender,
         'seeking': seeking,
         'relationshipGoal': relationshipGoal,
+        'height': height,
+        'weight': weight,
+        'goal': gymStage,
       }),
     );
 

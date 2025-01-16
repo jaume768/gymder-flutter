@@ -62,6 +62,9 @@ class AuthProvider with ChangeNotifier {
     required String gender,
     required List<String> seeking,
     required String relationshipGoal,
+    double? height,
+    double? weight,
+    String? gymStage,
   }) async {
     try {
       // Delegar a authService:
@@ -74,6 +77,9 @@ class AuthProvider with ChangeNotifier {
         gender: gender,
         seeking: seeking,
         relationshipGoal: relationshipGoal,
+        height: height,
+        weight: weight,
+        gymStage: gymStage,
       );
 
       if (result['success'] == true) {
@@ -119,7 +125,7 @@ class AuthProvider with ChangeNotifier {
 
   Future<Map<String, dynamic>> loginWithGoogle(String googleIdToken) async {
     try {
-      final url = Uri.parse('http://10.0.2.2:5000/api/users/auth/google');
+      final url = Uri.parse('https://gymder-api-production.up.railway.app:5000/api/users/auth/google');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},

@@ -80,7 +80,7 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
       final token = await authProvider.getToken();
       if (token == null || currentUserId == null) return;
 
-      final url = Uri.parse('http://10.0.2.2:5000/api/messages/conversation'
+      final url = Uri.parse('https://gymder-api-production.up.railway.app/api/messages/conversation'
           '?user1=$currentUserId&user2=$otherUserId');
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
@@ -113,7 +113,7 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
       if (token == null) return;
 
       final url =
-          Uri.parse('http://10.0.2.2:5000/api/messages/conversation/hide');
+          Uri.parse('https://gymder-api-production.up.railway.app/api/messages/conversation/hide');
       final response = await http.post(
         url,
         headers: {

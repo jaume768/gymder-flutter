@@ -20,6 +20,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   late PageController _pageController;
 
   int _currentStep = 0;
+  // Seguimos con 9 pasos (0 a 8)
   final int _totalSteps = 9;
 
   String email = '';
@@ -36,6 +37,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String relationshipGoal = '';
   String location = '';
   String gymStage = '';
+
+  /// -- NUEVO: variables para altura y peso
+  double? height;
+  double? weight;
 
   final List<File> selectedPhotos = [];
 
@@ -163,9 +168,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
         break;
       case 7:
-        if (gymStage.isEmpty) {
+        // Validamos etapa, altura y peso
+        if (gymStage.isEmpty || height == null || weight == null) {
           setState(() {
-            errorMessage = 'Selecciona tu etapa actual del gym';
+            errorMessage =
+                'Selecciona tu etapa del gym, e ingresa altura y peso';
           });
           return false;
         }
@@ -210,6 +217,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'gender': gender,
         'seeking': seeking,
         'relationshipGoal': relationshipGoal,
+        'height': height,
+        'weight': weight,
+        'goal': gymStage,
       });
       if (!(updateResult['success'] ?? false)) {
         setState(() {
@@ -219,9 +229,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         });
         return;
       }
+      // Subir fotos
       final uploadResult = await userService.uploadPhotos(selectedPhotos);
       if (uploadResult['success'] == true) {
-        // Refrescar los datos del usuario para que HomeScreen no redirija de nuevo
         await authProvider.refreshUser();
         setState(() {
           isLoading = false;
@@ -237,6 +247,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         });
       }
     } else {
+      print("Enviando => height: $height, weight: $weight, gymStage: $gymStage");
       // Flujo normal de registro
       final result = await authProvider.register(
         email: email,
@@ -247,6 +258,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         gender: gender,
         seeking: seeking,
         relationshipGoal: relationshipGoal,
+        height: height,
+        weight: weight,
+        gymStage: gymStage,
       );
 
       if (result['success'] == true) {
@@ -313,7 +327,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   _buildStep4(),
                   _buildStep5(),
                   _buildStep6(),
-                  _buildStep7(),
+                  _buildStep7(), // <-- Paso modificado
                   _buildStep8(),
                 ],
               ),
@@ -428,7 +442,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  /// STEP 1: Pedir Username, FirstName, LastName
   Widget _buildStep1() {
     return _buildStepTemplate(
       title: '¿Cómo te llamas?',
@@ -436,27 +449,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
       child: Column(
         children: [
           const SizedBox(height: 20),
-          // Username
           TextFormField(
             style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration('Username'),
             onChanged: (value) => username = value,
           ),
           const SizedBox(height: 20),
-          // Nombre
           TextFormField(
             style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration('Nombre'),
             onChanged: (value) => firstName = value,
           ),
           const SizedBox(height: 20),
-          // Apellido
           TextFormField(
             style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration('Apellido'),
             onChanged: (value) => lastName = value,
           ),
-          // Error
           if (errorMessage.isNotEmpty && _currentStep == 1)
             Padding(
               padding: const EdgeInsets.only(top: 16),
@@ -636,32 +645,71 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  /// Paso 7 modificado para pedir etapa, altura y peso
   Widget _buildStep7() {
     final gymStages = ['Volumen', 'Definición', 'Mantenimiento'];
 
     return _buildStepTemplate(
-      title: '¿En qué etapa del gym estás?',
-      subtitle: 'Selecciona tu objetivo actual',
-      child: DropdownButtonFormField<String>(
-        decoration: _dropdownDecoration('Etapa'),
-        style: const TextStyle(color: Colors.white),
-        selectedItemBuilder: (context) {
-          return gymStages.map((stage) {
-            return Text(stage, style: const TextStyle(color: Colors.white));
-          }).toList();
-        },
-        value: gymStage.isEmpty ? null : gymStage,
-        items: gymStages.map((stage) {
-          return DropdownMenuItem(
-            value: stage,
-            child: Text(stage, style: const TextStyle(color: Colors.black)),
-          );
-        }).toList(),
-        onChanged: (value) {
-          setState(() {
-            gymStage = value ?? '';
-          });
-        },
+      title: 'Tu etapa del gym, altura y peso',
+      subtitle: 'Selecciona tu objetivo actual, e ingresa altura y peso',
+      child: Column(
+        children: [
+          // Etapa del gym
+          DropdownButtonFormField<String>(
+            decoration: _dropdownDecoration('Etapa'),
+            style: const TextStyle(color: Colors.white),
+            selectedItemBuilder: (context) {
+              return gymStages.map((stage) {
+                return Text(stage, style: const TextStyle(color: Colors.white));
+              }).toList();
+            },
+            value: gymStage.isEmpty ? null : gymStage,
+            items: gymStages.map((stage) {
+              return DropdownMenuItem(
+                value: stage,
+                child: Text(stage, style: const TextStyle(color: Colors.black)),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                gymStage = value ?? '';
+              });
+            },
+          ),
+          const SizedBox(height: 20),
+
+          // Altura
+          TextFormField(
+            style: const TextStyle(color: Colors.white),
+            decoration: _inputDecoration('Altura (cm)'),
+            keyboardType: TextInputType.number,
+            onChanged: (value) {
+              setState(() {
+                height = double.tryParse(value);
+              });
+            },
+          ),
+          const SizedBox(height: 20),
+
+          // Peso
+          TextFormField(
+            style: const TextStyle(color: Colors.white),
+            decoration: _inputDecoration('Peso (kg)'),
+            keyboardType: TextInputType.number,
+            onChanged: (value) {
+              setState(() {
+                weight = double.tryParse(value);
+              });
+            },
+          ),
+
+          if (errorMessage.isNotEmpty && _currentStep == 7)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Text(errorMessage,
+                  style: const TextStyle(color: Colors.redAccent)),
+            ),
+        ],
       ),
     );
   }

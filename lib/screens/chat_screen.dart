@@ -49,7 +49,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _connectToSocket() {
     socket = IO.io(
-      'http://10.0.2.2:5000',
+      'https://gymder-api-production.up.railway.app',
       IO.OptionBuilder()
           .setTransports(['websocket'])
           .disableAutoConnect()
@@ -89,7 +89,7 @@ class _ChatScreenState extends State<ChatScreen> {
       if (token == null) return;
 
       final url = Uri.parse(
-          'http://10.0.2.2:5000/api/users/profile/${widget.matchedUserId}');
+          'https://gymder-api-production.up.railway.app/api/users/profile/${widget.matchedUserId}');
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -123,7 +123,7 @@ class _ChatScreenState extends State<ChatScreen> {
         return;
       }
 
-      final url = Uri.parse('http://10.0.2.2:5000/api/messages/conversation'
+      final url = Uri.parse('https://gymder-api-production.up.railway.app/api/messages/conversation'
           '?user1=${widget.currentUserId}&user2=${widget.matchedUserId}');
 
       final response = await http.get(url, headers: {
@@ -182,7 +182,7 @@ class _ChatScreenState extends State<ChatScreen> {
         return;
       }
 
-      final url = Uri.parse('http://10.0.2.2:5000/api/messages/upload');
+      final url = Uri.parse('https://gymder-api-production.up.railway.app/api/messages/upload');
       var request = http.MultipartRequest('POST', url);
       request.headers['Authorization'] = 'Bearer $token';
 
@@ -248,7 +248,7 @@ class _ChatScreenState extends State<ChatScreen> {
       if (token == null) return;
 
       final url =
-          Uri.parse('http://10.0.2.2:5000/api/messages/$messageId/hide');
+          Uri.parse('https://gymder-api-production.up.railway.app/api/messages/$messageId/hide');
       final response = await http.delete(
         url,
         headers: {

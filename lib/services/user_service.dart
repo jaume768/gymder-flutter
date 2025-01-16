@@ -8,8 +8,7 @@ import 'package:http_parser/http_parser.dart'; // Para MediaType
 import '../models/user.dart';
 
 class UserService {
-  final String baseUrl =
-      'http://10.0.2.2:5000/api'; // Actualiza esta URL según tu configuración
+  final String baseUrl = 'https://gymder-api-production.up.railway.app/api';
   final String token;
 
   UserService({required this.token});

@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import '../models/user.dart';
 
 class MatchService {
-  final String baseUrl = 'http://10.0.2.2:5000/api/matches';
+  final String baseUrl = 'https://gymder-api-production.up.railway.app/api/matches';
   final String token;
 
   MatchService({required this.token});

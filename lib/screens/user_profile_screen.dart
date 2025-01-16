@@ -94,7 +94,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       }
 
       final url =
-          Uri.parse('http://10.0.2.2:5000/api/users/profile/${widget.userId}');
+          Uri.parse('https://gymder-api-production.up.railway.app/api/users/profile/${widget.userId}');
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',

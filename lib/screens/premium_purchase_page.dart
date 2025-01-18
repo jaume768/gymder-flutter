@@ -47,8 +47,6 @@ class _PremiumPurchasePageState extends State<PremiumPurchasePage> {
     for (var purchase in purchases) {
       if (purchase.productID == _premiumProductId &&
           purchase.status == PurchaseStatus.purchased) {
-        // Verifica y consume/actualiza la compra aquí si es necesario.
-
         // Notificar al backend para actualizar el usuario a premium
         await _updateUserToPremium();
 
@@ -57,7 +55,7 @@ class _PremiumPurchasePageState extends State<PremiumPurchasePage> {
           await _iap.completePurchase(purchase);
         }
       } else if (purchase.status == PurchaseStatus.error) {
-        // Manejar errores en la compra
+        // Manejar errores en la compra si es necesario
       }
     }
   }
@@ -89,29 +87,91 @@ class _PremiumPurchasePageState extends State<PremiumPurchasePage> {
     _iap.buyNonConsumable(purchaseParam: purchaseParam);
   }
 
+  Widget _buildAdvantage(String title, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.cyanAccent),
+          const SizedBox(width: 12),
+          Text(title, style: const TextStyle(color: Colors.white, fontSize: 16))
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Compra Premium')),
-      body: Center(
-        child: _available
-            ? (_products.isNotEmpty
-            ? ElevatedButton(
-          onPressed: _buyPremium,
-          child: const Text('Comprar Premium'),
-        )
-            : Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text('Compra Premium'),
+        backgroundColor: Colors.grey[900],
+      ),
+      body: _available
+          ? (_products.isNotEmpty
+          ? SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('No se encontraron productos.'),
+            Card(
+              color: Colors.grey[900],
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Ventajas de ser Premium",
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white),
+                    ),
+                    const SizedBox(height: 8),
+                    Divider(color: Colors.grey[700]),
+                    _buildAdvantage("Scrolls infinitos", Icons.swap_vert),
+                    _buildAdvantage("Likes infinitos", Icons.favorite),
+                    _buildAdvantage("Acceso al apartado de 'Le gustas'", Icons.thumb_up),
+                    _buildAdvantage("Scroll hacia arriba desbloqueado", Icons.arrow_upward),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: _initialize,
-              child: const Text('Reintentar'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.cyanAccent,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                textStyle: const TextStyle(fontSize: 18),
+              ),
+              onPressed: _buyPremium,
+              child: const Text('Comprar Premium'),
             ),
           ],
-        )
-        )
-            : const Text('Las compras in-app no están disponibles.'),
+        ),
+      )
+          : Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            'No se encontraron productos.',
+            style: TextStyle(color: Colors.white),
+          ),
+          ElevatedButton(
+            onPressed: _initialize,
+            child: const Text('Reintentar'),
+          ),
+        ],
+      ))
+          : const Center(
+        child: Text(
+          'Las compras in-app no están disponibles.',
+          style: TextStyle(color: Colors.white),
+        ),
       ),
     );
   }

@@ -308,7 +308,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final user = authProvider.user;
 
     if (user == null) {
-      return const Center(child: Text('Usuario no encontrado.'));
+      Future.microtask(() {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+      });
+      return const Scaffold(
+        body: SizedBox(),
+      );
     }
 
     return Scaffold(
@@ -373,8 +381,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 }
               },
               onSeekingSelectionChanged: (isSelected) {
-                // Actualizar la lista 'seeking' según la selección
-                // (Implementación similar a la existente en PersonalInfoForm)
                 _checkChanges();
               },
             ),

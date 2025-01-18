@@ -64,20 +64,16 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-
     if (index == 2) {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const MyProfileScreen()),
-      ).then((_) {
-        setState(() {
-          _selectedIndex = 1;
-        });
-      });
+      );
+      return;
     }
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 
   @override

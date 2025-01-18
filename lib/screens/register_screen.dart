@@ -1,11 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart'; // <-- Para seleccionar fotos
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/user_service.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class RegisterScreen extends StatefulWidget {
   final bool fromGoogle;
@@ -22,6 +24,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   int _currentStep = 0;
   // Seguimos con 9 pasos (0 a 8)
   final int _totalSteps = 9;
+
+  bool isCheckingUsername = false;
+  String usernameCheckMessage = '';
 
   String email = '';
   String password = '';
@@ -58,6 +63,51 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } else {
       _pageController = PageController();
     }
+  }
+
+  Future<void> _checkUsernameAvailability(String username) async {
+    setState(() {
+      isCheckingUsername = true;
+      usernameCheckMessage = 'Comprobando disponibilidad...';
+    });
+
+    final url = Uri.parse('https://gymder-api-production.up.railway.app/api/users/check_username/$username');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        bool available = data['available'] ?? false;
+        setState(() {
+          isCheckingUsername = false;
+          usernameCheckMessage = available ? 'Username disponible' : 'Username no disponible';
+        });
+      } else {
+        setState(() {
+          isCheckingUsername = false;
+          usernameCheckMessage = 'Error al comprobar disponibilidad';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        isCheckingUsername = false;
+        usernameCheckMessage = 'Error de conexión';
+      });
+    }
+  }
+
+  double? parseHeight(String input) {
+    input = input.replaceAll("'", ".").replaceAll(",", ".");
+
+    double? value = double.tryParse(input);
+    if (value == null) {
+      return null;
+    }
+
+    if (value < 3) {
+      return value * 100;
+    }
+
+    return value;
   }
 
   Future<void> _pickImages() async {
@@ -123,6 +173,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
         if (username.isEmpty || firstName.isEmpty || lastName.isEmpty) {
           setState(() {
             errorMessage = 'Ingresa tu username, nombre y apellido';
+          });
+          return false;
+        }
+        if (usernameCheckMessage == 'Username no disponible') {
+          setState(() {
+            errorMessage = 'El username no está disponible';
           });
           return false;
         }
@@ -452,8 +508,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
           TextFormField(
             style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration('Username'),
-            onChanged: (value) => username = value,
+            onChanged: (value) {
+              setState(() {
+                username = value;
+              });
+              if (value.isNotEmpty) {
+                _checkUsernameAvailability(value);
+              }
+            },
           ),
+          if (usernameCheckMessage.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text(
+                usernameCheckMessage,
+                style: TextStyle(
+                  color: usernameCheckMessage == 'Username disponible'
+                      ? Colors.green
+                      : Colors.redAccent,
+                ),
+              ),
+            ),
           const SizedBox(height: 20),
           TextFormField(
             style: const TextStyle(color: Colors.white),
@@ -476,6 +551,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
+
 
   Widget _buildStep2() {
     return _buildStepTemplate(
@@ -685,7 +761,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             keyboardType: TextInputType.number,
             onChanged: (value) {
               setState(() {
-                height = double.tryParse(value);
+                height = parseHeight(value);
               });
             },
           ),

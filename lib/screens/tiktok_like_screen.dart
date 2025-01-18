@@ -127,9 +127,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
     final result = await userService.likeUser(user.id);
 
     if (result['success'] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Has dado like al usuario')),
-      );
       if (result['matchedUser'] != null) {
         Navigator.push(
           context,
@@ -206,11 +203,13 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen> {
         const SnackBar(content: Text('Has dado like al usuario')),
       );
       if (result['matchedUser'] != null) {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final currentUser = authProvider.user;
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => ChatScreen(
-              currentUserId: user.id,
+              currentUserId: currentUser!.id,
               matchedUserId: result['matchedUser'].id,
             ),
           ),

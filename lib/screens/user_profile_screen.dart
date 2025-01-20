@@ -174,7 +174,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            '${user!.firstName ?? ''} ${user!.lastName ?? ''}',
+                            user!.username ?? '',
                             style: const TextStyle(
                                 fontSize: 26,
                                 fontWeight: FontWeight.bold,

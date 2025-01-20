@@ -13,6 +13,33 @@ class UserService {
 
   UserService({required this.token});
 
+  Future<Map<String, dynamic>> updatePhotoOrder(List<String> photoIds) async {
+    final url = Uri.parse('$baseUrl/users/order/photos');
+    final response = await http.patch(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'photoIds': photoIds}),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return {
+        'success': data['success'] ?? true,
+        'message': data['message'],
+        'photos': data['photos'], // si quieres devolver las fotos actualizadas
+      };
+    } else {
+      final data = jsonDecode(response.body);
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Error al actualizar el orden de fotos',
+      };
+    }
+  }
+
   Future<Map<String, dynamic>> getUserLikes() async {
     final url = Uri.parse('$baseUrl/users/likes');
     final response = await http.get(
@@ -51,11 +78,12 @@ class UserService {
     if (response.statusCode == 200) {
       return {'success': true, 'user': User.fromJson(data['user'])};
     } else {
-      return {'success': false, 'message': data['message'] ?? 'Error al suscribirse'};
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Error al suscribirse'
+      };
     }
   }
-
-
 
   // En user_service.dart
   Future<Map<String, dynamic>> getMatches() async {

@@ -23,8 +23,11 @@ class _SingleUserViewState extends State<SingleUserView>
 
   late AnimationController _heartAnimationController;
   late Animation<double> _heartAnimation;
+  Animation<double>? _heartOpacityAnimation;
+  Animation<double>? _heartMoveAnimation;
 
-  bool _showHeart = false; // Para mostrar/ocultar el icono temporalmente
+  bool _showHeart = false;
+  Offset? _heartPosition; // Almacena la posición del doble tap
 
   @override
   void initState() {
@@ -33,9 +36,19 @@ class _SingleUserViewState extends State<SingleUserView>
 
     _heartAnimationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 800), // Duración extendida para el efecto
     );
-    _heartAnimation = Tween<double>(begin: 0.5, end: 1.2).animate(
+
+    // Configuración de animaciones
+    _heartAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _heartAnimationController, curve: Curves.easeOut),
+    );
+
+    _heartOpacityAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _heartAnimationController, curve: Curves.easeOut),
+    );
+
+    _heartMoveAnimation = Tween<double>(begin: 0.0, end: -100.0).animate(
       CurvedAnimation(parent: _heartAnimationController, curve: Curves.easeOut),
     );
   }
@@ -51,6 +64,11 @@ class _SingleUserViewState extends State<SingleUserView>
     setState(() {
       _showHeart = true;
     });
+
+    // Mostrar el corazón grande y estático por un breve periodo
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    // Iniciar la animación de desvanecimiento y movimiento hacia arriba
     _heartAnimationController.forward(from: 0).then((_) {
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
@@ -72,6 +90,13 @@ class _SingleUserViewState extends State<SingleUserView>
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
+      onDoubleTapDown: (TapDownDetails details) {
+        // Capturar la posición local del doble tap
+        final RenderBox box = context.findRenderObject() as RenderBox;
+        setState(() {
+          _heartPosition = box.globalToLocal(details.globalPosition);
+        });
+      },
       onDoubleTap: _handleDoubleTap,
       child: Stack(
         children: [
@@ -107,7 +132,7 @@ class _SingleUserViewState extends State<SingleUserView>
                   child: CircularProgressIndicator(),
                 ),
                 errorWidget: (context, url, error) =>
-                    const Center(child: Icon(Icons.error)),
+                const Center(child: Icon(Icons.error)),
               );
             },
           ),
@@ -135,7 +160,7 @@ class _SingleUserViewState extends State<SingleUserView>
               ),
             ),
 
-          // --- DATOS del usuario (nombre, goal, etc.) ---
+          // Datos del usuario
           Positioned(
             left: 20,
             bottom: 120,
@@ -164,16 +189,27 @@ class _SingleUserViewState extends State<SingleUserView>
             ),
           ),
 
-          // --- ICONO de corazón animado al hacer doble tap ---
-          if (_showHeart)
-            Center(
-              child: ScaleTransition(
-                scale: _heartAnimation,
-                child: const Icon(
-                  Icons.favorite,
-                  color: Colors.red,
-                  size: 80,
-                ),
+          // Ícono de corazón animado en la posición del doble tap con efecto TikTok
+          if (_showHeart && _heartPosition != null)
+            AnimatedBuilder(
+              animation: _heartAnimationController,
+              builder: (context, child) {
+                return Positioned(
+                  left: _heartPosition!.dx - 40,
+                  top: _heartPosition!.dy - 40 + (_heartMoveAnimation?.value ?? 0.0),
+                  child: Opacity(
+                    opacity: _heartOpacityAnimation?.value ?? 1.0,
+                    child: ScaleTransition(
+                      scale: _heartAnimation,
+                      child: child,
+                    ),
+                  ),
+                );
+              },
+              child: const Icon(
+                Icons.favorite,
+                color: Colors.red,
+                size: 80,
               ),
             ),
         ],

@@ -79,7 +79,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                       );
                     },
                     child: Container(
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: Colors.black54,
                         shape: BoxShape.circle,
                       ),
@@ -93,7 +93,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              '${user.firstName ?? ''} ${user.lastName ?? ''}',
+              user.username ?? '',
               style: const TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.bold,

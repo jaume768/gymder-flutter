@@ -3,14 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../services/user_service.dart';
 import '../widgets/perfil/profile_picture_widget.dart';
 import '../widgets/perfil/personal_info_form.dart';
 import '../widgets/perfil/additional_photos_widget.dart';
 import 'login_screen.dart';
-import 'home_screen.dart';
-import 'blocked_users_screen.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({Key? key}) : super(key: key);
@@ -45,6 +44,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   List<File> _additionalImages = [];
   final ImagePicker _picker = ImagePicker();
 
+  // Control de reordenamiento de fotos
+  List<Photo> _reorderedPhotos = [];
+  bool _photoOrderChanged = false;
+
   @override
   void initState() {
     super.initState();
@@ -76,6 +79,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           seeking.length != originalSeeking.length ||
           !seeking.every((item) => originalSeeking.contains(item)));
     });
+  }
+
+  void _handleSeekingChanged(String option, bool isSelected) {
+    setState(() {
+      if (isSelected) {
+        // Agregar la opción a la lista
+        if (!seeking.contains(option)) {
+          seeking.add(option);
+        }
+      } else {
+        // Quitar la opción de la lista
+        seeking.remove(option);
+      }
+    });
+    _checkChanges();
   }
 
   Future<void> _pickProfileImage() async {
@@ -152,8 +170,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         return;
       }
       setState(() {
-        _additionalImages =
-            pickedFiles.map((pickedFile) => File(pickedFile.path)).toList();
+        _additionalImages = pickedFiles.map((f) => File(f.path)).toList();
       });
     }
   }
@@ -204,40 +221,75 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  Future<void> _updatePhotoOrder(List<Photo> newPhotoList) async {
+    if (newPhotoList.isEmpty) return;
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = await authProvider.getToken();
+      if (token == null) return;
+
+      final userService = UserService(token: token);
+      final photoIds = newPhotoList.map((p) => p.id).toList();
+      final result = await userService.updatePhotoOrder(photoIds);
+
+      if (result['success'] == true) {
+        await authProvider.refreshUser();
+      } else {
+        setState(() {
+          errorMessage =
+              result['message'] ?? 'Error al actualizar orden de fotos';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error al actualizar orden de fotos: $e';
+      });
+    }
+  }
+
   Future<void> _saveProfile() async {
-    if (!_formKey.currentState!.validate()) return;
-    _formKey.currentState!.save();
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+    } else {
+      return;
+    }
 
     setState(() {
       isUploading = true;
       errorMessage = '';
     });
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final token = await authProvider.getToken();
-    if (token == null) {
-      setState(() {
-        isUploading = false;
-        errorMessage = 'Token no encontrado. Inicia sesión nuevamente.';
-      });
-      return;
-    }
-
     try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = await authProvider.getToken();
+      if (token == null) {
+        setState(() {
+          errorMessage = 'Token no encontrado. Inicia sesión nuevamente.';
+        });
+        return;
+      }
+
       final userService = UserService(token: token);
       final result = await userService.updateProfile({
         'firstName': firstName,
         'lastName': lastName,
         'goal': goal,
         'gender': gender,
-        'seeking': seeking,
+        'seeking': seeking, // <--- Enviamos la lista actualizada
         'relationshipGoal': relationshipGoal,
       });
+
       if (result['success']) {
         await authProvider.refreshUser();
+        if (_photoOrderChanged && _reorderedPhotos.isNotEmpty) {
+          await _updatePhotoOrder(_reorderedPhotos);
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Perfil actualizado exitosamente')),
         );
+
+        // Actualizamos originales
         setState(() {
           originalFirstName = firstName;
           originalLastName = lastName;
@@ -245,7 +297,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           originalGender = gender;
           originalSeeking = List.from(seeking);
           originalRelationshipGoal = relationshipGoal;
+
           hasChanges = false;
+          _photoOrderChanged = false;
         });
       } else {
         setState(() {
@@ -319,6 +373,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
     }
 
+    final showSaveButton = hasChanges || _photoOrderChanged;
+
     return Scaffold(
       appBar: AppBar(
         title:
@@ -327,7 +383,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       backgroundColor: Colors.grey[900],
-      floatingActionButton: hasChanges
+      floatingActionButton: showSaveButton
           ? FloatingActionButton.extended(
               onPressed: _saveProfile,
               backgroundColor: Colors.blueAccent,
@@ -346,6 +402,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               onPickImage: _pickProfileImage,
             ),
             const SizedBox(height: 20),
+
+            // Formulario de info personal
             PersonalInfoForm(
               formKey: _formKey,
               firstName: firstName,
@@ -380,11 +438,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   _checkChanges();
                 }
               },
-              onSeekingSelectionChanged: (isSelected) {
-                _checkChanges();
-              },
+              onSeekingSelectionChanged: _handleSeekingChanged,
             ),
+
             const SizedBox(height: 20),
+
+            // Fotos adicionales
             AdditionalPhotosWidget(
               user: user,
               additionalImages: _additionalImages,
@@ -397,7 +456,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 });
               },
               onDeletePhoto: _deletePhoto,
+              onReorderDone: (List<Photo> newPhotoList) {
+                _reorderedPhotos = newPhotoList;
+                _photoOrderChanged = true;
+                setState(() {});
+              },
             ),
+
             if (errorMessage.isNotEmpty) ...[
               const SizedBox(height: 10),
               Text(
@@ -407,6 +472,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
             ],
             const SizedBox(height: 20),
+
             ElevatedButton(
               onPressed: () async {
                 await authProvider.logoutUser();

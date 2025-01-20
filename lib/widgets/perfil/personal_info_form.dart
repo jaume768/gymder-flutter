@@ -9,12 +9,15 @@ class PersonalInfoForm extends StatelessWidget {
   final String gender;
   final List<String> seeking;
   final String relationshipGoal;
+
   final ValueChanged<String> onFirstNameChanged;
   final ValueChanged<String> onLastNameChanged;
   final ValueChanged<String?> onGoalChanged;
   final ValueChanged<String?> onGenderChanged;
   final ValueChanged<String?> onRelationshipGoalChanged;
-  final ValueChanged<bool> onSeekingSelectionChanged;
+
+  // CAMBIO: ahora pasamos la opción y el bool
+  final Function(String option, bool isSelected) onSeekingSelectionChanged;
 
   const PersonalInfoForm({
     Key? key,
@@ -149,6 +152,8 @@ class PersonalInfoForm extends StatelessWidget {
                 validatorMsg: 'Por favor selecciona tu género',
               ),
               const SizedBox(height: 16),
+
+              // Buscando:
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -157,6 +162,8 @@ class PersonalInfoForm extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
+
+              // FilterChips
               Wrap(
                 spacing: 10.0,
                 children: [
@@ -174,12 +181,15 @@ class PersonalInfoForm extends StatelessWidget {
                     backgroundColor: Colors.white54,
                     selectedColor: Colors.white,
                     onSelected: (bool isSelected) {
-                      onSeekingSelectionChanged(isSelected);
+                      // IMPORTANTE: pasamos la opción y el estado
+                      onSeekingSelectionChanged(option, isSelected);
                     },
                   );
                 }).toList(),
               ),
               const SizedBox(height: 16),
+
+              // Relación
               _buildDropdownField(
                 label: 'Objetivo de Relación',
                 value: relationshipGoal.isNotEmpty ? relationshipGoal : null,

@@ -147,6 +147,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _nextStep() async {
     if (_validateCurrentStep()) {
       if (_currentStep == 0) {
+        if (email.isEmpty || password.isEmpty) {
+          setState(() {
+            errorMessage = 'Completa tu correo y contraseña';
+          });
+          return;
+        }
         setState(() {
           errorMessage = 'Comprobando disponibilidad de email...';
         });
@@ -545,7 +551,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 username = value;
               });
               if (value.isNotEmpty) {
-                _checkUsernameAvailability(value);
+                if (value.length < 4) {
+                  setState(() {
+                    isCheckingUsername = false;
+                    usernameCheckMessage = 'Username no disponible';
+                  });
+                } else {
+                  _checkUsernameAvailability(value);
+                }
+              } else {
+                setState(() {
+                  usernameCheckMessage = '';
+                });
               }
             },
           ),

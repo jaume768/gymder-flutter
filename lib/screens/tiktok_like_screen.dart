@@ -333,16 +333,18 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                   )
                 : NotificationListener<UserScrollNotification>(
                     onNotification: (notification) {
-                      if (!auth.user!.isPremium &&
-                          notification.direction == ScrollDirection.forward) {
-                        _showPremiumDialog(
-                          "Función Premium",
-                          "Para hacer scroll hacia arriba y volver al usuario anterior necesitas ser premium. ¿Deseas comprarlo?",
-                        );
-                      }
-                      if (!auth.user!.isPremium &&
-                          notification.direction == ScrollDirection.reverse) {
-                        _checkScrollLimit(maxScrollLimit);
+                      if (notification.metrics.axis == Axis.vertical) {
+                        if (!auth.user!.isPremium &&
+                            notification.direction == ScrollDirection.forward) {
+                          _showPremiumDialog(
+                            "Función Premium",
+                            "Para hacer scroll hacia arriba y volver al usuario anterior necesitas ser premium. ¿Deseas comprarlo?",
+                          );
+                        }
+                        if (!auth.user!.isPremium &&
+                            notification.direction == ScrollDirection.reverse) {
+                          _checkScrollLimit(maxScrollLimit);
+                        }
                       }
                       return false;
                     },

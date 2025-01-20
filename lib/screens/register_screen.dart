@@ -71,7 +71,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       usernameCheckMessage = 'Comprobando disponibilidad...';
     });
 
-    final url = Uri.parse('https://gymder-api-production.up.railway.app/api/users/check_username/$username');
+    final url = Uri.parse(
+        'https://gymder-api-production.up.railway.app/api/users/check_username/$username');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -79,7 +80,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         bool available = data['available'] ?? false;
         setState(() {
           isCheckingUsername = false;
-          usernameCheckMessage = available ? 'Username disponible' : 'Username no disponible';
+          usernameCheckMessage =
+              available ? 'Username disponible' : 'Username no disponible';
         });
       } else {
         setState(() {
@@ -93,6 +95,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
         usernameCheckMessage = 'Error de conexión';
       });
     }
+  }
+
+  Future<bool> _checkEmailAvailability(String email) async {
+    final url = Uri.parse(
+        'https://gymder-api-production.up.railway.app/api/users/check_email/$email');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        bool available = data['available'] ?? false;
+        return available;
+      }
+    } catch (e) {
+      print('Error comprobando email: $e');
+    }
+    return false;
   }
 
   double? parseHeight(String input) {
@@ -126,8 +144,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  void _nextStep() {
+  Future<void> _nextStep() async {
     if (_validateCurrentStep()) {
+      if (_currentStep == 0) {
+        setState(() {
+          errorMessage = 'Comprobando disponibilidad de email...';
+        });
+        bool emailAvailable = await _checkEmailAvailability(email);
+        if (!emailAvailable) {
+          setState(() {
+            errorMessage = 'El correo ya está en uso';
+          });
+          return;
+        }
+      }
+
       if (_currentStep < _totalSteps - 1) {
         setState(() {
           errorMessage = '';
@@ -303,7 +334,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         });
       }
     } else {
-      print("Enviando => height: $height, weight: $weight, gymStage: $gymStage");
+      print(
+          "Enviando => height: $height, weight: $weight, gymStage: $gymStage");
       // Flujo normal de registro
       final result = await authProvider.register(
         email: email,
@@ -551,7 +583,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
-
 
   Widget _buildStep2() {
     return _buildStepTemplate(
@@ -844,7 +875,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               color: Colors.redAccent,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.close, color: Colors.white, size: 20),
+                            child: const Icon(Icons.close,
+                                color: Colors.white, size: 20),
                           ),
                         ),
                       )

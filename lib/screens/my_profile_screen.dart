@@ -6,6 +6,7 @@ import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import 'edit_profile_screen.dart';
 import 'photo_gallery_screen.dart';
+import 'login_screen.dart';
 
 class MyProfileScreen extends StatefulWidget {
   const MyProfileScreen({Key? key}) : super(key: key);
@@ -42,6 +43,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mi Perfil', style: TextStyle(color: Colors.white)),
@@ -172,7 +175,33 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
               ),
             ],
             const SizedBox(height: 16),
-            // Puedes agregar más widgets o funcionalidades aquí si lo deseas
+            // Botón de Cerrar sesión agregado directamente en el perfil
+            ElevatedButton(
+              onPressed: () async {
+                await authProvider.logoutUser();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
+              ),
+              child: const Text(
+                'Cerrar sesión',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
           ],
         ),
       ),

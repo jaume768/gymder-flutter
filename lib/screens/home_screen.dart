@@ -1,11 +1,13 @@
 import 'package:app/screens/register_screen.dart';
 import 'package:app/screens/tiktok_like_screen.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
-import 'login_screen.dart';
+
 import '../models/user.dart';
+import '../providers/auth_provider.dart';
 import '../services/user_service.dart';
+import 'login_screen.dart';
 import 'matches_chats_screen.dart';
 import 'my_profile_screen.dart';
 
@@ -21,6 +23,9 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isLoading = true;
   String errorMessage = '';
   int _selectedIndex = 1;
+
+  // Para no recrear TikTokLikeScreen cada vez
+  late final TikTokLikeScreen _tikTokLikeScreen;
 
   @override
   void initState() {
@@ -49,6 +54,8 @@ class _HomeScreenState extends State<HomeScreen> {
             List<User>.from(result['matches'].map((x) => User.fromJson(x)));
         isLoading = false;
       });
+      // Instanciar la pantalla de matches una sola vez
+      _tikTokLikeScreen = TikTokLikeScreen(users: suggestedMatches);
     } else {
       setState(() {
         errorMessage = result['message'] ?? 'Error al obtener matches';
@@ -57,23 +64,20 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  final List<Widget> _widgetOptions = <Widget>[
-    const MatchesChatsScreen(),
-    const SizedBox.shrink(),
-    const MyProfileScreen(),
-  ];
-
   void _onItemTapped(int index) {
-    if (index == 2) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const MyProfileScreen()),
-      );
-      return;
-    }
+    // Simplemente cambiamos el tab, sin Navigator.push
     setState(() {
       _selectedIndex = index;
     });
+  }
+
+  // Lista de pantallas para tu bottom nav
+  List<Widget> _widgetOptions() {
+    return [
+      const MatchesChatsScreen(), // index 0
+      _tikTokLikeScreen, // index 1
+      const MyProfileScreen(), // index 2
+    ];
   }
 
   @override
@@ -81,6 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.user;
 
+    // Verificar si el usuario tiene pendientes
     if (user != null &&
         (user.gender == 'Pendiente' || user.relationshipGoal == 'Pendiente')) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -94,6 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
+
     return Scaffold(
       extendBody: true,
       backgroundColor: Colors.black,
@@ -110,22 +116,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 )
-              : _selectedIndex == 1
-                  ? (suggestedMatches.isEmpty
-                      ? const Center(
-                          child: Text(
-                          'No hay más matches disponibles.',
-                          style: TextStyle(fontSize: 18, color: Colors.white),
-                        ))
-                      : TikTokLikeScreen(users: suggestedMatches))
-                  : _widgetOptions.elementAt(_selectedIndex),
+              : IndexedStack(
+                  index: _selectedIndex,
+                  children: _widgetOptions(),
+                ),
       bottomNavigationBar: Container(
         color: Colors.transparent,
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Icono Chat
+            // Opción 0: Matches (Chats)
             GestureDetector(
               onTap: () => _onItemTapped(0),
               child: CircleAvatar(
@@ -140,6 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(width: 40),
+            // Opción 1: Pantalla "TikTokLikeScreen" (la de swipes)
             GestureDetector(
               onTap: () => _onItemTapped(1),
               child: CircleAvatar(
@@ -154,6 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(width: 40),
+            // Opción 2: Perfil
             GestureDetector(
               onTap: () => _onItemTapped(2),
               child: CircleAvatar(

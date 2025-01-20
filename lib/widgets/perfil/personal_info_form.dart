@@ -181,7 +181,6 @@ class PersonalInfoForm extends StatelessWidget {
                     backgroundColor: Colors.white54,
                     selectedColor: Colors.white,
                     onSelected: (bool isSelected) {
-                      // IMPORTANTE: pasamos la opción y el estado
                       onSeekingSelectionChanged(option, isSelected);
                     },
                   );

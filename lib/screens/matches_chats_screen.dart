@@ -180,113 +180,143 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
                           ),
                         ),
                         Expanded(
-                          child: ListView.builder(
-                            itemCount: myMatches.length,
-                            itemBuilder: (context, index) {
-                              final matchedUser = myMatches[index];
-                              return GestureDetector(
-                                onLongPress: () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (ctx) => AlertDialog(
-                                      title:
-                                          const Text('Eliminar conversación'),
-                                      content: Text(
-                                          '¿Deseas eliminar el chat con ${matchedUser.username}?'),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(ctx).pop(),
-                                          child: const Text('Cancelar'),
-                                        ),
-                                        TextButton(
-                                          onPressed: () {
-                                            Navigator.of(ctx).pop();
-                                            _hideConversation(matchedUser.id);
-                                          },
-                                          child: const Text('Eliminar'),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 8),
-                                  child: Card(
-                                    color: Colors.grey[850],
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(15),
-                                    ),
-                                    elevation: 4,
-                                    child: ListTile(
-                                      contentPadding: const EdgeInsets.all(16),
-                                      leading: CircleAvatar(
-                                        radius: 30,
-                                        backgroundImage: matchedUser
-                                                    .profilePicture !=
-                                                null
-                                            ? NetworkImage(
-                                                matchedUser.profilePicture!.url)
-                                            : null,
-                                        child: matchedUser.profilePicture ==
-                                                null
-                                            ? const Icon(Icons.person, size: 30)
-                                            : null,
-                                      ),
-                                      title: Text(
-                                        matchedUser.username,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      subtitle: Text(
-                                        () {
-                                          final lastMsg =
-                                              lastMessages[matchedUser.id];
-                                          if (lastMsg != null) {
-                                            if (lastMsg['type'] == 'image') {
-                                              return '🖼️ imagen';
-                                            } else {
-                                              return lastMsg['message'] ??
-                                                  'Toca para chatear';
-                                            }
-                                          }
-                                          return 'Toca para chatear';
-                                        }(),
-                                        style: const TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                      onTap: () {
-                                        final authProvider =
-                                            Provider.of<AuthProvider>(context,
-                                                listen: false);
-                                        final currentUserId =
-                                            authProvider.user!.id;
+                          child: () {
+                            // Crear una copia de myMatches para ordenar
+                            final sortedMatches = List<User>.from(myMatches);
+                            sortedMatches.sort((a, b) {
+                              final msgA = lastMessages[a.id];
+                              final msgB = lastMessages[b.id];
 
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => ChatScreen(
-                                              currentUserId: currentUserId,
-                                              matchedUserId: matchedUser.id,
-                                            ),
+                              // Si ambos no tienen mensaje, mantener su orden
+                              if (msgA == null && msgB == null) return 0;
+                              // Si solo uno no tiene mensaje, se coloca al final
+                              if (msgA == null) return 1;
+                              if (msgB == null) return -1;
+
+                              // Convertir los timestamps usando 'createdAt' y comparar
+                              final dateA = DateTime.tryParse(
+                                  msgA['createdAt']?.toString() ?? '');
+                              final dateB = DateTime.tryParse(
+                                  msgB['createdAt']?.toString() ?? '');
+
+                              // Si la fecha es nula, poner al final
+                              if (dateA == null && dateB == null) return 0;
+                              if (dateA == null) return 1;
+                              if (dateB == null) return -1;
+
+                              // Ordenar de más reciente a más antiguo
+                              return dateB.compareTo(dateA);
+                            });
+
+                            return ListView.builder(
+                              itemCount: sortedMatches.length,
+                              itemBuilder: (context, index) {
+                                final matchedUser = sortedMatches[index];
+                                return GestureDetector(
+                                  onLongPress: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (ctx) => AlertDialog(
+                                        title:
+                                            const Text('Eliminar conversación'),
+                                        content: Text(
+                                            '¿Deseas eliminar el chat con ${matchedUser.username}?'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.of(ctx).pop(),
+                                            child: const Text('Cancelar'),
                                           ),
-                                        ).then((_) {
-                                          // Al regresar del chat, refrescar la lista
-                                          _fetchMyMatches();
-                                        });
-                                      },
+                                          TextButton(
+                                            onPressed: () {
+                                              Navigator.of(ctx).pop();
+                                              _hideConversation(matchedUser.id);
+                                            },
+                                            child: const Text('Eliminar'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 8),
+                                    child: Card(
+                                      color: Colors.grey[850],
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                      elevation: 4,
+                                      child: ListTile(
+                                        contentPadding:
+                                            const EdgeInsets.all(16),
+                                        leading: CircleAvatar(
+                                          radius: 30,
+                                          backgroundImage:
+                                              matchedUser.profilePicture != null
+                                                  ? NetworkImage(matchedUser
+                                                      .profilePicture!.url)
+                                                  : null,
+                                          child:
+                                              matchedUser.profilePicture == null
+                                                  ? const Icon(Icons.person,
+                                                      size: 30)
+                                                  : null,
+                                        ),
+                                        title: Text(
+                                          matchedUser.username,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        subtitle: Text(
+                                          () {
+                                            final lastMsg =
+                                                lastMessages[matchedUser.id];
+                                            if (lastMsg != null) {
+                                              if (lastMsg['type'] == 'image') {
+                                                return '🖼️ imagen';
+                                              } else {
+                                                return lastMsg['message'] ??
+                                                    'Toca para chatear';
+                                              }
+                                            }
+                                            return 'Toca para chatear';
+                                          }(),
+                                          style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        onTap: () {
+                                          final authProvider =
+                                              Provider.of<AuthProvider>(context,
+                                                  listen: false);
+                                          final currentUserId =
+                                              authProvider.user!.id;
+
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => ChatScreen(
+                                                currentUserId: currentUserId,
+                                                matchedUserId: matchedUser.id,
+                                              ),
+                                            ),
+                                          ).then((_) {
+                                            // Al regresar del chat, refrescar la lista
+                                            _fetchMyMatches();
+                                          });
+                                        },
+                                      ),
                                     ),
                                   ),
-                                ),
-                              );
-                            },
-                          ),
+                                );
+                              },
+                            );
+                          }(),
                         ),
                       ],
                     ),

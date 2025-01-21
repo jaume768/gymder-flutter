@@ -22,8 +22,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   late PageController _pageController;
 
   int _currentStep = 0;
-  // Seguimos con 9 pasos (0 a 8)
-  final int _totalSteps = 9;
+  final int _totalSteps = 10;
 
   bool isCheckingUsername = false;
   String usernameCheckMessage = '';
@@ -52,6 +51,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String errorMessage = '';
   bool isLoading = false;
 
+  File? profilePictureFile;
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -271,6 +271,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
         break;
       case 8:
+      // Paso de foto de perfil, no obligatorio
+        return true;
+      case 9:
         if (selectedPhotos.length < 2) {
           setState(() {
             errorMessage = 'Por favor, sube al menos 2 fotos';
@@ -322,6 +325,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
         });
         return;
       }
+      if (profilePictureFile != null) {
+        final userService = UserService(token: token);
+        final profileResult = await userService.uploadProfilePicture(profilePictureFile!);
+        if (profileResult['success'] != true) {
+          setState(() {
+            isLoading = false;
+            errorMessage = profileResult['message'] ?? 'Error al subir foto de perfil';
+          });
+          return;
+        }
+      }
       // Subir fotos
       final uploadResult = await userService.uploadPhotos(selectedPhotos);
       if (uploadResult['success'] == true) {
@@ -361,6 +375,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
         final token = result['token'];
         if (token != null) {
           final userService = UserService(token: token);
+          if (profilePictureFile != null) {
+            final profileResult = await userService.uploadProfilePicture(profilePictureFile!);
+            if (profileResult['success'] != true) {
+              setState(() {
+                isLoading = false;
+                errorMessage = profileResult['message'] ?? 'Error al subir foto de perfil';
+              });
+              return;
+            }
+          }
           final uploadResult = await userService.uploadPhotos(selectedPhotos);
           if (uploadResult['success'] == true) {
             setState(() {
@@ -421,7 +445,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   _buildStep4(),
                   _buildStep5(),
                   _buildStep6(),
-                  _buildStep7(), // <-- Paso modificado
+                  _buildStep7(),
+                  _buildStepProfilePicture(),
                   _buildStep8(),
                 ],
               ),
@@ -769,7 +794,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  /// Paso 7 modificado para pedir etapa, altura y peso
   Widget _buildStep7() {
     final gymStages = ['Volumen', 'Definición', 'Mantenimiento'];
 
@@ -833,6 +857,41 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Text(errorMessage,
                   style: const TextStyle(color: Colors.redAccent)),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepProfilePicture() {
+    return _buildStepTemplate(
+      title: 'Foto de perfil',
+      subtitle: 'Selecciona una foto de perfil',
+      child: Column(
+        children: [
+          const SizedBox(height: 20),
+          CircleAvatar(
+            radius: 75,
+            backgroundImage: profilePictureFile != null
+                ? FileImage(profilePictureFile!)
+                : const AssetImage('assets/images/default_profile.png'),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () async {
+              final pickedFile =
+                  await _picker.pickImage(source: ImageSource.gallery);
+              if (pickedFile != null) {
+                setState(() {
+                  profilePictureFile = File(pickedFile.path);
+                });
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+            child: const Text(
+              'Cambiar foto',
+              style: TextStyle(color: Colors.black),
+            ),
+          ),
         ],
       ),
     );

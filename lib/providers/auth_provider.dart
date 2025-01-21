@@ -125,7 +125,7 @@ class AuthProvider with ChangeNotifier {
 
   Future<Map<String, dynamic>> loginWithGoogle(String googleIdToken) async {
     try {
-      final url = Uri.parse('https://gymder-api-production.up.railway.app:5000/api/users/auth/google');
+      final url = Uri.parse('https://gymder-api-production.up.railway.app/api/users/auth/google');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},

@@ -69,6 +69,13 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
   final Duration limitDuration = const Duration(hours: 10);
   final Duration likeLimitDuration = const Duration(hours: 10);
 
+  // Variables para persistir filtros
+  RangeValues ageRangeFilter = const RangeValues(18, 50);
+  RangeValues weightRangeFilter = const RangeValues(50, 100);
+  RangeValues heightRangeFilter = const RangeValues(150, 200);
+  String gymStageFilter = 'Mantenimiento';
+  String relationshipTypeFilter = 'Amistad';
+
   @override
   bool get wantKeepAlive => true;
 
@@ -311,6 +318,24 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     );
   }
 
+  Future<List<User>?> _fetchAllUsersWithoutFilter() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final token = await authProvider.getToken();
+    if (token == null) return null;
+
+    final matchService = MatchService(token: token);
+    final result =
+        await matchService.getSuggestedMatchesWithFilters({}); // Sin filtros
+
+    if (result['success'] == true) {
+      List<dynamic> matchesJson = result['matches'];
+      List<User> matches =
+          matchesJson.map((json) => User.fromJson(json)).toList();
+      return matches;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     super
@@ -442,7 +467,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                 ),
                 IconButton(
                   onPressed: () async {
-                    final result = await showModalBottomSheet<List<User>>(
+                    final result = await showModalBottomSheet<dynamic>(
                       context: context,
                       backgroundColor: Colors.transparent,
                       shape: const RoundedRectangleBorder(
@@ -465,18 +490,53 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                               top: Radius.circular(20),
                             ),
                           ),
-                          child: const FilterModalContent(),
+                          child: FilterModalContent(
+                            initialAgeRange: ageRangeFilter,
+                            initialWeightRange: weightRangeFilter,
+                            initialHeightRange: heightRangeFilter,
+                            initialGymStage: gymStageFilter,
+                            initialRelationshipType: relationshipTypeFilter,
+                          ),
                         );
                       },
                     );
 
-                    if (result != null && result is List<User>) {
-                      setState(() {
-                        _randomUsers = result;
-                        _randomUsers
-                            .shuffle(); // Reordenar aleatoriamente tras aplicar filtros
-                        showRandom = true;
-                      });
+                    if (result != null && result is Map) {
+                      if (result['remove'] == true) {
+                        // Quitar filtro: cargar todos los usuarios
+                        var allUsers = await _fetchAllUsersWithoutFilter();
+                        if (allUsers != null) {
+                          setState(() {
+                            _randomUsers = allUsers;
+                            _randomUsers.shuffle();
+                            showRandom = true;
+
+                            // Resetear filtros a valores predeterminados si se desea
+                            ageRangeFilter = const RangeValues(18, 50);
+                            weightRangeFilter = const RangeValues(50, 100);
+                            heightRangeFilter = const RangeValues(150, 200);
+                            gymStageFilter = 'Mantenimiento';
+                            relationshipTypeFilter = 'Amistad';
+                          });
+                        }
+                      } else if (result['matches'] != null) {
+                        List<User> matches = List<User>.from(result['matches']);
+                        setState(() {
+                          _randomUsers = matches;
+                          _randomUsers.shuffle();
+                          showRandom = true;
+
+                          // Actualizar variables de filtro con los valores seleccionados
+                          ageRangeFilter = result['ageRange'] as RangeValues;
+                          weightRangeFilter =
+                              result['weightRange'] as RangeValues;
+                          heightRangeFilter =
+                              result['heightRange'] as RangeValues;
+                          gymStageFilter = result['gymStage'] as String;
+                          relationshipTypeFilter =
+                              result['relationshipType'] as String;
+                        });
+                      }
                     }
                   },
                   icon: const Icon(Icons.settings, color: Colors.white),
@@ -490,20 +550,43 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
   }
 }
 
-// Definición de FilterModalContent según tu código previo
+// Definición de FilterModalContent con valores iniciales
 class FilterModalContent extends StatefulWidget {
-  const FilterModalContent({Key? key}) : super(key: key);
+  final RangeValues initialAgeRange;
+  final RangeValues initialWeightRange;
+  final RangeValues initialHeightRange;
+  final String initialGymStage;
+  final String initialRelationshipType;
+
+  const FilterModalContent({
+    Key? key,
+    required this.initialAgeRange,
+    required this.initialWeightRange,
+    required this.initialHeightRange,
+    required this.initialGymStage,
+    required this.initialRelationshipType,
+  }) : super(key: key);
 
   @override
   _FilterModalContentState createState() => _FilterModalContentState();
 }
 
 class _FilterModalContentState extends State<FilterModalContent> {
-  RangeValues ageRange = const RangeValues(18, 50);
-  RangeValues weightRange = const RangeValues(50, 100);
-  RangeValues heightRange = const RangeValues(150, 200);
-  String selectedGymStage = 'Mantenimiento';
-  String selectedRelationshipType = 'Amistad';
+  late RangeValues ageRange;
+  late RangeValues weightRange;
+  late RangeValues heightRange;
+  late String selectedGymStage;
+  late String selectedRelationshipType;
+
+  @override
+  void initState() {
+    super.initState();
+    ageRange = widget.initialAgeRange;
+    weightRange = widget.initialWeightRange;
+    heightRange = widget.initialHeightRange;
+    selectedGymStage = widget.initialGymStage;
+    selectedRelationshipType = widget.initialRelationshipType;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -629,7 +712,15 @@ class _FilterModalContentState extends State<FilterModalContent> {
                     List<User> matches =
                         matchesJson.map((json) => User.fromJson(json)).toList();
 
-                    Navigator.of(context).pop(matches);
+                    // Retornar tanto los matches como los valores del filtro
+                    Navigator.of(context).pop({
+                      'matches': matches,
+                      'ageRange': ageRange,
+                      'weightRange': weightRange,
+                      'heightRange': heightRange,
+                      'gymStage': selectedGymStage,
+                      'relationshipType': selectedRelationshipType,
+                    });
                     return;
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -645,6 +736,24 @@ class _FilterModalContentState extends State<FilterModalContent> {
               child: const Text(
                 "Aplicar",
                 style: TextStyle(color: Colors.black),
+              ),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.grey[700],
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30)),
+              ),
+              onPressed: () {
+                // Botón para quitar el filtro
+                Navigator.of(context).pop({'remove': true});
+              },
+              child: const Text(
+                "Quitar filtro",
+                style: TextStyle(color: Colors.white),
               ),
             ),
           ],

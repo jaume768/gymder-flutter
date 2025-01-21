@@ -12,7 +12,7 @@ import google_sign_in_ios
 import in_app_purchase_storekit
 import path_provider_foundation
 import shared_preferences_foundation
-import sqflite_darwin
+import sqflite
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   EmojiPickerFlutterPlugin.register(with: registry.registrar(forPlugin: "EmojiPickerFlutterPlugin"))

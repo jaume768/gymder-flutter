@@ -21,12 +21,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   @override
   void initState() {
     super.initState();
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    if (authProvider.user != null) {
-      user = authProvider.user!;
-    } else {
-      // Manejar el caso en que no hay usuario
-    }
+    Provider.of<AuthProvider>(context, listen: false).refreshUser();
   }
 
   Widget _buildInfoTile({
@@ -44,6 +39,13 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
+
+    final user = authProvider.user;
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(

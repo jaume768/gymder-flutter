@@ -80,7 +80,8 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
       final token = await authProvider.getToken();
       if (token == null || currentUserId == null) return;
 
-      final url = Uri.parse('https://gymder-api-production.up.railway.app/api/messages/conversation'
+      final url = Uri.parse(
+          'https://gymder-api-production.up.railway.app/api/messages/conversation'
           '?user1=$currentUserId&user2=$otherUserId');
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
@@ -112,8 +113,8 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
       final token = await authProvider.getToken();
       if (token == null) return;
 
-      final url =
-          Uri.parse('https://gymder-api-production.up.railway.app/api/messages/conversation/hide');
+      final url = Uri.parse(
+          'https://gymder-api-production.up.railway.app/api/messages/conversation/hide');
       final response = await http.post(
         url,
         headers: {
@@ -168,10 +169,7 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
                       children: [
                         const Padding(
                           padding: EdgeInsets.only(
-                              top: 82.0,
-                              left: 16.0,
-                              right: 16.0,
-                              bottom: 1.0), // Aumenta el margen superior
+                              top: 82.0, left: 16.0, right: 16.0, bottom: 1.0),
                           child: Text(
                             'Mensajes',
                             style: TextStyle(
@@ -278,7 +276,10 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
                                               matchedUserId: matchedUser.id,
                                             ),
                                           ),
-                                        );
+                                        ).then((_) {
+                                          // Al regresar del chat, refrescar la lista
+                                          _fetchMyMatches();
+                                        });
                                       },
                                     ),
                                   ),

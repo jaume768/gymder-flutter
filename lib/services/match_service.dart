@@ -13,7 +13,7 @@ class MatchService {
   Future<Map<String, dynamic>> getSuggestedMatchesWithFilters(
       Map<String, String> filters) async {
     final uri =
-        Uri.parse('$baseUrl/suggested').replace(queryParameters: filters);
+    Uri.parse('$baseUrl/suggested').replace(queryParameters: filters);
     final response = await http.get(
       uri,
       headers: {

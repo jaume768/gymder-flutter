@@ -21,7 +21,6 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
   String errorMessage = '';
   List<User> myMatches = [];
 
-  // Variables para almacenar el ID del usuario actual y los últimos mensajes
   String? currentUserId;
   Map<String, Map<String, dynamic>> lastMessages = {};
 
@@ -43,7 +42,6 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
         return;
       }
 
-      // Obtener el ID del usuario actual
       currentUserId = authProvider.user?.id;
 
       final userService = UserService(token: token);
@@ -56,10 +54,10 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
           isLoading = false;
         });
 
-        // Por cada match, obtener el último mensaje
-        for (var match in myMatches) {
-          _fetchLastMessageForUser(match.id);
-        }
+        final lastMsgMap = await _fetchAllLastMessages(token, myMatches);
+        setState(() {
+          lastMessages = lastMsgMap;
+        });
       } else {
         setState(() {
           errorMessage = result['message'] ?? 'Error al obtener matches';
@@ -74,37 +72,32 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
     }
   }
 
-  Future<void> _fetchLastMessageForUser(String otherUserId) async {
-    try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final token = await authProvider.getToken();
-      if (token == null || currentUserId == null) return;
+  Future<Map<String, Map<String, dynamic>>> _fetchAllLastMessages(
+      String token, List<User> matches) async {
+    final url = Uri.parse(
+        'https://gymder-api-production.up.railway.app/api/messages/lastConversations');
+    final response = await http.get(url, headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    });
 
-      final url = Uri.parse(
-          'https://gymder-api-production.up.railway.app/api/messages/conversation'
-          '?user1=$currentUserId&user2=$otherUserId');
-      final response = await http.get(url, headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      });
+    final Map<String, Map<String, dynamic>> map = {};
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['success'] == true) {
-          final List<dynamic> msgs = data['messages'];
-          if (msgs.isNotEmpty) {
-            final lastMsg = msgs.last;
-            setState(() {
-              lastMessages[otherUserId] = lastMsg;
-            });
-          }
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data['success'] == true) {
+        final List<dynamic> lastMessages = data['lastMessages'];
+        for (var item in lastMessages) {
+          final matchId = item['_id'];
+          final lastMsg = item['lastMsg'];
+          map[matchId] = lastMsg;
         }
-      } else {
-        print('Error obteniendo conversación: ${response.statusCode}');
+        print('Last Messages: $map'); // Agrega este log
       }
-    } catch (e) {
-      print('Error en _fetchLastMessageForUser: $e');
+    } else {
+      print('Error en la respuesta: ${response.statusCode}');
     }
+    return map;
   }
 
   Future<void> _hideConversation(String otherUserId) async {
@@ -253,15 +246,22 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
                                         leading: CircleAvatar(
                                           radius: 30,
                                           backgroundImage:
-                                              matchedUser.profilePicture != null
+                                              (matchedUser.profilePicture !=
+                                                          null &&
+                                                      matchedUser
+                                                          .profilePicture!
+                                                          .url
+                                                          .isNotEmpty)
                                                   ? NetworkImage(matchedUser
                                                       .profilePicture!.url)
                                                   : null,
-                                          child:
-                                              matchedUser.profilePicture == null
-                                                  ? const Icon(Icons.person,
-                                                      size: 30)
-                                                  : null,
+                                          child: (matchedUser.profilePicture ==
+                                                      null ||
+                                                  matchedUser.profilePicture!
+                                                      .url.isEmpty)
+                                              ? const Icon(Icons.person,
+                                                  size: 30)
+                                              : null,
                                         ),
                                         title: Text(
                                           matchedUser.username,

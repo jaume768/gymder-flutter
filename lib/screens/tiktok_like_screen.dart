@@ -138,16 +138,9 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     final result = await userService.likeUser(user.id);
 
     if (result['success'] == true) {
-      if (result['matchedUser'] != null) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ChatScreen(
-              currentUserId: user.id,
-              matchedUserId: result['matchedUser'].id,
-            ),
-          ),
-        );
+      final currentUser = Provider.of<AuthProvider>(context, listen: false).user;
+      if (result['matchedUser'] != null && currentUser != null) {
+        _mostrarModalMatch(context, currentUser, user);
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -214,17 +207,10 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
         const SnackBar(content: Text('Has dado like al usuario')),
       );
       if (result['matchedUser'] != null) {
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        final currentUser = authProvider.user;
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ChatScreen(
-              currentUserId: currentUser!.id,
-              matchedUserId: result['matchedUser'].id,
-            ),
-          ),
-        );
+        final currentUser = Provider.of<AuthProvider>(context, listen: false).user;
+        if (result['matchedUser'] != null && currentUser != null) {
+          _mostrarModalMatch(context, currentUser, user);
+        }
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -318,6 +304,100 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     );
   }
 
+  Widget _buildMatchAvatar(String? imageUrl, {double radius = 50}) {
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: Colors.grey[800],
+      backgroundImage: (imageUrl != null && imageUrl.isNotEmpty)
+          ? NetworkImage(imageUrl)
+          : null,
+      child: (imageUrl == null || imageUrl.isEmpty)
+          ? Icon(Icons.person, color: Colors.white, size: radius)
+          : null,
+    );
+  }
+
+
+  void _mostrarModalMatch(
+      BuildContext context, User usuarioActual, User matchedUser) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: Colors.black87,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                '¡Es un match!',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Tú y ${matchedUser.username} se han dado like mutuamente',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70, fontSize: 16),
+              ),
+              const SizedBox(height: 20),
+              // Sección de las dos fotos
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildMatchAvatar(usuarioActual.profilePicture?.url, radius: 50),
+                  const SizedBox(width: 20),
+                  _buildMatchAvatar(matchedUser.profilePicture?.url, radius: 50),
+                ],
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30)),
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                ),
+                onPressed: () {
+                  Navigator.pop(context); // Cierra el modal
+                  // Luego navegas al chat
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ChatScreen(
+                        currentUserId: usuarioActual.id,
+                        matchedUserId: matchedUser.id,
+                      ),
+                    ),
+                  );
+                },
+                child: const Text(
+                  'Enviar mensaje',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context); // Simplemente cierras el modal
+                },
+                child: const Text(
+                  'Seguir navegando',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              )
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<List<User>?> _fetchAllUsersWithoutFilter() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final token = await authProvider.getToken();
@@ -325,7 +405,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
 
     final matchService = MatchService(token: token);
     final result =
-        await matchService.getSuggestedMatchesWithFilters({}); // Sin filtros
+        await matchService.getSuggestedMatchesWithFilters({});
 
     if (result['success'] == true) {
       List<dynamic> matchesJson = result['matches'];
@@ -653,7 +733,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
             _buildDropdown(
               label: "Etapa en el gym",
               value: selectedGymStage,
-              items: const ['Mantenimiento', 'Volumen', 'Definición'],
+              items: const ['Todos','Mantenimiento', 'Volumen', 'Definición'],
               onChanged: (String? newValue) {
                 setState(() {
                   selectedGymStage = newValue!;
@@ -665,6 +745,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
               label: "Tipo de relación",
               value: selectedRelationshipType,
               items: const [
+                'Todos',
                 'Amistad',
                 'Relación',
                 'Casual',

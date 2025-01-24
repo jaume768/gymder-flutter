@@ -58,7 +58,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Foto de perfil con ícono de lápiz superpuesto
             Stack(
               children: [
                 CircleAvatar(

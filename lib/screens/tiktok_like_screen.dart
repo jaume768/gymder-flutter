@@ -138,7 +138,8 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     final result = await userService.likeUser(user.id);
 
     if (result['success'] == true) {
-      final currentUser = Provider.of<AuthProvider>(context, listen: false).user;
+      final currentUser =
+          Provider.of<AuthProvider>(context, listen: false).user;
       if (result['matchedUser'] != null && currentUser != null) {
         _mostrarModalMatch(context, currentUser, user);
       }
@@ -207,7 +208,8 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
         const SnackBar(content: Text('Has dado like al usuario')),
       );
       if (result['matchedUser'] != null) {
-        final currentUser = Provider.of<AuthProvider>(context, listen: false).user;
+        final currentUser =
+            Provider.of<AuthProvider>(context, listen: false).user;
         if (result['matchedUser'] != null && currentUser != null) {
           _mostrarModalMatch(context, currentUser, user);
         }
@@ -317,7 +319,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     );
   }
 
-
   void _mostrarModalMatch(
       BuildContext context, User usuarioActual, User matchedUser) {
     showDialog(
@@ -326,7 +327,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
       builder: (BuildContext context) {
         return AlertDialog(
           shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           backgroundColor: Colors.black87,
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -349,9 +350,11 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildMatchAvatar(usuarioActual.profilePicture?.url, radius: 50),
+                  _buildMatchAvatar(usuarioActual.profilePicture?.url,
+                      radius: 50),
                   const SizedBox(width: 20),
-                  _buildMatchAvatar(matchedUser.profilePicture?.url, radius: 50),
+                  _buildMatchAvatar(matchedUser.profilePicture?.url,
+                      radius: 50),
                 ],
               ),
               const SizedBox(height: 20),
@@ -361,7 +364,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30)),
                   padding:
-                  const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                      const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 ),
                 onPressed: () {
                   Navigator.pop(context); // Cierra el modal
@@ -404,8 +407,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     if (token == null) return null;
 
     final matchService = MatchService(token: token);
-    final result =
-        await matchService.getSuggestedMatchesWithFilters({});
+    final result = await matchService.getSuggestedMatchesWithFilters({});
 
     if (result['success'] == true) {
       List<dynamic> matchesJson = result['matches'];
@@ -547,6 +549,9 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                 ),
                 IconButton(
                   onPressed: () async {
+                    final hasLocation = (auth.user?.location != null) &&
+                        (auth.user?.location?.coordinates.length == 2) &&
+                        !(auth.user?.location?.coordinates[0] == 0 && auth.user?.location?.coordinates[1] == 0);
                     final result = await showModalBottomSheet<dynamic>(
                       context: context,
                       backgroundColor: Colors.transparent,
@@ -571,6 +576,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                             ),
                           ),
                           child: FilterModalContent(
+                            hasLocation: hasLocation,
                             initialAgeRange: ageRangeFilter,
                             initialWeightRange: weightRangeFilter,
                             initialHeightRange: heightRangeFilter,
@@ -632,14 +638,19 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
 
 // Definición de FilterModalContent con valores iniciales
 class FilterModalContent extends StatefulWidget {
+  final bool hasLocation; // <-- Nuevo: si el user tiene location
   final RangeValues initialAgeRange;
   final RangeValues initialWeightRange;
   final RangeValues initialHeightRange;
   final String initialGymStage;
   final String initialRelationshipType;
 
+  // Podrías también recibir 'initialUseLocation' y 'initialDistanceRange' si quieres que se guarde
+  // el estado de la última vez. Para simplificar, supondremos que es false por defecto.
+
   const FilterModalContent({
     Key? key,
+    required this.hasLocation,
     required this.initialAgeRange,
     required this.initialWeightRange,
     required this.initialHeightRange,
@@ -657,6 +668,10 @@ class _FilterModalContentState extends State<FilterModalContent> {
   late RangeValues heightRange;
   late String selectedGymStage;
   late String selectedRelationshipType;
+
+  bool useLocation = false;
+
+  RangeValues distanceRange = const RangeValues(5, 50);
 
   @override
   void initState() {
@@ -676,6 +691,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Barra superior "drag"
             Container(
               width: 50,
               height: 5,
@@ -693,6 +709,8 @@ class _FilterModalContentState extends State<FilterModalContent> {
                   color: Colors.white),
             ),
             const SizedBox(height: 40),
+
+            // Filtros de edad, peso, altura
             _buildRangeSlider(
               label: "Rango de edad",
               values: ageRange,
@@ -710,7 +728,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
               values: weightRange,
               min: 40,
               max: 150,
-              divisions: 120,
+              divisions: 110,
               onChanged: (values) {
                 setState(() {
                   weightRange = values;
@@ -729,11 +747,12 @@ class _FilterModalContentState extends State<FilterModalContent> {
                 });
               },
             ),
+
             const SizedBox(height: 10),
             _buildDropdown(
               label: "Etapa en el gym",
               value: selectedGymStage,
-              items: const ['Todos','Mantenimiento', 'Volumen', 'Definición'],
+              items: const ['Todos', 'Mantenimiento', 'Volumen', 'Definición'],
               onChanged: (String? newValue) {
                 setState(() {
                   selectedGymStage = newValue!;
@@ -759,16 +778,56 @@ class _FilterModalContentState extends State<FilterModalContent> {
               },
             ),
             const SizedBox(height: 20),
+
+            // Solo si el user tiene location, mostramos la opción:
+            if (widget.hasLocation)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SwitchListTile(
+                    title: const Text(
+                      "Filtrar por ubicación",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    value: useLocation,
+                    onChanged: (val) {
+                      setState(() {
+                        useLocation = val;
+                      });
+                    },
+                  ),
+                  // Si useLocation = true, mostramos el RangeSlider de distancias
+                  if (useLocation)
+                    _buildRangeSlider(
+                      label: "Distancia (km)",
+                      values: distanceRange,
+                      min: 0,
+                      max: 100,
+                      divisions: 100,
+                      onChanged: (values) {
+                        setState(() {
+                          distanceRange = values;
+                        });
+                      },
+                    ),
+                ],
+              ),
+
+            const SizedBox(height: 20),
+
+            // Botón "Aplicar"
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30)),
+                  borderRadius: BorderRadius.circular(30),
+                ),
               ),
               onPressed: () async {
-                Map<String, String> filters = {
+                // Construimos el map "filters" con strings
+                final filters = <String, String>{
                   'ageMin': ageRange.start.round().toString(),
                   'ageMax': ageRange.end.round().toString(),
                   'weightMin': weightRange.start.round().toString(),
@@ -777,9 +836,20 @@ class _FilterModalContentState extends State<FilterModalContent> {
                   'heightMax': heightRange.end.round().toString(),
                   'gymStage': selectedGymStage,
                   'relationshipGoal': selectedRelationshipType,
+                  // Enviamos si se filtra x ubicación:
+                  'useLocation': useLocation ? 'true' : 'false',
                 };
 
+                // Si se filtra x ubicación, agregamos distanceMin y distanceMax:
+                if (useLocation) {
+                  filters['distanceMin'] =
+                      distanceRange.start.round().toString();
+                  filters['distanceMax'] = distanceRange.end.round().toString();
+                }
+
+                // Llamada al backend:
                 final authProvider =
+                    // ignore: use_build_context_synchronously
                     Provider.of<AuthProvider>(context, listen: false);
                 final token = await authProvider.getToken();
 
@@ -793,7 +863,9 @@ class _FilterModalContentState extends State<FilterModalContent> {
                     List<User> matches =
                         matchesJson.map((json) => User.fromJson(json)).toList();
 
-                    // Retornar tanto los matches como los valores del filtro
+                    // Retornar matches y los nuevos valores:
+                    // Devuelve un map para que el parent reciba.
+                    // Por ejemplo:
                     Navigator.of(context).pop({
                       'matches': matches,
                       'ageRange': ageRange,
@@ -801,13 +873,16 @@ class _FilterModalContentState extends State<FilterModalContent> {
                       'heightRange': heightRange,
                       'gymStage': selectedGymStage,
                       'relationshipType': selectedRelationshipType,
+                      'useLocation': useLocation,
+                      'distanceRange': distanceRange,
                     });
                     return;
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                          content: Text(
-                              result['message'] ?? 'Error al obtener matches')),
+                        content: Text(
+                            result['message'] ?? 'Error al obtener matches'),
+                      ),
                     );
                   }
                 }
@@ -819,17 +894,20 @@ class _FilterModalContentState extends State<FilterModalContent> {
                 style: TextStyle(color: Colors.black),
               ),
             ),
+
             const SizedBox(height: 10),
+
+            // Botón "Quitar filtro"
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.grey[700],
                 padding:
                     const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30)),
+                  borderRadius: BorderRadius.circular(30),
+                ),
               ),
               onPressed: () {
-                // Botón para quitar el filtro
                 Navigator.of(context).pop({'remove': true});
               },
               child: const Text(
@@ -842,6 +920,10 @@ class _FilterModalContentState extends State<FilterModalContent> {
       ),
     );
   }
+
+  // ---------------------------------
+  // Helpers para construir UI
+  // ---------------------------------
 
   Widget _buildRangeSlider({
     required String label,
@@ -860,8 +942,10 @@ class _FilterModalContentState extends State<FilterModalContent> {
           min: min,
           max: max,
           divisions: divisions,
-          labels:
-              RangeLabels("${values.start.round()}", "${values.end.round()}"),
+          labels: RangeLabels(
+            "${values.start.round()}",
+            "${values.end.round()}",
+          ),
           activeColor: Colors.cyanAccent,
           inactiveColor: Colors.grey,
           onChanged: onChanged,
@@ -894,12 +978,12 @@ class _FilterModalContentState extends State<FilterModalContent> {
             style: const TextStyle(color: Colors.white),
             isExpanded: true,
             underline: const SizedBox(),
-            items: items
-                .map<DropdownMenuItem<String>>((String val) => DropdownMenuItem(
-                      value: val,
-                      child: Text(val),
-                    ))
-                .toList(),
+            items: items.map<DropdownMenuItem<String>>((val) {
+              return DropdownMenuItem(
+                value: val,
+                child: Text(val),
+              );
+            }).toList(),
             onChanged: onChanged,
           ),
         ),

@@ -30,6 +30,22 @@ class Photo {
   }
 }
 
+class LocationData {
+  final String type;
+  final List<double> coordinates;
+
+  LocationData({required this.type, required this.coordinates});
+
+  factory LocationData.fromJson(Map<String, dynamic> json) {
+    return LocationData(
+      type: json['type'] ?? '',
+      coordinates: (json['coordinates'] != null)
+          ? List<double>.from(json['coordinates'].map((x) => x.toDouble()))
+          : [],
+    );
+  }
+}
+
 
 class User {
   final String id;
@@ -48,6 +64,9 @@ class User {
   final List<String>? blockedUsers;
   final List<Photo>? photos;
   final String? googleId;
+  final LocationData? location;
+  final String? city;
+  final String? country;
 
   User({
     required this.id,
@@ -66,6 +85,9 @@ class User {
     this.blockedUsers,
     this.photos,
     this.googleId,
+    this.location,
+    this.city,
+    this.country,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -90,6 +112,11 @@ class User {
           ? List<Photo>.from(json['photos'].map((x) => Photo.fromJson(x)))
           : [],
       googleId: json['googleId'],
+      location: json['location'] != null
+          ? LocationData.fromJson(json['location'])
+          : null,
+      city: json['city'],
+      country: json['country'],
     );
   }
 }

@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -37,10 +39,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   DateTime? birthDate;
   String gender = '';
+  bool isLoadingLocation = false;
   List<String> seeking = [];
   String relationshipGoal = '';
   String location = '';
   String gymStage = '';
+  double userLatitude = 0.0;
+  double userLongitude = 0.0;
 
   /// -- NUEVO: variables para altura y peso
   double? height;
@@ -145,6 +150,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _nextStep() async {
+    if (_currentStep == 6 && location.isEmpty) {
+      bool? continuar = await showDialog<bool>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text("¿Sin ubicación?"),
+            content: const Text(
+                "Si no proporcionas tu ubicación, se te mostrarán usuarios de manera aleatoria. "
+                    "Podrás cambiar esto más tarde en tu perfil. ¿Deseas continuar sin ubicación?"
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text("Cancelar"),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text("Continuar"),
+              ),
+            ],
+          )
+      );
+
+      if (continuar == false) {
+        return;
+      }
+    }
     if (_validateCurrentStep()) {
       if (_currentStep == 0) {
         if (email.isEmpty || password.isEmpty) {
@@ -253,12 +284,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
         break;
       case 6:
-        if (location.isEmpty) {
-          setState(() {
-            errorMessage = 'Ingresa tu ubicación actual';
-          });
-          return false;
-        }
         break;
       case 7:
         // Validamos etapa, altura y peso
@@ -271,7 +296,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
         break;
       case 8:
-      // Paso de foto de perfil, no obligatorio
+        // Paso de foto de perfil, no obligatorio
         return true;
       case 9:
         if (selectedPhotos.length < 2) {
@@ -316,6 +341,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'height': height,
         'weight': weight,
         'goal': gymStage,
+        'latitude': userLatitude,
+        'longitude': userLongitude,
       });
       if (!(updateResult['success'] ?? false)) {
         setState(() {
@@ -327,11 +354,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
       if (profilePictureFile != null) {
         final userService = UserService(token: token);
-        final profileResult = await userService.uploadProfilePicture(profilePictureFile!);
+        final profileResult =
+            await userService.uploadProfilePicture(profilePictureFile!);
         if (profileResult['success'] != true) {
           setState(() {
             isLoading = false;
-            errorMessage = profileResult['message'] ?? 'Error al subir foto de perfil';
+            errorMessage =
+                profileResult['message'] ?? 'Error al subir foto de perfil';
           });
           return;
         }
@@ -369,6 +398,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         height: height,
         weight: weight,
         gymStage: gymStage,
+        latitude: location.isEmpty ? null : userLatitude,
+        longitude: location.isEmpty ? null : userLongitude,
       );
 
       if (result['success'] == true) {
@@ -376,11 +407,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         if (token != null) {
           final userService = UserService(token: token);
           if (profilePictureFile != null) {
-            final profileResult = await userService.uploadProfilePicture(profilePictureFile!);
+            final profileResult =
+                await userService.uploadProfilePicture(profilePictureFile!);
             if (profileResult['success'] != true) {
               setState(() {
                 isLoading = false;
-                errorMessage = profileResult['message'] ?? 'Error al subir foto de perfil';
+                errorMessage =
+                    profileResult['message'] ?? 'Error al subir foto de perfil';
               });
               return;
             }
@@ -786,12 +819,131 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return _buildStepTemplate(
       title: '¿Dónde te encuentras?',
       subtitle: 'Comparte tu ubicación actual',
-      child: TextFormField(
-        style: const TextStyle(color: Colors.white),
-        decoration: _inputDecoration('Ej: Ciudad, País'),
-        onChanged: (value) => location = value,
+      child: Column(
+        children: [
+          ElevatedButton.icon(
+            onPressed: isLoadingLocation ? null : _obtenerUbicacion,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.0),
+              ),
+            ),
+            icon: Icon(
+              Icons.my_location,
+              color: Colors.black,
+            ),
+            label: Text(
+              location.isEmpty ? 'Obtener mi ubicación' : 'Ubicación detectada',
+              style: const TextStyle(color: Colors.black, fontSize: 16),
+            ),
+          ),
+          const SizedBox(height: 20),
+          if (isLoadingLocation)
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          if (location.isNotEmpty)
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (Widget child, Animation<double> animation) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+              child: Card(
+                key: ValueKey<String>(location),
+                color: Colors.white24,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16.0),
+                ),
+                elevation: 4,
+                child: ListTile(
+                  leading: const Icon(
+                    Icons.location_on,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                  title: Text(
+                    location,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(
+                      Icons.refresh,
+                      color: Colors.white,
+                    ),
+                    onPressed: _obtenerUbicacion,
+                  ),
+                ),
+              ),
+            ),
+          if (errorMessage.isNotEmpty && _currentStep == 6)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Text(
+                errorMessage,
+                style: const TextStyle(color: Colors.redAccent),
+              ),
+            ),
+        ],
       ),
     );
+  }
+
+  Future<void> _obtenerUbicacion() async {
+    setState(() {
+      isLoadingLocation = true;
+      errorMessage = '';
+    });
+
+    try {
+      LocationPermission permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        setState(() {
+          errorMessage =
+              'Permiso de ubicación denegado. No se puede continuar.';
+          isLoadingLocation = false;
+        });
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        Placemark placemark = placemarks.first;
+        String ciudad = placemark.locality ?? '';
+        String pais = placemark.country ?? '';
+
+        setState(() {
+          location = '$ciudad, $pais';
+          userLatitude = position.latitude;
+          userLongitude = position.longitude;
+          isLoadingLocation = false;
+        });
+      } else {
+        setState(() {
+          errorMessage = 'No se pudo determinar la ciudad.';
+          isLoadingLocation = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error al obtener la ubicación: $e';
+        isLoadingLocation = false;
+      });
+    }
   }
 
   Widget _buildStep7() {

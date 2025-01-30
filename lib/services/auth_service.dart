@@ -21,24 +21,36 @@ class AuthService {
     double? height,
     double? weight,
     String? gymStage,
+    double? latitude,
+    double? longitude,
   }) async {
     final url = Uri.parse('$baseUrl/register');
+
+    final bodyData = {
+      'email': email,
+      'password': password,
+      'username': username,
+      'firstName': firstName,
+      'lastName': lastName,
+      'gender': gender,
+      'seeking': seeking,
+      'relationshipGoal': relationshipGoal,
+      'height': height,
+      'weight': weight,
+      'goal': gymStage,
+    };
+
+    if (latitude != null && longitude != null) {
+      bodyData['location'] = {
+        'type': 'Point',
+        'coordinates': [longitude, latitude],
+      };
+    }
+
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': email,
-        'password': password,
-        'username': username,
-        'firstName': firstName,
-        'lastName': lastName,
-        'gender': gender,
-        'seeking': seeking,
-        'relationshipGoal': relationshipGoal,
-        'height': height,
-        'weight': weight,
-        'goal': gymStage,
-      }),
+      body: jsonEncode(bodyData),
     );
 
     final data = jsonDecode(response.body);

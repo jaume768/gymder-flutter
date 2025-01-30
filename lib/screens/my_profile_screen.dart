@@ -126,6 +126,15 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                     title: 'Objetivo de Relación',
                     content: user.relationshipGoal ?? 'No especificado',
                   ),
+                  const Divider(color: Colors.white24, indent: 16, endIndent: 16),
+                  _buildInfoTile(
+                    icon: Icons.location_on,
+                    title: 'Ubicación',
+                    content: (user.city != null && user.city!.isNotEmpty) ||
+                        (user.country != null && user.country!.isNotEmpty)
+                        ? '${user.city ?? ''}, ${user.country ?? ''}'
+                        : 'Falta definir tu ubicación',
+                  ),
                 ],
               ),
             ),

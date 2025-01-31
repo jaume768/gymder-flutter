@@ -141,7 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: CircleAvatar(
                 radius: 24,
                 backgroundColor:
-                    _selectedIndex == 0 ? Colors.white : Colors.grey.shade700,
+                    _selectedIndex == 0 ? Colors.white : Colors.grey.shade800,
                 child: Icon(
                   Icons.chat_bubble,
                   color: _selectedIndex == 0 ? Colors.black : Colors.white,
@@ -156,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: CircleAvatar(
                 radius: 34,
                 backgroundColor:
-                    _selectedIndex == 1 ? Colors.white : Colors.grey.shade700,
+                    _selectedIndex == 1 ? Colors.white : Colors.grey.shade800,
                 child: Icon(
                   Icons.favorite,
                   color: _selectedIndex == 1 ? Colors.black : Colors.white,
@@ -175,7 +175,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               child: CircleAvatar(
                 radius: 24,
-                backgroundColor: Colors.grey.shade700,
+                backgroundColor: Colors.grey.shade800,
                 child: const Icon(
                   Icons.person,
                   color: Colors.white,

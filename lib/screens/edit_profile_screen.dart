@@ -390,7 +390,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      backgroundColor: const Color.fromRGBO(20, 20, 20, 99),
+      backgroundColor: const Color.fromRGBO(20, 20, 20, 0.0),
       floatingActionButton: showSaveButton
           ? FloatingActionButton.extended(
               onPressed: _saveProfile,

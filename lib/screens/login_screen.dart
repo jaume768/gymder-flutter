@@ -99,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
 
     return Scaffold(
-      backgroundColor: const Color.fromRGBO(34, 34, 34, 99), // Fondo gris
+      backgroundColor: const Color.fromRGBO(34, 34, 34, 0.0),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(

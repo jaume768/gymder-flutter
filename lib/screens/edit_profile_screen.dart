@@ -133,8 +133,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (result['success']) {
         await authProvider.refreshUser();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Foto de perfil actualizada exitosamente')),
+          SnackBar(
+            content: const Text('Perfil actualizado exitosamente'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12.0),
+            ),
+          ),
         );
         setState(() {
           _imageFile = null;
@@ -377,12 +383,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title:
-            const Text('Editar Perfil', style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Editar Perfil',
+          style: TextStyle(color: Colors.white),
+        ),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      backgroundColor: Colors.grey[900],
+      backgroundColor: const Color.fromRGBO(20, 20, 20, 99),
       floatingActionButton: showSaveButton
           ? FloatingActionButton.extended(
               onPressed: _saveProfile,
@@ -395,13 +403,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ProfilePictureWidget(
               user: user,
               imageFile: _imageFile,
               onPickImage: _pickProfileImage,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(
+                height:
+                    30), // Mayor espacio entre la foto de perfil y el formulario
 
             // Formulario de info personal
             PersonalInfoForm(
@@ -441,7 +452,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               onSeekingSelectionChanged: _handleSeekingChanged,
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(
+                height:
+                    30), // Mayor espacio entre el formulario y las fotos adicionales
 
             // Fotos adicionales
             AdditionalPhotosWidget(
@@ -467,34 +480,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 10),
               Text(
                 errorMessage,
-                style: const TextStyle(color: Colors.redAccent),
+                style: const TextStyle(color: Colors.redAccent, fontSize: 14),
                 textAlign: TextAlign.center,
               ),
             ],
             const SizedBox(height: 20),
 
-            ElevatedButton(
-              onPressed: () async {
-                await authProvider.logoutUser();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.0),
+            // Botón de Cerrar Sesión
+            Center(
+              child: ElevatedButton(
+                onPressed: () async {
+                  await authProvider.logoutUser();
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
                 ),
-              ),
-              child: const Text(
-                'Cerrar sesión',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                child: const Text(
+                  'Cerrar sesión',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),

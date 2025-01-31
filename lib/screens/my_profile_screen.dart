@@ -53,7 +53,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      backgroundColor: Colors.grey[900],
+      backgroundColor: const Color.fromRGBO(20, 20, 20, 99),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -102,7 +102,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             ),
             const SizedBox(height: 16),
             Card(
-              color: Colors.grey[850],
+              color: Color.fromRGBO(38, 38, 38, 9),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
               child: Column(

@@ -453,7 +453,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final double progress = (_currentStep + 1) / _totalSteps;
 
     return Scaffold(
-      backgroundColor: const Color.fromRGBO(64, 65, 65, 1),
+      backgroundColor: const Color.fromRGBO(34, 34, 34, 99),
       body: SafeArea(
         child: Column(
           children: [
@@ -493,7 +493,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Widget _buildBottomBar() {
     return Container(
-      color: const Color.fromRGBO(64, 65, 65, 1),
+      color: const Color.fromRGBO(20, 20, 20, 99),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [

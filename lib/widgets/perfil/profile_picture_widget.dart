@@ -1,4 +1,3 @@
-// widgets/profile_picture_widget.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -40,7 +39,7 @@ class ProfilePictureWidget extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
+                  border: Border.all(color: Colors.black, width: 2),
                 ),
                 padding: const EdgeInsets.all(8),
                 child:

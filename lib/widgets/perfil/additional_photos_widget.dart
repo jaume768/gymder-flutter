@@ -65,7 +65,7 @@ class _AdditionalPhotosWidgetState extends State<AdditionalPhotosWidget> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Tus Fotos Adicionales:',
+          'Tus Fotos:',
           style: TextStyle(
             color: Colors.white,
             fontSize: 18,
@@ -93,13 +93,22 @@ class _AdditionalPhotosWidgetState extends State<AdditionalPhotosWidget> {
             children: List.generate(photoList.length, (index) {
               final photo = photoList[index];
               return Container(
-                key: ValueKey(photo.id), // Necesario para Reorderable
+                key: ValueKey(photo.id),
                 width: itemSize,
                 height: itemSize,
                 decoration: BoxDecoration(
                   color: Colors.black26,
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.white24),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.5),
+                      spreadRadius: 2,
+                      blurRadius: 5,
+                      offset:
+                          const Offset(0, 3), // Cambia la posición de la sombra
+                    ),
+                  ],
                 ),
                 child: Stack(
                   fit: StackFit.expand,
@@ -108,18 +117,18 @@ class _AdditionalPhotosWidgetState extends State<AdditionalPhotosWidget> {
                       imageUrl: photo.url,
                       fit: BoxFit.cover,
                       placeholder: (context, url) =>
-                          Container(color: Colors.grey[300]),
+                          Container(color: Colors.grey[800]),
                       errorWidget: (context, url, error) =>
-                          const Icon(Icons.error),
+                          const Icon(Icons.error, color: Colors.redAccent),
                     ),
                     Positioned(
-                      top: 2,
-                      right: 2,
+                      top: 4,
+                      right: 4,
                       child: GestureDetector(
                         onTap: () => widget.onDeletePhoto(photo.id),
                         child: const CircleAvatar(
                           radius: 12,
-                          backgroundColor: Colors.red,
+                          backgroundColor: Colors.redAccent,
                           child:
                               Icon(Icons.close, size: 14, color: Colors.white),
                         ),
@@ -144,9 +153,9 @@ class _AdditionalPhotosWidgetState extends State<AdditionalPhotosWidget> {
                   width: itemSize,
                   height: itemSize,
                   decoration: BoxDecoration(
-                    color: Colors.black54,
+                    color: Colors.grey[800],
                     border: Border.all(color: Colors.white24),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
                     Icons.photo_size_select_actual_outlined,
@@ -162,11 +171,18 @@ class _AdditionalPhotosWidgetState extends State<AdditionalPhotosWidget> {
         // Botón "Agregar Fotos"
         ElevatedButton.icon(
           onPressed: widget.onPickAdditionalImages,
-          icon: const Icon(Icons.add_a_photo),
-          label: const Text('Agregar Fotos'),
+          icon: const Icon(Icons.add_a_photo, color: Colors.black),
+          label: const Text(
+            'Agregar Fotos',
+            style: TextStyle(color: Colors.black),
+          ),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.white,
-            foregroundColor: Colors.black,
+            padding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12.0),
+            ),
           ),
         ),
         const SizedBox(height: 10),
@@ -197,15 +213,18 @@ class _AdditionalPhotosWidgetState extends State<AdditionalPhotosWidget> {
               return Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.file(file, fit: BoxFit.cover),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(file, fit: BoxFit.cover),
+                  ),
                   Positioned(
-                    top: 2,
-                    right: 2,
+                    top: 4,
+                    right: 4,
                     child: GestureDetector(
                       onTap: () => widget.onRemoveSelectedImage(index),
                       child: const CircleAvatar(
                         radius: 12,
-                        backgroundColor: Colors.red,
+                        backgroundColor: Colors.redAccent,
                         child: Icon(Icons.close, size: 14, color: Colors.white),
                       ),
                     ),
@@ -221,16 +240,19 @@ class _AdditionalPhotosWidgetState extends State<AdditionalPhotosWidget> {
             onPressed:
                 widget.isUploading ? null : widget.onUploadAdditionalPhotos,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.black,
+              backgroundColor: Colors.blueAccent,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.0),
+              ),
             ),
             child: widget.isUploading
                 ? const CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   )
                 : const Text(
                     'Subir Fotos Adicionales',
-                    style: TextStyle(color: Colors.black, fontSize: 16),
+                    style: TextStyle(color: Colors.white, fontSize: 16),
                   ),
           ),
         ],

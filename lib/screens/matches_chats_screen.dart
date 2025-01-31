@@ -139,7 +139,7 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[900],
+      backgroundColor: const Color.fromRGBO(20, 20, 20, 99),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : errorMessage.isNotEmpty

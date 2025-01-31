@@ -1,4 +1,3 @@
-// widgets/personal_info_form.dart
 import 'package:flutter/material.dart';
 
 class PersonalInfoForm extends StatelessWidget {
@@ -47,13 +46,13 @@ class PersonalInfoForm extends StatelessWidget {
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.white),
+        labelStyle: const TextStyle(color: Colors.white70),
         enabledBorder: OutlineInputBorder(
           borderSide: const BorderSide(color: Colors.white54),
           borderRadius: BorderRadius.circular(12.0),
         ),
         focusedBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: Colors.white),
+          borderSide: const BorderSide(color: Colors.blueAccent),
           borderRadius: BorderRadius.circular(12.0),
         ),
         errorStyle: const TextStyle(color: Colors.redAccent),
@@ -75,6 +74,7 @@ class PersonalInfoForm extends StatelessWidget {
     return DropdownButtonFormField<String>(
       value: value,
       style: const TextStyle(color: Colors.white),
+      dropdownColor: Colors.grey[800], // Fondo del dropdown
       selectedItemBuilder: (BuildContext context) {
         return items.map<Widget>((String item) {
           return Text(item, style: const TextStyle(color: Colors.white));
@@ -82,13 +82,13 @@ class PersonalInfoForm extends StatelessWidget {
       },
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.white),
+        labelStyle: const TextStyle(color: Colors.white70),
         enabledBorder: OutlineInputBorder(
           borderSide: const BorderSide(color: Colors.white54),
           borderRadius: BorderRadius.circular(12.0),
         ),
         focusedBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: Colors.white),
+          borderSide: const BorderSide(color: Colors.blueAccent),
           borderRadius: BorderRadius.circular(12.0),
         ),
         errorStyle: const TextStyle(color: Colors.redAccent),
@@ -96,7 +96,7 @@ class PersonalInfoForm extends StatelessWidget {
       items: items.map((String option) {
         return DropdownMenuItem<String>(
           value: option,
-          child: Text(option, style: const TextStyle(color: Colors.black)),
+          child: Text(option, style: const TextStyle(color: Colors.white)),
         );
       }).toList(),
       onChanged: onChanged,
@@ -108,10 +108,11 @@ class PersonalInfoForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: const Color.fromRGBO(64, 65, 65, 1),
+      color: const Color.fromRGBO(20, 20, 20, 99),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 4,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(4),
         child: Form(
           key: formKey,
           child: Column(
@@ -158,7 +159,8 @@ class PersonalInfoForm extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   'Buscando:',
-                  style: TextStyle(color: Colors.white.withOpacity(0.9)),
+                  style: TextStyle(
+                      color: Colors.white.withOpacity(0.9), fontSize: 16),
                 ),
               ),
               const SizedBox(height: 8),
@@ -176,10 +178,11 @@ class PersonalInfoForm extends StatelessWidget {
                   final selected = seeking.contains(option);
                   return FilterChip(
                     label: Text(option,
-                        style: const TextStyle(color: Colors.black)),
+                        style: TextStyle(
+                            color: selected ? Colors.black : Colors.white)),
                     selected: selected,
-                    backgroundColor: Colors.white54,
-                    selectedColor: Colors.white,
+                    backgroundColor: Colors.grey[900],
+                    selectedColor: Colors.blueAccent,
                     onSelected: (bool isSelected) {
                       onSeekingSelectionChanged(option, isSelected);
                     },

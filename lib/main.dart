@@ -22,9 +22,43 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Gymder',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+      theme: ThemeData.dark().copyWith(
+        primaryColor: Colors.black,
+        scaffoldBackgroundColor: Colors.black,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.black,
+          iconTheme: IconThemeData(color: Colors.white),
+          titleTextStyle: TextStyle(
+              color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Colors.blueAccent,
+          foregroundColor: Colors.white,
+        ),
+        inputDecorationTheme: const InputDecorationTheme(
+          filled: true,
+          fillColor: Color(0xFF2C2C2C),
+          labelStyle: TextStyle(color: Colors.white70),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.white54),
+            borderRadius: BorderRadius.all(Radius.circular(12.0)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.white),
+            borderRadius: BorderRadius.all(Radius.circular(12.0)),
+          ),
+          errorStyle: TextStyle(color: Colors.redAccent),
+        ),
+        buttonTheme: const ButtonThemeData(
+          buttonColor: Colors.blueAccent,
+          textTheme: ButtonTextTheme.primary,
+        ),
+        colorScheme: ColorScheme.fromSwatch(
+          brightness: Brightness.dark, // Asegurando brightness oscuro
+          primarySwatch: Colors.blue,
+        ).copyWith(
+          secondary: Colors.blueAccent,
+        ),
       ),
       home: const SplashScreen(),
     );

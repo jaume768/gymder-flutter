@@ -726,7 +726,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         items: genders.map((g) {
           return DropdownMenuItem(
             value: g,
-            child: Text(g, style: const TextStyle(color: Colors.black)),
+            child: Text(g, style: const TextStyle(color: Colors.white)),
           );
         }).toList(),
         onChanged: (value) {
@@ -803,7 +803,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         items: goals.map((g) {
           return DropdownMenuItem(
             value: g,
-            child: Text(g, style: const TextStyle(color: Colors.black)),
+            child: Text(g, style: const TextStyle(color: Colors.white)),
           );
         }).toList(),
         onChanged: (value) {
@@ -967,7 +967,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             items: gymStages.map((stage) {
               return DropdownMenuItem(
                 value: stage,
-                child: Text(stage, style: const TextStyle(color: Colors.black)),
+                child: Text(stage, style: const TextStyle(color: Colors.white)),
               );
             }).toList(),
             onChanged: (value) {

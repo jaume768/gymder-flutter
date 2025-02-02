@@ -108,7 +108,7 @@ class PersonalInfoForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: const Color.fromRGBO(20, 20, 20, 99),
+      color: const Color.fromRGBO(20, 20, 20, 0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 4,
       child: Padding(

@@ -10,6 +10,9 @@ import '../widgets/perfil/profile_picture_widget.dart';
 import '../widgets/perfil/personal_info_form.dart';
 import '../widgets/perfil/additional_photos_widget.dart';
 import 'login_screen.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({Key? key}) : super(key: key);
@@ -38,6 +41,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   String originalGender = '';
   List<String> originalSeeking = [];
   String originalRelationshipGoal = '';
+  String location = '';
+  double? userLatitude;
+  double? userLongitude;
+  bool isLoadingLocation = false;
+  bool locationUpdated = false;
 
   bool hasChanges = false;
   File? _imageFile;
@@ -53,6 +61,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.initState();
     final user = Provider.of<AuthProvider>(context, listen: false).user;
     if (user != null) {
+      if ((user.city != null && user.city!.isNotEmpty) ||
+          (user.country != null && user.country!.isNotEmpty)) {
+        location = '${user.city ?? ''}, ${user.country ?? ''}';
+      }
       originalFirstName = user.firstName ?? '';
       originalLastName = user.lastName ?? '';
       originalGoal = user.goal ?? '';
@@ -77,8 +89,62 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           gender != originalGender ||
           relationshipGoal != originalRelationshipGoal ||
           seeking.length != originalSeeking.length ||
-          !seeking.every((item) => originalSeeking.contains(item)));
+          !seeking.every((item) => originalSeeking.contains(item)) ||
+          locationUpdated);
     });
+  }
+
+  Future<void> _obtenerUbicacion() async {
+    setState(() {
+      isLoadingLocation = true;
+      errorMessage = '';
+    });
+
+    try {
+      LocationPermission permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        setState(() {
+          errorMessage =
+          'Permiso de ubicación denegado. No se puede continuar.';
+          isLoadingLocation = false;
+        });
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        Placemark placemark = placemarks.first;
+        String ciudad = placemark.locality ?? '';
+        String pais = placemark.country ?? '';
+        setState(() {
+          location = '$ciudad, $pais';
+          userLatitude = position.latitude;
+          userLongitude = position.longitude;
+          isLoadingLocation = false;
+          locationUpdated = true;
+        });
+        _checkChanges();
+      } else {
+        setState(() {
+          errorMessage = 'No se pudo determinar la ciudad.';
+          isLoadingLocation = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error al obtener la ubicación: $e';
+        isLoadingLocation = false;
+      });
+    }
   }
 
   void _handleSeekingChanged(String option, bool isSelected) {
@@ -276,26 +342,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
 
       final userService = UserService(token: token);
-      final result = await userService.updateProfile({
+      Map<String, dynamic> profileData = {
         'firstName': firstName,
         'lastName': lastName,
         'goal': goal,
         'gender': gender,
-        'seeking': seeking, // <--- Enviamos la lista actualizada
+        'seeking': seeking,
         'relationshipGoal': relationshipGoal,
-      });
+      };
+
+      if (locationUpdated && userLatitude != null && userLongitude != null) {
+        profileData['location'] = {
+          'type': 'Point',
+          'coordinates': [userLongitude, userLatitude]
+        };
+      }
+
+      final result = await userService.updateProfile(profileData);
 
       if (result['success']) {
         await authProvider.refreshUser();
-        if (_photoOrderChanged && _reorderedPhotos.isNotEmpty) {
-          await _updatePhotoOrder(_reorderedPhotos);
-        }
-
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Perfil actualizado exitosamente')),
+          SnackBar(
+            content: const Text('Perfil actualizado exitosamente'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12.0),
+            ),
+          ),
         );
 
-        // Actualizamos originales
         setState(() {
           originalFirstName = firstName;
           originalLastName = lastName;
@@ -306,6 +383,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
           hasChanges = false;
           _photoOrderChanged = false;
+          locationUpdated = false;
         });
       } else {
         setState(() {
@@ -452,9 +530,46 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               onSeekingSelectionChanged: _handleSeekingChanged,
             ),
 
+            Card(
+              color: Colors.white24,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16.0),
+              ),
+              child: ListTile(
+                leading: const Icon(
+                  Icons.location_on,
+                  color: Colors.white,
+                  size: 30,
+                ),
+                title: isLoadingLocation
+                    ? Center(
+                  child: SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: CircularProgressIndicator(
+                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                )
+                    : Text(
+                  location.isNotEmpty ? location : 'Ubicación no definida',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                trailing: IconButton(
+                  icon: const Icon(Icons.refresh, color: Colors.white),
+                  onPressed: _obtenerUbicacion,
+                ),
+              ),
+            ),
+
+
             const SizedBox(
                 height:
-                    30), // Mayor espacio entre el formulario y las fotos adicionales
+                    30),
 
             // Fotos adicionales
             AdditionalPhotosWidget(

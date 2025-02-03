@@ -278,7 +278,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       case 5:
         if (relationshipGoal.isEmpty) {
           setState(() {
-            errorMessage = 'Selecciona tu objetivo de relación';
+            errorMessage = 'Selecciona tu propósito de conexión';
           });
           return false;
         }
@@ -760,7 +760,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               final isSelected = seeking.contains(option);
               return FilterChip(
                 label:
-                    Text(option, style: const TextStyle(color: Colors.black)),
+                    Text(option, style: const TextStyle(color: Colors.white)),
                 selected: isSelected,
                 backgroundColor: Colors.white54,
                 selectedColor: Colors.white,
@@ -786,9 +786,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     return _buildStepTemplate(
       title: '¿Qué estás buscando?',
-      subtitle: 'Selecciona un objetivo',
+      subtitle: 'Propósito de conexión',
       child: DropdownButtonFormField<String>(
-        decoration: _dropdownDecoration('Objetivo de relación'),
+        decoration: _dropdownDecoration('Propósito de conexión'),
         style: const TextStyle(color: Colors.white),
         hint: const Text(
           'Seleccionar objetivo',

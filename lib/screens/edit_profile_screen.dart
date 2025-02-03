@@ -13,6 +13,7 @@ import 'login_screen.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 
+import 'my_profile_screen.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({Key? key}) : super(key: key);
@@ -106,7 +107,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           permission == LocationPermission.deniedForever) {
         setState(() {
           errorMessage =
-          'Permiso de ubicación denegado. No se puede continuar.';
+              'Permiso de ubicación denegado. No se puede continuar.';
           isLoadingLocation = false;
         });
         return;
@@ -361,6 +362,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final result = await userService.updateProfile(profileData);
 
       if (result['success']) {
+        if (_photoOrderChanged) {
+          await _updatePhotoOrder(_reorderedPhotos);
+        }
+
         await authProvider.refreshUser();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -385,6 +390,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           _photoOrderChanged = false;
           locationUpdated = false;
         });
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MyProfileScreen()),
+        );
       } else {
         setState(() {
           errorMessage = result['message'] ?? 'Error al actualizar el perfil';
@@ -471,11 +481,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       backgroundColor: const Color.fromRGBO(20, 20, 20, 0.0),
       floatingActionButton: showSaveButton
           ? FloatingActionButton.extended(
-              onPressed: _saveProfile,
+              onPressed: isUploading ? null : _saveProfile,
               backgroundColor: Colors.blueAccent,
-              icon: const Icon(Icons.save, color: Colors.white),
-              label: const Text('Guardar Cambios',
-                  style: TextStyle(color: Colors.white)),
+              icon: isUploading
+                  ? const SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Icon(Icons.save, color: Colors.white),
+              label: Text(
+                isUploading ? 'Guardando...' : 'Guardar Cambios',
+                style: const TextStyle(color: Colors.white),
+              ),
             )
           : null,
       body: SingleChildScrollView(
@@ -543,22 +564,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
                 title: isLoadingLocation
                     ? Center(
-                  child: SizedBox(
-                    height: 24,
-                    width: 24,
-                    child: CircularProgressIndicator(
-                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  ),
-                )
+                        child: SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                                Colors.white),
+                          ),
+                        ),
+                      )
                     : Text(
-                  location.isNotEmpty ? location : 'Ubicación no definida',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                        location.isNotEmpty
+                            ? location
+                            : 'Ubicación no definida',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                 trailing: IconButton(
                   icon: const Icon(Icons.refresh, color: Colors.white),
                   onPressed: _obtenerUbicacion,
@@ -566,10 +590,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
             ),
 
-
-            const SizedBox(
-                height:
-                    30),
+            const SizedBox(height: 30),
 
             // Fotos adicionales
             AdditionalPhotosWidget(

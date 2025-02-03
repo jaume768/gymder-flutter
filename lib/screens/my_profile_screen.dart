@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import 'edit_profile_screen.dart';
+import 'home_screen.dart';
 import 'photo_gallery_screen.dart';
 import 'login_screen.dart';
 
@@ -49,7 +50,19 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mi Perfil', style: TextStyle(color: Colors.white)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+            );
+          },
+        ),
+        title: const Text(
+          'Mi Perfil',
+          style: TextStyle(color: Colors.white),
+        ),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -126,12 +139,13 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                     title: 'Objetivo de Relación',
                     content: user.relationshipGoal ?? 'No especificado',
                   ),
-                  const Divider(color: Colors.white24, indent: 16, endIndent: 16),
+                  const Divider(
+                      color: Colors.white24, indent: 16, endIndent: 16),
                   _buildInfoTile(
                     icon: Icons.location_on,
                     title: 'Ubicación',
                     content: (user.city != null && user.city!.isNotEmpty) ||
-                        (user.country != null && user.country!.isNotEmpty)
+                            (user.country != null && user.country!.isNotEmpty)
                         ? '${user.city ?? ''}, ${user.country ?? ''}'
                         : 'Falta definir tu ubicación',
                   ),
@@ -196,7 +210,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.redAccent,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12.0),
                 ),

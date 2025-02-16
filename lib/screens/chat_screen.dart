@@ -8,11 +8,12 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
-
-import '../providers/auth_provider.dart';
-import '../models/user.dart'; // Asegúrate de importar el modelo User
+import 'package:intl/intl.dart';
 import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
+
+import '../providers/auth_provider.dart';
+import '../models/user.dart';
 
 class ChatScreen extends StatefulWidget {
   final String currentUserId;
@@ -33,6 +34,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
 
+  // Lista de mensajes; cada mensaje es un Map que contiene campos como: _id, senderId, type, message, imageUrl, timestamp y seenAt.
   List<Map<String, dynamic>> messages = [];
   bool _showEmojiPicker = false;
 
@@ -60,7 +62,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
     socket.onConnect((_) {
       print('Conectado al socket.io server');
+      // Unirse a la sala de chat correspondiente
       socket.emit('joinRoom', {
+        'userId': widget.currentUserId,
+        'matchedUserId': widget.matchedUserId,
+      });
+      // Al abrir el chat, marcamos los mensajes recibidos del otro usuario como leídos
+      socket.emit('markAsRead', {
         'userId': widget.currentUserId,
         'matchedUserId': widget.matchedUserId,
       });
@@ -69,17 +77,33 @@ class _ChatScreenState extends State<ChatScreen> {
     socket.on('receiveMessage', (data) {
       setState(() {
         messages.add({
+          '_id': data['_id'] ?? '',
           'senderId': data['senderId'],
           'type': data['type'] ?? 'text',
           'message': data['message'] ?? '',
           'imageUrl': data['imageUrl'] ?? '',
-          'timestamp': data['timestamp']
+          'timestamp': data['timestamp'],
+          'seenAt': data['seenAt'] // puede venir nulo si aún no se ha visto
         });
       });
     });
 
     socket.onDisconnect((_) => print('Desconectado del servidor'));
     socket.on('errorMessage', (data) => print('Error del servidor: $data'));
+
+    // Opcional: escuchar cuando se confirmen los mensajes marcados como leídos
+    socket.on('messagesMarkedAsRead', (data) {
+      print('Mensajes marcados como leídos: $data');
+      // Actualizamos localmente: para cada mensaje enviado por el otro usuario sin seenAt, asignamos la hora actual.
+      setState(() {
+        for (var msg in messages) {
+          if (msg['senderId'] == widget.matchedUserId &&
+              msg['seenAt'] == null) {
+            msg['seenAt'] = DateTime.now().toIso8601String();
+          }
+        }
+      });
+    });
   }
 
   Future<void> _fetchMatchedUser() async {
@@ -97,7 +121,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        // Verificar directamente si 'user' existe en la respuesta
         if (data != null && data['user'] != null) {
           setState(() {
             matchedUser = User.fromJson(data['user']);
@@ -123,9 +146,9 @@ class _ChatScreenState extends State<ChatScreen> {
         return;
       }
 
-      final url = Uri.parse('https://gymder-api-production.up.railway.app/api/messages/conversation'
+      final url = Uri.parse(
+          'https://gymder-api-production.up.railway.app/api/messages/conversation'
           '?user1=${widget.currentUserId}&user2=${widget.matchedUserId}');
-
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -143,7 +166,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 'type': m['type'],
                 'message': m['message'],
                 'imageUrl': m['imageUrl'],
-                'timestamp': m['createdAt']
+                'timestamp': m['createdAt'],
+                'seenAt': m['seenAt'] // puede ser nulo si no fue leído
               };
             }).toList();
           });
@@ -182,7 +206,8 @@ class _ChatScreenState extends State<ChatScreen> {
         return;
       }
 
-      final url = Uri.parse('https://gymder-api-production.up.railway.app/api/messages/upload');
+      final url = Uri.parse(
+          'https://gymder-api-production.up.railway.app/api/messages/upload');
       var request = http.MultipartRequest('POST', url);
       request.headers['Authorization'] = 'Bearer $token';
 
@@ -213,6 +238,17 @@ class _ChatScreenState extends State<ChatScreen> {
             'receiverId': widget.matchedUserId,
             'type': 'image',
             'imageUrl': imageUrl,
+          });
+          setState(() {
+            messages.add({
+              '_id': '',
+              'senderId': widget.currentUserId,
+              'type': 'image',
+              'message': '',
+              'imageUrl': imageUrl,
+              'timestamp': DateTime.now().toIso8601String(),
+              'seenAt': null,
+            });
           });
         } else {
           print('Error al subir imagen chat: ${data['message']}');
@@ -247,8 +283,8 @@ class _ChatScreenState extends State<ChatScreen> {
       final token = await authProvider.getToken();
       if (token == null) return;
 
-      final url =
-          Uri.parse('https://gymder-api-production.up.railway.app/api/messages/$messageId/hide');
+      final url = Uri.parse(
+          'https://gymder-api-production.up.railway.app/api/messages/$messageId/hide');
       final response = await http.delete(
         url,
         headers: {
@@ -324,6 +360,14 @@ class _ChatScreenState extends State<ChatScreen> {
                 final msg = messages[index];
                 final isMe = msg['senderId'] == widget.currentUserId;
                 final type = msg['type'] as String? ?? 'text';
+                final timestamp = msg['timestamp'];
+                DateTime dateTime;
+                try {
+                  dateTime = DateTime.parse(timestamp);
+                } catch (e) {
+                  dateTime = DateTime.now();
+                }
+                final formattedTime = DateFormat('hh:mm a').format(dateTime);
 
                 return GestureDetector(
                   onLongPress: () async {
@@ -347,7 +391,9 @@ class _ChatScreenState extends State<ChatScreen> {
                         );
                       },
                     );
-                    if (confirm == true && msg['_id'] != null) {
+                    if (confirm == true &&
+                        msg['_id'] != null &&
+                        msg['_id'] != '') {
                       _hideMessage(msg['_id']);
                     }
                   },
@@ -355,35 +401,83 @@ class _ChatScreenState extends State<ChatScreen> {
                     alignment:
                         isMe ? Alignment.centerRight : Alignment.centerLeft,
                     child: Container(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width * 0.8,
+                      ),
                       margin: const EdgeInsets.symmetric(
                           vertical: 5, horizontal: 10),
-                      padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
-                        color: isMe ? Colors.blue : Colors.grey[800],
+                        color: isMe ? Colors.white : Colors.grey[800],
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: type == 'image'
-                          ? (msg['imageUrl'] != null
-                              ? Image.network(
-                                  msg['imageUrl'],
-                                  height: 200,
-                                  width: 200,
-                                  fit: BoxFit.cover,
-                                )
-                              : const Text('Imagen no disponible'))
-                          : Text(
-                              msg['message'] ?? '',
-                              style: const TextStyle(
-                                  color: Colors.white, fontSize: 19),
+                      child: Stack(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              left: 10,
+                              right: 24,
+                              top: 10,
+                              bottom: 15,
                             ),
+                            child: type == 'image'
+                                ? (msg['imageUrl'] != null &&
+                                        msg['imageUrl'] != ''
+                                    ? Image.network(
+                                        msg['imageUrl'],
+                                        height: 200,
+                                        width: 200,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Text(
+                                        'Imagen no disponible',
+                                        style: TextStyle(
+                                          color: isMe
+                                              ? Colors.black
+                                              : Colors.white,
+                                        ),
+                                      ))
+                                : Text(
+                                    msg['message'] ?? '',
+                                    style: TextStyle(
+                                      color: isMe ? Colors.black : Colors.white,
+                                      fontSize: 19,
+                                    ),
+                                  ),
+                          ),
+                          Positioned(
+                            bottom: 4,
+                            right: 8,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  formattedTime,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: isMe ? Colors.black : Colors.white70,
+                                  ),
+                                ),
+                                if (isMe) ...[
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    Icons.done_all,
+                                    size: 16,
+                                    color: msg['seenAt'] != null
+                                        ? Colors.blue
+                                        : Colors.grey,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );
               },
             ),
           ),
-
-          // Emoji Picker
           if (_showEmojiPicker)
             SizedBox(
               height: 250,
@@ -395,8 +489,6 @@ class _ChatScreenState extends State<ChatScreen> {
                 },
               ),
             ),
-
-          // Caja de texto para enviar mensaje con iconos de foto y emoji a la izquierda
           SafeArea(
             child: Row(
               children: [

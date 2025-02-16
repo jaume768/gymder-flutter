@@ -1,4 +1,95 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+/// InputFormatter que evita que se inserten más de un salto de línea (dos líneas).
+class TwoLineTextInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    // Cuenta el número de saltos de línea en el nuevo valor.
+    final newlineCount = '\n'.allMatches(newValue.text).length;
+    // Permite máximo 1 salto de línea (2 líneas).
+    if (newlineCount > 1) {
+      return oldValue;
+    }
+    return newValue;
+  }
+}
+
+/// Widget para el campo de biografía que incluye un contador de caracteres.
+class BiographyTextField extends StatefulWidget {
+  final String initialValue;
+  final ValueChanged<String> onChanged;
+
+  const BiographyTextField({
+    Key? key,
+    required this.initialValue,
+    required this.onChanged,
+  }) : super(key: key);
+
+  @override
+  _BiographyTextFieldState createState() => _BiographyTextFieldState();
+}
+
+class _BiographyTextFieldState extends State<BiographyTextField> {
+  late TextEditingController _controller;
+  final int maxChars = 80;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue);
+    _controller.addListener(() {
+      widget.onChanged(_controller.text);
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          controller: _controller,
+          style: const TextStyle(color: Colors.white),
+          textAlign: TextAlign.left,
+          maxLines: 2,
+          decoration: InputDecoration(
+            labelText: 'Biografía',
+            labelStyle: const TextStyle(color: Colors.white70),
+            enabledBorder: OutlineInputBorder(
+              borderSide: const BorderSide(color: Colors.white54),
+              borderRadius: BorderRadius.circular(12.0),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: const BorderSide(color: Colors.blueAccent),
+              borderRadius: BorderRadius.circular(12.0),
+            ),
+            errorStyle: const TextStyle(color: Colors.redAccent),
+          ),
+          inputFormatters: [
+            TwoLineTextInputFormatter(),
+            LengthLimitingTextInputFormatter(maxChars),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '${_controller.text.length}/$maxChars caracteres',
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
+        ),
+      ],
+    );
+  }
+}
 
 class PersonalInfoForm extends StatelessWidget {
   final GlobalKey<FormState> formKey;
@@ -8,14 +99,16 @@ class PersonalInfoForm extends StatelessWidget {
   final String gender;
   final List<String> seeking;
   final String relationshipGoal;
+  final String biography; // NUEVO: biografía
 
   final ValueChanged<String> onFirstNameChanged;
   final ValueChanged<String> onLastNameChanged;
   final ValueChanged<String?> onGoalChanged;
   final ValueChanged<String?> onGenderChanged;
   final ValueChanged<String?> onRelationshipGoalChanged;
+  final ValueChanged<String> onBiographyChanged; // Callback para biografía
 
-  // CAMBIO: ahora pasamos la opción y el bool
+  // CAMBIO: se pasa la opción y el bool para el filtro "Buscando"
   final Function(String option, bool isSelected) onSeekingSelectionChanged;
 
   const PersonalInfoForm({
@@ -27,11 +120,13 @@ class PersonalInfoForm extends StatelessWidget {
     required this.gender,
     required this.seeking,
     required this.relationshipGoal,
+    required this.biography, // Se requiere la biografía
     required this.onFirstNameChanged,
     required this.onLastNameChanged,
     required this.onGoalChanged,
     required this.onGenderChanged,
     required this.onRelationshipGoalChanged,
+    required this.onBiographyChanged, // Callback para biografía
     required this.onSeekingSelectionChanged,
   }) : super(key: key);
 
@@ -40,10 +135,14 @@ class PersonalInfoForm extends StatelessWidget {
     required String initialValue,
     required ValueChanged<String> onChanged,
     required String validatorMsg,
+    int maxLines = 1,
+    TextAlign textAlign = TextAlign.left,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return TextFormField(
       initialValue: initialValue,
       style: const TextStyle(color: Colors.white),
+      textAlign: textAlign,
       decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(color: Colors.white70),
@@ -61,6 +160,8 @@ class PersonalInfoForm extends StatelessWidget {
           (value == null || value.isEmpty) ? validatorMsg : null,
       onChanged: onChanged,
       cursorColor: Colors.white,
+      maxLines: maxLines,
+      inputFormatters: inputFormatters,
     );
   }
 
@@ -74,7 +175,7 @@ class PersonalInfoForm extends StatelessWidget {
     return DropdownButtonFormField<String>(
       value: value,
       style: const TextStyle(color: Colors.white),
-      dropdownColor: Colors.grey[800], // Fondo del dropdown
+      dropdownColor: Colors.grey[800],
       selectedItemBuilder: (BuildContext context) {
         return items.map<Widget>((String item) {
           return Text(item, style: const TextStyle(color: Colors.white));
@@ -153,8 +254,7 @@ class PersonalInfoForm extends StatelessWidget {
                 validatorMsg: 'Por favor selecciona tu género',
               ),
               const SizedBox(height: 16),
-
-              // Buscando:
+              // Sección "Buscando"
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -164,8 +264,6 @@ class PersonalInfoForm extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-
-              // FilterChips
               Wrap(
                 spacing: 10.0,
                 children: [
@@ -190,14 +288,18 @@ class PersonalInfoForm extends StatelessWidget {
                 }).toList(),
               ),
               const SizedBox(height: 16),
-
-              // Relación
               _buildDropdownField(
                 label: 'Objetivo de Relación',
                 value: relationshipGoal.isNotEmpty ? relationshipGoal : null,
                 items: const ['Amistad', 'Relación', 'Casual', 'Otro'],
                 onChanged: onRelationshipGoalChanged,
                 validatorMsg: 'Por favor selecciona un objetivo de relación',
+              ),
+              const SizedBox(height: 16),
+              // Utilizamos el widget BiographyTextField para la biografía
+              BiographyTextField(
+                initialValue: biography,
+                onChanged: onBiographyChanged,
               ),
             ],
           ),

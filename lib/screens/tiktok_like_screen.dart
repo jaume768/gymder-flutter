@@ -120,12 +120,37 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
 
   Future<void> _handleLike(int userIndex) async {
     if (_isProcessing) return;
-    _isProcessing = true;
 
-    final user = _randomUsers[userIndex];
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final token = await authProvider.getToken();
+    final userIsPremium = authProvider.user?.isPremium ?? false;
 
+    int localMaxLike = (authProvider.user?.gender == 'Masculino') ? 20 : 40;
+
+    // Verificar el límite de likes antes de proceder
+    if (!userIsPremium && likeCount >= localMaxLike) {
+      likeLimitReachedTime ??= DateTime.now();
+      Duration timePassed = DateTime.now().difference(likeLimitReachedTime!);
+      if (timePassed < likeLimitDuration) {
+        Duration remaining = likeLimitDuration - timePassed;
+        _showPremiumDialog(
+          "Límite de likes alcanzado",
+          "Has llegado al número máximo de likes. Espera ${remaining.inHours} horas y ${remaining.inMinutes % 60} minutos o mira un video para expandirlo.",
+        );
+        return; // Cancela el like sin enviarlo
+      } else {
+        // Reinicia el contador si ya pasó el tiempo
+        setState(() {
+          likeCount = 0;
+          likeLimitReachedTime = null;
+        });
+      }
+    }
+
+    // Ya no incrementamos scrollCount aquí, solo likeCount
+    _isProcessing = true;
+    final user = _randomUsers[userIndex];
+
+    final token = await authProvider.getToken();
     if (token == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Token no encontrado. Inicia sesión.')),
@@ -138,8 +163,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     final result = await userService.likeUser(user.id);
 
     if (result['success'] == true) {
-      final currentUser =
-          Provider.of<AuthProvider>(context, listen: false).user;
+      final currentUser = authProvider.user;
       if (result['matchedUser'] != null && currentUser != null) {
         _mostrarModalMatch(context, currentUser, user);
       }
@@ -151,6 +175,8 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
 
     setState(() {
       _randomUsers.removeAt(userIndex);
+      // Incrementa solo el contador de likes aquí
+      if (!userIsPremium) likeCount++;
     });
 
     if (_randomUsers.isEmpty) {
@@ -167,20 +193,8 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
 
     _isProcessing = false;
 
-    final authProviderForLike =
-        Provider.of<AuthProvider>(context, listen: false);
-    if (!(authProviderForLike.user?.isPremium ?? false)) {
-      int localMaxScroll =
-          (authProviderForLike.user?.gender == 'Masculino') ? 40 : 75;
-      int localMaxLike =
-          (authProviderForLike.user?.gender == 'Masculino') ? 20 : 40;
-
-      setState(() {
-        scrollCount++;
-        likeCount++;
-      });
-
-      _checkScrollLimit(localMaxScroll);
+    // Verifica el límite de likes nuevamente en caso de que se necesite mostrar el aviso
+    if (!userIsPremium) {
       _checkLikeLimit(localMaxLike);
     }
   }
@@ -421,7 +435,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
   @override
   Widget build(BuildContext context) {
     super
-        .build(context); // Llamada necesaria para AutomaticKeepAliveClientMixin
+        .build(context);
     final auth = Provider.of<AuthProvider>(context);
     final int maxScrollLimit = (auth.user?.gender == 'Masculino') ? 25 : 45;
     final currentList = showRandom ? _randomUsers : _likedUsers;
@@ -551,7 +565,8 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                   onPressed: () async {
                     final hasLocation = (auth.user?.location != null) &&
                         (auth.user?.location?.coordinates.length == 2) &&
-                        !(auth.user?.location?.coordinates[0] == 0 && auth.user?.location?.coordinates[1] == 0);
+                        !(auth.user?.location?.coordinates[0] == 0 &&
+                            auth.user?.location?.coordinates[1] == 0);
                     final result = await showModalBottomSheet<dynamic>(
                       context: context,
                       backgroundColor: Colors.transparent,

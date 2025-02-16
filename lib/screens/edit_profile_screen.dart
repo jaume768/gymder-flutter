@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
@@ -10,9 +12,6 @@ import '../widgets/perfil/profile_picture_widget.dart';
 import '../widgets/perfil/personal_info_form.dart';
 import '../widgets/perfil/additional_photos_widget.dart';
 import 'login_screen.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
-
 import 'my_profile_screen.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -34,14 +33,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   String gender = '';
   List<String> seeking = [];
   String relationshipGoal = '';
+  String biography = '';
 
-  // Variables originales
   String originalFirstName = '';
   String originalLastName = '';
   String originalGoal = '';
   String originalGender = '';
   List<String> originalSeeking = [];
   String originalRelationshipGoal = '';
+  String originalBiography = '';
+
   String location = '';
   double? userLatitude;
   double? userLongitude;
@@ -72,13 +73,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       originalGender = user.gender ?? '';
       originalSeeking = List.from(user.seeking ?? []);
       originalRelationshipGoal = user.relationshipGoal ?? '';
-
+      originalBiography = user.biography ?? '';
+      // Asignamos los valores a las variables editables
       firstName = originalFirstName;
       lastName = originalLastName;
       goal = originalGoal;
       gender = originalGender;
       seeking = List.from(originalSeeking);
       relationshipGoal = originalRelationshipGoal;
+      biography = originalBiography;
     }
   }
 
@@ -89,6 +92,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           goal != originalGoal ||
           gender != originalGender ||
           relationshipGoal != originalRelationshipGoal ||
+          biography != originalBiography ||
           seeking.length != originalSeeking.length ||
           !seeking.every((item) => originalSeeking.contains(item)) ||
           locationUpdated);
@@ -100,7 +104,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       isLoadingLocation = true;
       errorMessage = '';
     });
-
     try {
       LocationPermission permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied ||
@@ -112,16 +115,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         });
         return;
       }
-
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-
       List<Placemark> placemarks = await placemarkFromCoordinates(
         position.latitude,
         position.longitude,
       );
-
       if (placemarks.isNotEmpty) {
         Placemark placemark = placemarks.first;
         String ciudad = placemark.locality ?? '';
@@ -151,12 +151,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void _handleSeekingChanged(String option, bool isSelected) {
     setState(() {
       if (isSelected) {
-        // Agregar la opción a la lista
         if (!seeking.contains(option)) {
           seeking.add(option);
         }
       } else {
-        // Quitar la opción de la lista
         seeking.remove(option);
       }
     });
@@ -183,7 +181,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       isUploading = true;
       errorMessage = '';
     });
-
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final token = await authProvider.getToken();
     if (token == null) {
@@ -193,7 +190,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       });
       return;
     }
-
     try {
       final userService = UserService(token: token);
       final result = await userService.uploadProfilePicture(_imageFile!);
@@ -254,7 +250,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       isUploading = true;
       errorMessage = '';
     });
-
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final token = await authProvider.getToken();
     if (token == null) {
@@ -264,7 +259,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       });
       return;
     }
-
     try {
       final userService = UserService(token: token);
       final result = await userService.uploadPhotos(_additionalImages);
@@ -300,11 +294,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final token = await authProvider.getToken();
       if (token == null) return;
-
       final userService = UserService(token: token);
       final photoIds = newPhotoList.map((p) => p.id).toList();
       final result = await userService.updatePhotoOrder(photoIds);
-
       if (result['success'] == true) {
         await authProvider.refreshUser();
       } else {
@@ -326,12 +318,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     } else {
       return;
     }
-
     setState(() {
       isUploading = true;
       errorMessage = '';
     });
-
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final token = await authProvider.getToken();
@@ -341,7 +331,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         });
         return;
       }
-
       final userService = UserService(token: token);
       Map<String, dynamic> profileData = {
         'firstName': firstName,
@@ -350,22 +339,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'gender': gender,
         'seeking': seeking,
         'relationshipGoal': relationshipGoal,
+        'biography': biography, // Envío de la biografía
       };
-
       if (locationUpdated && userLatitude != null && userLongitude != null) {
         profileData['location'] = {
           'type': 'Point',
           'coordinates': [userLongitude, userLatitude]
         };
       }
-
       final result = await userService.updateProfile(profileData);
-
       if (result['success']) {
         if (_photoOrderChanged) {
           await _updatePhotoOrder(_reorderedPhotos);
         }
-
         await authProvider.refreshUser();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -377,7 +363,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
           ),
         );
-
         setState(() {
           originalFirstName = firstName;
           originalLastName = lastName;
@@ -385,12 +370,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           originalGender = gender;
           originalSeeking = List.from(seeking);
           originalRelationshipGoal = relationshipGoal;
-
+          originalBiography = biography;
           hasChanges = false;
           _photoOrderChanged = false;
           locationUpdated = false;
         });
-
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const MyProfileScreen()),
@@ -416,7 +400,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       isUploading = true;
       errorMessage = '';
     });
-
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final token = await authProvider.getToken();
     if (token == null) {
@@ -454,7 +437,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.user;
-
     if (user == null) {
       Future.microtask(() {
         Navigator.pushReplacement(
@@ -466,9 +448,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         body: SizedBox(),
       );
     }
-
     final showSaveButton = hasChanges || _photoOrderChanged;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -509,90 +489,94 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               imageFile: _imageFile,
               onPickImage: _pickProfileImage,
             ),
-            const SizedBox(
-                height:
-                    30), // Mayor espacio entre la foto de perfil y el formulario
-
-            // Formulario de info personal
-            PersonalInfoForm(
-              formKey: _formKey,
-              firstName: firstName,
-              lastName: lastName,
-              goal: goal,
-              gender: gender,
-              seeking: seeking,
-              relationshipGoal: relationshipGoal,
-              onFirstNameChanged: (val) {
-                firstName = val;
-                _checkChanges();
-              },
-              onLastNameChanged: (val) {
-                lastName = val;
-                _checkChanges();
-              },
-              onGoalChanged: (val) {
-                if (val != null) {
-                  goal = val;
-                  _checkChanges();
-                }
-              },
-              onGenderChanged: (val) {
-                if (val != null) {
-                  gender = val;
-                  _checkChanges();
-                }
-              },
-              onRelationshipGoalChanged: (val) {
-                if (val != null) {
-                  relationshipGoal = val;
-                  _checkChanges();
-                }
-              },
-              onSeekingSelectionChanged: _handleSeekingChanged,
-            ),
-
-            Card(
-              color: Colors.white24,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16.0),
-              ),
-              child: ListTile(
-                leading: const Icon(
-                  Icons.location_on,
-                  color: Colors.white,
-                  size: 30,
-                ),
-                title: isLoadingLocation
-                    ? Center(
-                        child: SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                                Colors.white),
-                          ),
-                        ),
-                      )
-                    : Text(
-                        location.isNotEmpty
-                            ? location
-                            : 'Ubicación no definida',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.refresh, color: Colors.white),
-                  onPressed: _obtenerUbicacion,
-                ),
-              ),
-            ),
-
             const SizedBox(height: 30),
-
-            // Fotos adicionales
+            Form(
+              child: Column(
+                children: [
+                  // Se utiliza un formulario personalizado que ahora incluye el campo biografía.
+                  PersonalInfoForm(
+                    formKey: _formKey,
+                    firstName: firstName,
+                    lastName: lastName,
+                    goal: goal,
+                    gender: gender,
+                    seeking: seeking,
+                    relationshipGoal: relationshipGoal,
+                    biography: biography,
+                    onFirstNameChanged: (val) {
+                      firstName = val;
+                      _checkChanges();
+                    },
+                    onLastNameChanged: (val) {
+                      lastName = val;
+                      _checkChanges();
+                    },
+                    onGoalChanged: (val) {
+                      if (val != null) {
+                        goal = val;
+                        _checkChanges();
+                      }
+                    },
+                    onGenderChanged: (val) {
+                      if (val != null) {
+                        gender = val;
+                        _checkChanges();
+                      }
+                    },
+                    onRelationshipGoalChanged: (val) {
+                      if (val != null) {
+                        relationshipGoal = val;
+                        _checkChanges();
+                      }
+                    },
+                    onBiographyChanged: (val) {
+                      biography = val;
+                      _checkChanges();
+                    },
+                    onSeekingSelectionChanged: _handleSeekingChanged,
+                  ),
+                  Card(
+                    color: Colors.white24,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16.0),
+                    ),
+                    child: ListTile(
+                      leading: const Icon(
+                        Icons.location_on,
+                        color: Colors.white,
+                        size: 30,
+                      ),
+                      title: isLoadingLocation
+                          ? const Center(
+                              child: SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
+                                ),
+                              ),
+                            )
+                          : Text(
+                              location.isNotEmpty
+                                  ? location
+                                  : 'Ubicación no definida',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.refresh, color: Colors.white),
+                        onPressed: _obtenerUbicacion,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 30),
             AdditionalPhotosWidget(
               user: user,
               additionalImages: _additionalImages,
@@ -611,7 +595,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 setState(() {});
               },
             ),
-
             if (errorMessage.isNotEmpty) ...[
               const SizedBox(height: 10),
               Text(
@@ -621,8 +604,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
             ],
             const SizedBox(height: 20),
-
-            // Botón de Cerrar Sesión
             Center(
               child: ElevatedButton(
                 onPressed: () async {

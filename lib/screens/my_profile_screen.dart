@@ -17,8 +17,6 @@ class MyProfileScreen extends StatefulWidget {
 }
 
 class _MyProfileScreenState extends State<MyProfileScreen> {
-  late User user;
-
   @override
   void initState() {
     super.initState();
@@ -40,14 +38,12 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
-
-    final user = authProvider.user;
+    final User? user = authProvider.user;
     if (user == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
-
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -59,10 +55,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             );
           },
         ),
-        title: const Text(
-          'Mi Perfil',
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text('Mi Perfil', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -71,6 +64,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            // Foto de perfil y botón de editar
             Stack(
               children: [
                 CircleAvatar(
@@ -106,16 +100,28 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
               ],
             ),
             const SizedBox(height: 16),
+            // Nombre de usuario
             Text(
               user.username ?? '',
               style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white),
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
+            // Mostrar la biografía debajo del nombre (alineada a la izquierda)
+            if (user.biography != null && user.biography!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  user.biography!,
+                  style: const TextStyle(fontSize: 16, color: Colors.white70),
+                  textAlign: TextAlign.center,
+                ),
+              ),
             const SizedBox(height: 16),
             Card(
-              color: Color.fromRGBO(38, 38, 38, 0.0),
+              color: const Color.fromRGBO(38, 38, 38, 1.0),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
               child: Column(
@@ -152,14 +158,16 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                 ],
               ),
             ),
+            // Mostrar fotos adicionales si existen
             if (user.photos != null && user.photos!.isNotEmpty) ...[
               const SizedBox(height: 16),
               const Text(
                 'Fotografías:',
                 style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white),
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
               const SizedBox(height: 8),
               GridView.builder(
@@ -199,7 +207,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
               ),
             ],
             const SizedBox(height: 16),
-            // Botón de Cerrar sesión agregado directamente en el perfil
+            // Botón de Cerrar sesión
             ElevatedButton(
               onPressed: () async {
                 await authProvider.logoutUser();

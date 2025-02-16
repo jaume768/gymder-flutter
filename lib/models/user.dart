@@ -65,6 +65,7 @@ class User {
   final List<Photo>? photos;
   final String? googleId;
   final LocationData? location;
+  final String? biography;
   final String? city;
   final String? country;
 
@@ -78,6 +79,7 @@ class User {
     this.firstName,
     this.lastName,
     this.gender,
+    this.biography,
     this.seeking,
     this.relationshipGoal,
     this.likes,
@@ -112,6 +114,7 @@ class User {
           ? List<Photo>.from(json['photos'].map((x) => Photo.fromJson(x)))
           : [],
       googleId: json['googleId'],
+      biography: json['biography'],
       location: json['location'] != null
           ? LocationData.fromJson(json['location'])
           : null,

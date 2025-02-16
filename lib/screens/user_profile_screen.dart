@@ -1,4 +1,3 @@
-// lib/screens/user_profile_screen.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -12,7 +11,6 @@ import 'photo_gallery_screen.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;
-
   const UserProfileScreen({Key? key, required this.userId}) : super(key: key);
 
   @override
@@ -39,11 +37,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             const Text('¿Estás seguro de que deseas bloquear a este usuario?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar')),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
           TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Bloquear')),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Bloquear'),
+          ),
         ],
       ),
     );
@@ -53,6 +53,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     setState(() {
       isLoading = true;
     });
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final token = await authProvider.getToken();
     if (token == null) {
@@ -93,8 +94,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         return;
       }
 
-      final url =
-          Uri.parse('https://gymder-api-production.up.railway.app/api/users/profile/${widget.userId}');
+      final url = Uri.parse(
+          'https://gymder-api-production.up.railway.app/api/users/profile/${widget.userId}');
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -127,10 +128,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
-  Widget _buildInfoTile(
-      {required IconData icon,
-      required String title,
-      required String content}) {
+  Widget _buildInfoTile({
+    required IconData icon,
+    required String title,
+    required String content,
+  }) {
     return ListTile(
       leading: Icon(icon, color: Colors.white70),
       title: Text(title, style: const TextStyle(color: Colors.white70)),
@@ -154,14 +156,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ? const Center(child: CircularProgressIndicator())
           : errorMessage.isNotEmpty
               ? Center(
-                  child: Text(errorMessage,
-                      style: const TextStyle(color: Colors.redAccent)))
+                  child: Text(
+                    errorMessage,
+                    style: const TextStyle(color: Colors.redAccent),
+                  ),
+                )
               : user == null
                   ? const Center(child: Text('Usuario no encontrado.'))
                   : SingleChildScrollView(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
                         children: [
+                          // Foto de perfil
                           CircleAvatar(
                             radius: 70,
                             backgroundColor: Colors.white,
@@ -173,6 +179,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                     as ImageProvider,
                           ),
                           const SizedBox(height: 16),
+                          // Nombre del usuario
                           Text(
                             user!.username ?? '',
                             style: const TextStyle(
@@ -180,11 +187,26 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white),
                           ),
+                          // Biografía alineada a la izquierda
+                          if (user!.biography != null &&
+                              user!.biography!.isNotEmpty)
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 8.0),
+                              child: Text(
+                                user!.biography!,
+                                style: const TextStyle(
+                                    fontSize: 16, color: Colors.white70),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
                           const SizedBox(height: 8),
+                          // Información adicional en tarjeta
                           Card(
                             color: Colors.grey[850],
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             child: Column(
                               children: [
                                 _buildInfoTile(
@@ -214,58 +236,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                               ],
                             ),
                           ),
-                          if (user!.photos != null &&
-                              user!.photos!.isNotEmpty) ...[
-                            const SizedBox(height: 16),
-                            const Text(
-                              'Fotografías:',
-                              style: TextStyle(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white),
-                            ),
-                            GridView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 3,
-                                crossAxisSpacing: 4,
-                                mainAxisSpacing: 4,
-                              ),
-                              itemCount: user!.photos!.length,
-                              itemBuilder: (context, index) {
-                                final photo = user!.photos![index];
-                                return GestureDetector(
-                                  onTap: () {
-                                    final urls = user!.photos!
-                                        .map((p) => p.url)
-                                        .toList();
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => PhotoGalleryScreen(
-                                          imageUrls: urls,
-                                          initialIndex: index,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  child: CachedNetworkImage(
-                                    imageUrl: photo.url,
-                                    fit: BoxFit.cover,
-                                    placeholder: (context, url) => Container(
-                                      color: Colors.grey[800],
-                                    ),
-                                    errorWidget: (context, url, error) =>
-                                        const Icon(Icons.error,
-                                            color: Colors.white),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
                           const SizedBox(height: 16),
+                          // Botón para bloquear usuario
                           ElevatedButton.icon(
                             onPressed: _blockUser,
                             icon: const Icon(Icons.block, color: Colors.white),

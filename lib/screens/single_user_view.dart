@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/user.dart';
+import 'user_profile_screen.dart'; // Para navegar al perfil del usuario
 
 class SingleUserView extends StatefulWidget {
   final User user;
@@ -36,18 +37,16 @@ class _SingleUserViewState extends State<SingleUserView>
 
     _heartAnimationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800), // Duración extendida para el efecto
+      duration: const Duration(milliseconds: 800),
     );
 
     // Configuración de animaciones
     _heartAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
       CurvedAnimation(parent: _heartAnimationController, curve: Curves.easeOut),
     );
-
     _heartOpacityAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(parent: _heartAnimationController, curve: Curves.easeOut),
     );
-
     _heartMoveAnimation = Tween<double>(begin: 0.0, end: -100.0).animate(
       CurvedAnimation(parent: _heartAnimationController, curve: Curves.easeOut),
     );
@@ -64,11 +63,8 @@ class _SingleUserViewState extends State<SingleUserView>
     setState(() {
       _showHeart = true;
     });
-
-    // Mostrar el corazón grande y estático por un breve periodo
+    // Mostramos el corazón durante 300ms antes de iniciar la animación
     await Future.delayed(const Duration(milliseconds: 300));
-
-    // Iniciar la animación de desvanecimiento y movimiento hacia arriba
     _heartAnimationController.forward(from: 0).then((_) {
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
@@ -78,8 +74,7 @@ class _SingleUserViewState extends State<SingleUserView>
         }
       });
     });
-
-    // Llamar la función de like
+    // Ejecuta la función de like
     widget.onDoubleTapLike();
   }
 
@@ -91,7 +86,6 @@ class _SingleUserViewState extends State<SingleUserView>
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onDoubleTapDown: (TapDownDetails details) {
-        // Capturar la posición local del doble tap
         final RenderBox box = context.findRenderObject() as RenderBox;
         setState(() {
           _heartPosition = box.globalToLocal(details.globalPosition);
@@ -101,8 +95,8 @@ class _SingleUserViewState extends State<SingleUserView>
       child: Stack(
         children: [
           PageView.builder(
-            scrollDirection: Axis.horizontal,
             controller: _horizontalPageController,
+            scrollDirection: Axis.horizontal,
             itemCount: photos.isEmpty ? 1 : photos.length,
             onPageChanged: (index) {
               setState(() {
@@ -121,7 +115,6 @@ class _SingleUserViewState extends State<SingleUserView>
                   ),
                 );
               }
-
               final photoUrl = photos[index].url;
               return CachedNetworkImage(
                 imageUrl: photoUrl,
@@ -132,11 +125,10 @@ class _SingleUserViewState extends State<SingleUserView>
                   child: CircularProgressIndicator(),
                 ),
                 errorWidget: (context, url, error) =>
-                const Center(child: Icon(Icons.error)),
+                    const Center(child: Icon(Icons.error)),
               );
             },
           ),
-
           if (photos.isNotEmpty)
             Positioned(
               bottom: 92,
@@ -159,44 +151,65 @@ class _SingleUserViewState extends State<SingleUserView>
                 }),
               ),
             ),
-
-          // Datos del usuario
+          // Datos del usuario: nombre, objetivo y biografía debajo del nombre
           Positioned(
             left: 20,
+            right: 20, // Limita el ancho para que el texto se ajuste
             bottom: 120,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  user.username,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 30,
-                    fontWeight: FontWeight.bold,
-                    shadows: [Shadow(blurRadius: 10, color: Colors.black)],
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => UserProfileScreen(userId: user.id),
                   ),
-                ),
-                if (user.goal != null)
+                );
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    user.goal!,
+                    user.username,
                     style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 20,
+                      color: Colors.white,
+                      fontSize: 30,
+                      fontWeight: FontWeight.bold,
                       shadows: [Shadow(blurRadius: 10, color: Colors.black)],
                     ),
                   ),
-              ],
+                  if (user.goal != null)
+                    Text(
+                      user.goal!,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 20,
+                        shadows: [Shadow(blurRadius: 10, color: Colors.black)],
+                      ),
+                    ),
+                  if (user.biography != null && user.biography!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
+                      child: Text(
+                        user.biography!,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
-
-          // Ícono de corazón animado en la posición del doble tap con efecto TikTok
           if (_showHeart && _heartPosition != null)
             AnimatedBuilder(
               animation: _heartAnimationController,
               builder: (context, child) {
                 return Positioned(
                   left: _heartPosition!.dx - 40,
-                  top: _heartPosition!.dy - 40 + (_heartMoveAnimation?.value ?? 0.0),
+                  top: _heartPosition!.dy -
+                      40 +
+                      (_heartMoveAnimation?.value ?? 0.0),
                   child: Opacity(
                     opacity: _heartOpacityAnimation?.value ?? 1.0,
                     child: ScaleTransition(

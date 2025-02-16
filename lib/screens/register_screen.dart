@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
@@ -154,23 +155,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
       bool? continuar = await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
-            title: const Text("¿Sin ubicación?"),
-            content: const Text(
-                "Si no proporcionas tu ubicación, se te mostrarán usuarios de manera aleatoria. "
-                    "Podrás cambiar esto más tarde en tu perfil. ¿Deseas continuar sin ubicación?"
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text("Cancelar"),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text("Continuar"),
-              ),
-            ],
-          )
-      );
+                title: const Text("¿Sin ubicación?"),
+                content: const Text(
+                    "Si no proporcionas tu ubicación, se te mostrarán usuarios de manera aleatoria. "
+                    "Podrás cambiar esto más tarde en tu perfil. ¿Deseas continuar sin ubicación?"),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text("Cancelar"),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text("Continuar"),
+                  ),
+                ],
+              ));
 
       if (continuar == false) {
         return;
@@ -759,11 +758,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
             children: seekingOptions.map((option) {
               final isSelected = seeking.contains(option);
               return FilterChip(
-                label:
-                    Text(option, style: const TextStyle(color: Colors.white)),
+                label: Text(
+                  option,
+                  style: TextStyle(
+                    color: isSelected ? Colors.black : Colors.white,
+                  ),
+                ),
                 selected: isSelected,
-                backgroundColor: Colors.white54,
-                selectedColor: Colors.white,
+                backgroundColor: Colors.grey[900],
+                selectedColor: Colors.blueAccent,
                 onSelected: (bool selected) {
                   setState(() {
                     if (selected) {
@@ -954,7 +957,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       subtitle: 'Selecciona tu objetivo actual, e ingresa altura y peso',
       child: Column(
         children: [
-          // Etapa del gym
           DropdownButtonFormField<String>(
             decoration: _dropdownDecoration('Etapa'),
             style: const TextStyle(color: Colors.white),
@@ -977,12 +979,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
             },
           ),
           const SizedBox(height: 20),
-
-          // Altura
           TextFormField(
             style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration('Altura (cm)'),
             keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             onChanged: (value) {
               setState(() {
                 height = parseHeight(value);
@@ -990,19 +991,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
             },
           ),
           const SizedBox(height: 20),
-
-          // Peso
           TextFormField(
             style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration('Peso (kg)'),
-            keyboardType: TextInputType.number,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+            ],
             onChanged: (value) {
               setState(() {
                 weight = double.tryParse(value);
               });
             },
           ),
-
           if (errorMessage.isNotEmpty && _currentStep == 7)
             Padding(
               padding: const EdgeInsets.only(top: 16),

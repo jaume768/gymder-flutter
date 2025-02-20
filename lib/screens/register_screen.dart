@@ -235,11 +235,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
           });
           return false;
         }
+        if (password.length < 6) {
+          setState(() {
+            errorMessage = 'La contraseña debe tener al menos 6 carácteres';
+          });
+          return false;
+        }
         break;
       case 1:
         if (username.isEmpty || firstName.isEmpty || lastName.isEmpty) {
           setState(() {
             errorMessage = 'Ingresa tu username, nombre y apellido';
+          });
+          return false;
+        }
+        // Expresión regular para detectar números
+        RegExp digitRegex = RegExp(r'\d');
+        if (digitRegex.hasMatch(firstName) || digitRegex.hasMatch(lastName)) {
+          setState(() {
+            errorMessage = 'El nombre y apellido no deben contener números';
           });
           return false;
         }
@@ -257,7 +271,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
           });
           return false;
         }
+        final today = DateTime.now();
+        int age = today.year - birthDate!.year;
+        if (today.month < birthDate!.month ||
+            (today.month == birthDate!.month && today.day < birthDate!.day)) {
+          age--;
+        }
+        if (age < 18) {
+          setState(() {
+            errorMessage = 'Debes ser mayor de 18 años para continuar';
+          });
+          return false;
+        }
         break;
+
       case 3:
         if (gender.isEmpty) {
           setState(() {

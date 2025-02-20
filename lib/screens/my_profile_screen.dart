@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
+import 'SettingsScreen.dart';
 import 'edit_profile_screen.dart';
 import 'home_screen.dart';
 import 'photo_gallery_screen.dart';
@@ -58,6 +59,17 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         title: const Text('Mi Perfil', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
+          )
+        ],
       ),
       backgroundColor: const Color.fromRGBO(20, 20, 20, 0.0),
       body: SingleChildScrollView(
@@ -109,7 +121,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                 color: Colors.white,
               ),
             ),
-            // Mostrar la biografía debajo del nombre (alineada a la izquierda)
+            // Mostrar la biografía debajo del nombre
             if (user.biography != null && user.biography!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
@@ -206,34 +218,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                 },
               ),
             ],
-            const SizedBox(height: 16),
-            // Botón de Cerrar sesión
-            ElevatedButton(
-              onPressed: () async {
-                await authProvider.logoutUser();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.0),
-                ),
-              ),
-              child: const Text(
-                'Cerrar sesión',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const SizedBox(height: 82),
           ],
         ),
       ),

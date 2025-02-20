@@ -342,12 +342,12 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
         return AlertDialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          backgroundColor: Colors.black87,
+          backgroundColor: Colors.black.withValues(alpha: 0.6),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                '¡Es un match!',
+                '¡Tienes un match!',
                 style: TextStyle(
                     color: Colors.white,
                     fontSize: 24,
@@ -355,7 +355,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
               ),
               const SizedBox(height: 10),
               Text(
-                'Tú y ${matchedUser.username} se han dado like mutuamente',
+                'Tú y ${matchedUser.username} os habéis dado like mutuamente',
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white70, fontSize: 16),
               ),
@@ -523,7 +523,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                             showRandom = true;
                           });
                         },
-                        child: const Text('Random'),
+                        child: const Text('Aleatorio'),
                       ),
                       const SizedBox(width: 8),
                       const Text(
@@ -961,7 +961,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
             "${values.start.round()}",
             "${values.end.round()}",
           ),
-          activeColor: Colors.cyanAccent,
+          activeColor: Colors.blueAccent,
           inactiveColor: Colors.grey,
           onChanged: onChanged,
         ),

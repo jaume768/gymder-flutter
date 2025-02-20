@@ -326,6 +326,28 @@ class UserService {
     }
   }
 
+  Future<Map<String, dynamic>> updateUsername(String newUsername) async {
+    final url = Uri.parse('$baseUrl/users/username');
+    final response = await http.patch(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'newUsername': newUsername}),
+    );
+
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return {'success': true, 'message': 'Username actualizado correctamente'};
+    } else {
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Error al cambiar el username'
+      };
+    }
+  }
+
   // Método para actualizar el perfil
   Future<Map<String, dynamic>> updateProfile(
       Map<String, dynamic> profileData) async {

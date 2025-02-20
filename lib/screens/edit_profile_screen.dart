@@ -22,11 +22,15 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  final _formKey = GlobalKey<FormState>();
+  // Keys distintas para cada Form
+  final _usernameFormKey = GlobalKey<FormState>();
+  final _personalInfoFormKey = GlobalKey<FormState>();
+
   bool isUploading = false;
   String errorMessage = '';
 
   // Variables editables
+  String username = '';
   String firstName = '';
   String lastName = '';
   String goal = '';
@@ -35,6 +39,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   String relationshipGoal = '';
   String biography = '';
 
+  // Valores originales para comparar cambios
+  String originalUsername = '';
   String originalFirstName = '';
   String originalLastName = '';
   String originalGoal = '';
@@ -63,6 +69,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.initState();
     final user = Provider.of<AuthProvider>(context, listen: false).user;
     if (user != null) {
+      username = user.username ?? '';
+      originalUsername = user.username ?? '';
       if ((user.city != null && user.city!.isNotEmpty) ||
           (user.country != null && user.country!.isNotEmpty)) {
         location = '${user.city ?? ''}, ${user.country ?? ''}';
@@ -87,7 +95,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   void _checkChanges() {
     setState(() {
-      hasChanges = (firstName != originalFirstName ||
+      hasChanges = (username != originalUsername ||
+          firstName != originalFirstName ||
           lastName != originalLastName ||
           goal != originalGoal ||
           gender != originalGender ||
@@ -110,7 +119,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           permission == LocationPermission.deniedForever) {
         setState(() {
           errorMessage =
-              'Permiso de ubicación denegado. No se puede continuar.';
+          'Permiso de ubicación denegado. No se puede continuar.';
           isLoadingLocation = false;
         });
         return;
@@ -233,8 +242,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (pickedFiles != null) {
       if (pickedFiles.length > 5) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Puedes seleccionar un máximo de 5 fotos')),
+          const SnackBar(content: Text('Puedes seleccionar un máximo de 5 fotos')),
         );
         return;
       }
@@ -265,8 +273,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (result['success']) {
         await authProvider.refreshUser();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Fotos adicionales subidas exitosamente')),
+          const SnackBar(content: Text('Fotos adicionales subidas exitosamente')),
         );
         setState(() {
           _additionalImages = [];
@@ -313,15 +320,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _saveProfile() async {
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
-    } else {
+    // Validamos ambos formularios
+    if (!_usernameFormKey.currentState!.validate() ||
+        !_personalInfoFormKey.currentState!.validate()) {
       return;
     }
+    _usernameFormKey.currentState!.save();
+    _personalInfoFormKey.currentState!.save();
+
     setState(() {
       isUploading = true;
       errorMessage = '';
     });
+
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final token = await authProvider.getToken();
@@ -339,19 +350,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'gender': gender,
         'seeking': seeking,
         'relationshipGoal': relationshipGoal,
-        'biography': biography, // Envío de la biografía
+        'biography': biography,
       };
-      if (locationUpdated && userLatitude != null && userLongitude != null) {
-        profileData['location'] = {
-          'type': 'Point',
-          'coordinates': [userLongitude, userLatitude]
-        };
+
+      // Si el username cambió, se intenta actualizarlo en el backend
+      if (username != authProvider.user?.username) {
+        final usernameResponse = await userService.updateUsername(username);
+        if (!usernameResponse['success']) {
+          setState(() {
+            errorMessage = usernameResponse['message'];
+          });
+          return;
+        }
       }
+
       final result = await userService.updateProfile(profileData);
       if (result['success']) {
-        if (_photoOrderChanged) {
-          await _updatePhotoOrder(_reorderedPhotos);
-        }
         await authProvider.refreshUser();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -364,16 +378,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
         );
         setState(() {
-          originalFirstName = firstName;
-          originalLastName = lastName;
-          originalGoal = goal;
-          originalGender = gender;
-          originalSeeking = List.from(seeking);
-          originalRelationshipGoal = relationshipGoal;
-          originalBiography = biography;
           hasChanges = false;
-          _photoOrderChanged = false;
-          locationUpdated = false;
         });
         Navigator.pushReplacement(
           context,
@@ -381,7 +386,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         );
       } else {
         setState(() {
-          errorMessage = result['message'] ?? 'Error al actualizar el perfil';
+          errorMessage = result['message'];
         });
       }
     } catch (e) {
@@ -444,40 +449,35 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           MaterialPageRoute(builder: (_) => const LoginScreen()),
         );
       });
-      return const Scaffold(
-        body: SizedBox(),
-      );
+      return const Scaffold(body: SizedBox());
     }
     final showSaveButton = hasChanges || _photoOrderChanged;
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Editar Perfil',
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text('Editar Perfil', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       backgroundColor: const Color.fromRGBO(20, 20, 20, 0.0),
       floatingActionButton: showSaveButton
           ? FloatingActionButton.extended(
-              onPressed: isUploading ? null : _saveProfile,
-              backgroundColor: Colors.blueAccent,
-              icon: isUploading
-                  ? const SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Icon(Icons.save, color: Colors.white),
-              label: Text(
-                isUploading ? 'Guardando...' : 'Guardar Cambios',
-                style: const TextStyle(color: Colors.white),
-              ),
-            )
+        onPressed: isUploading ? null : _saveProfile,
+        backgroundColor: Colors.blueAccent,
+        icon: isUploading
+            ? const SizedBox(
+          height: 24,
+          width: 24,
+          child: CircularProgressIndicator(
+            color: Colors.white,
+            strokeWidth: 2,
+          ),
+        )
+            : const Icon(Icons.save, color: Colors.white),
+        label: Text(
+          isUploading ? 'Guardando...' : 'Guardar Cambios',
+          style: const TextStyle(color: Colors.white),
+        ),
+      )
           : null,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -490,90 +490,106 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               onPickImage: _pickProfileImage,
             ),
             const SizedBox(height: 30),
+            // Form para el username
             Form(
-              child: Column(
-                children: [
-                  // Se utiliza un formulario personalizado que ahora incluye el campo biografía.
-                  PersonalInfoForm(
-                    formKey: _formKey,
-                    firstName: firstName,
-                    lastName: lastName,
-                    goal: goal,
-                    gender: gender,
-                    seeking: seeking,
-                    relationshipGoal: relationshipGoal,
-                    biography: biography,
-                    onFirstNameChanged: (val) {
-                      firstName = val;
-                      _checkChanges();
-                    },
-                    onLastNameChanged: (val) {
-                      lastName = val;
-                      _checkChanges();
-                    },
-                    onGoalChanged: (val) {
-                      if (val != null) {
-                        goal = val;
-                        _checkChanges();
-                      }
-                    },
-                    onGenderChanged: (val) {
-                      if (val != null) {
-                        gender = val;
-                        _checkChanges();
-                      }
-                    },
-                    onRelationshipGoalChanged: (val) {
-                      if (val != null) {
-                        relationshipGoal = val;
-                        _checkChanges();
-                      }
-                    },
-                    onBiographyChanged: (val) {
-                      biography = val;
-                      _checkChanges();
-                    },
-                    onSeekingSelectionChanged: _handleSeekingChanged,
+              key: _usernameFormKey,
+              child: TextFormField(
+                initialValue: username,
+                decoration: InputDecoration(
+                  labelText: 'Username',
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Colors.white54),
+                    borderRadius: BorderRadius.circular(12.0),
                   ),
-                  Card(
-                    color: Colors.white24,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16.0),
-                    ),
-                    child: ListTile(
-                      leading: const Icon(
-                        Icons.location_on,
-                        color: Colors.white,
-                        size: 30,
-                      ),
-                      title: isLoadingLocation
-                          ? const Center(
-                              child: SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white),
-                                ),
-                              ),
-                            )
-                          : Text(
-                              location.isNotEmpty
-                                  ? location
-                                  : 'Ubicación no definida',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.refresh, color: Colors.white),
-                        onPressed: _obtenerUbicacion,
-                      ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Colors.blueAccent),
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  errorStyle: const TextStyle(color: Colors.redAccent),
+                ),
+                style: const TextStyle(color: Colors.white),
+                onChanged: (val) {
+                  username = val;
+                  _checkChanges();
+                },
+                validator: (value) =>
+                (value == null || value.isEmpty) ? 'Ingresa un username' : null,
+              ),
+            ),
+            const SizedBox(height: 30),
+            // PersonalInfoForm para el resto de la información
+            PersonalInfoForm(
+              formKey: _personalInfoFormKey,
+              firstName: firstName,
+              lastName: lastName,
+              goal: goal,
+              gender: gender,
+              seeking: seeking,
+              relationshipGoal: relationshipGoal,
+              biography: biography,
+              onFirstNameChanged: (val) {
+                firstName = val;
+                _checkChanges();
+              },
+              onLastNameChanged: (val) {
+                lastName = val;
+                _checkChanges();
+              },
+              onGoalChanged: (val) {
+                if (val != null) {
+                  goal = val;
+                  _checkChanges();
+                }
+              },
+              onGenderChanged: (val) {
+                if (val != null) {
+                  gender = val;
+                  _checkChanges();
+                }
+              },
+              onRelationshipGoalChanged: (val) {
+                if (val != null) {
+                  relationshipGoal = val;
+                  _checkChanges();
+                }
+              },
+              onBiographyChanged: (val) {
+                biography = val;
+                _checkChanges();
+              },
+              onSeekingSelectionChanged: _handleSeekingChanged,
+            ),
+            const SizedBox(height: 16),
+            Card(
+              color: Colors.white24,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16.0),
+              ),
+              child: ListTile(
+                leading: const Icon(Icons.location_on, color: Colors.white, size: 30),
+                title: isLoadingLocation
+                    ? const Center(
+                  child: SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
                   ),
-                ],
+                )
+                    : Text(
+                  location.isNotEmpty ? location : 'Ubicación no definida',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                trailing: IconButton(
+                  icon: const Icon(Icons.refresh, color: Colors.white),
+                  onPressed: _obtenerUbicacion,
+                ),
               ),
             ),
             const SizedBox(height: 30),
@@ -615,8 +631,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.redAccent,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12.0),
                   ),

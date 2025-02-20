@@ -151,10 +151,10 @@ class _SingleUserViewState extends State<SingleUserView>
                 }),
               ),
             ),
-          // Datos del usuario: nombre, objetivo y biografía debajo del nombre
+          // Datos del usuario: nombre, objetivo y biografía
           Positioned(
             left: 20,
-            right: 20, // Limita el ancho para que el texto se ajuste
+            right: 20,
             bottom: 120,
             child: GestureDetector(
               onTap: () {
@@ -168,32 +168,49 @@ class _SingleUserViewState extends State<SingleUserView>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    user.username,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold,
-                      shadows: [Shadow(blurRadius: 10, color: Colors.black)],
+                  // Nombre de usuario con el objetivo entre paréntesis en un tamaño menor
+                  RichText(
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: user.username,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 35,
+                            fontWeight: FontWeight.bold,
+                            shadows: [
+                              Shadow(blurRadius: 10, color: Colors.black)
+                            ],
+                          ),
+                        ),
+                        if (user.goal != null)
+                          TextSpan(
+                            text: " (${user.goal!})",
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 21,
+                              fontWeight: FontWeight.normal,
+                              shadows: [
+                                Shadow(blurRadius: 10, color: Colors.black)
+                              ],
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                  if (user.goal != null)
-                    Text(
-                      user.goal!,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 20,
-                        shadows: [Shadow(blurRadius: 10, color: Colors.black)],
-                      ),
-                    ),
+                  // Biografía
                   if (user.biography != null && user.biography!.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 4.0),
                       child: Text(
                         user.biography!,
                         style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 16,
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          shadows: [
+                            Shadow(blurRadius: 10, color: Colors.black)
+                          ],
                         ),
                       ),
                     ),

@@ -13,8 +13,7 @@ class AdditionalPhotosWidget extends StatefulWidget {
   final VoidCallback onUploadAdditionalPhotos;
   final Function(int) onRemoveSelectedImage;
   final Future<void> Function(String) onDeletePhoto;
-
-  // NUEVO: callback para notificar que se ha reordenado la lista de fotos
+  // Callback para notificar que se ha reordenado la lista de fotos
   final ValueChanged<List<Photo>> onReorderDone;
 
   const AdditionalPhotosWidget({
@@ -26,7 +25,7 @@ class AdditionalPhotosWidget extends StatefulWidget {
     required this.onUploadAdditionalPhotos,
     required this.onRemoveSelectedImage,
     required this.onDeletePhoto,
-    required this.onReorderDone, // Recibimos el callback
+    required this.onReorderDone,
   }) : super(key: key);
 
   @override
@@ -59,7 +58,76 @@ class _AdditionalPhotosWidgetState extends State<AdditionalPhotosWidget> {
   @override
   Widget build(BuildContext context) {
     const double itemSize = 100.0;
-    final int placeholdersCount = maxAdditionalPhotos - photoList.length;
+    final int totalSlots = maxAdditionalPhotos;
+
+    // Construir una lista combinada de items (fotos y placeholders)
+    final List<Widget> items = List.generate(totalSlots, (index) {
+      if (index < photoList.length) {
+        // Foto existente
+        final photo = photoList[index];
+        return Container(
+          key: ValueKey(photo.id),
+          width: itemSize,
+          height: itemSize,
+          decoration: BoxDecoration(
+            color: Colors.black26,
+            border: Border.all(color: Colors.white24),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.5),
+                spreadRadius: 2,
+                blurRadius: 5,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              CachedNetworkImage(
+                imageUrl: photo.url,
+                fit: BoxFit.cover,
+                placeholder: (context, url) =>
+                    Container(color: Colors.grey[800]),
+                errorWidget: (context, url, error) =>
+                    const Icon(Icons.error, color: Colors.redAccent),
+              ),
+              Positioned(
+                top: 4,
+                right: 4,
+                child: GestureDetector(
+                  onTap: () => widget.onDeletePhoto(photo.id),
+                  child: const CircleAvatar(
+                    radius: 12,
+                    backgroundColor: Colors.redAccent,
+                    child: Icon(Icons.close, size: 14, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      } else {
+        // Placeholder: Envuelto en IgnorePointer para desactivar gestos
+        return IgnorePointer(
+          key: ValueKey("placeholder_$index"),
+          child: Container(
+            width: itemSize,
+            height: itemSize,
+            decoration: BoxDecoration(
+              color: Colors.grey[800],
+              border: Border.all(color: Colors.white24),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.photo_size_select_actual_outlined,
+              color: Colors.white30,
+            ),
+          ),
+        );
+      }
+    });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -73,101 +141,30 @@ class _AdditionalPhotosWidgetState extends State<AdditionalPhotosWidget> {
           ),
         ),
         const SizedBox(height: 10),
-
-        // ReorderableWrap para fotos existentes
+        // Envolver el ReorderableWrap en un PrimaryScrollController
         PrimaryScrollController(
           controller: ScrollController(),
           child: ReorderableWrap(
-            // Lo importante: desactivar el "longPress" para arrastrar.
             needsLongPressDraggable: false,
             spacing: 5,
             runSpacing: 5,
             onReorder: (int oldIndex, int newIndex) {
-              setState(() {
-                final item = photoList.removeAt(oldIndex);
-                photoList.insert(newIndex, item);
-              });
-              // Notificamos arriba que hay un nuevo orden
-              widget.onReorderDone(photoList);
+              // Permitir reordenar solo si se trata de una foto (no placeholder)
+              if (oldIndex < photoList.length) {
+                if (newIndex > photoList.length) {
+                  newIndex = photoList.length;
+                }
+                setState(() {
+                  final movedPhoto = photoList.removeAt(oldIndex);
+                  photoList.insert(newIndex, movedPhoto);
+                });
+                widget.onReorderDone(photoList);
+              }
             },
-            children: List.generate(photoList.length, (index) {
-              final photo = photoList[index];
-              return Container(
-                key: ValueKey(photo.id),
-                width: itemSize,
-                height: itemSize,
-                decoration: BoxDecoration(
-                  color: Colors.black26,
-                  border: Border.all(color: Colors.white24),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.5),
-                      spreadRadius: 2,
-                      blurRadius: 5,
-                      offset:
-                          const Offset(0, 3), // Cambia la posición de la sombra
-                    ),
-                  ],
-                ),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    CachedNetworkImage(
-                      imageUrl: photo.url,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) =>
-                          Container(color: Colors.grey[800]),
-                      errorWidget: (context, url, error) =>
-                          const Icon(Icons.error, color: Colors.redAccent),
-                    ),
-                    Positioned(
-                      top: 4,
-                      right: 4,
-                      child: GestureDetector(
-                        onTap: () => widget.onDeletePhoto(photo.id),
-                        child: const CircleAvatar(
-                          radius: 12,
-                          backgroundColor: Colors.redAccent,
-                          child:
-                              Icon(Icons.close, size: 14, color: Colors.white),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
+            children: items,
           ),
         ),
-
-        // Placeholders (espacios vacíos)
-        if (placeholdersCount > 0)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Wrap(
-              spacing: 5,
-              runSpacing: 5,
-              children: List.generate(placeholdersCount, (_) {
-                return Container(
-                  width: itemSize,
-                  height: itemSize,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[800],
-                    border: Border.all(color: Colors.white24),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.photo_size_select_actual_outlined,
-                    color: Colors.white30,
-                  ),
-                );
-              }),
-            ),
-          )
-        else
-          const SizedBox(height: 10),
-
+        const SizedBox(height: 10),
         // Botón "Agregar Fotos"
         ElevatedButton.icon(
           onPressed: widget.onPickAdditionalImages,
@@ -178,15 +175,13 @@ class _AdditionalPhotosWidgetState extends State<AdditionalPhotosWidget> {
           ),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.white,
-            padding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12.0),
             ),
           ),
         ),
         const SizedBox(height: 10),
-
         // Fotos nuevas (aún no subidas)
         if (widget.additionalImages.isNotEmpty) ...[
           const Text(
@@ -198,7 +193,6 @@ class _AdditionalPhotosWidgetState extends State<AdditionalPhotosWidget> {
             ),
           ),
           const SizedBox(height: 10),
-
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -234,7 +228,6 @@ class _AdditionalPhotosWidgetState extends State<AdditionalPhotosWidget> {
             },
           ),
           const SizedBox(height: 10),
-
           // Botón para subir las fotos seleccionadas
           ElevatedButton(
             onPressed:
@@ -256,7 +249,6 @@ class _AdditionalPhotosWidgetState extends State<AdditionalPhotosWidget> {
                   ),
           ),
         ],
-
         const SizedBox(height: 10),
       ],
     );

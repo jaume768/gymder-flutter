@@ -58,7 +58,9 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
   late PageController _verticalPageController;
   bool _isProcessing = false;
   bool showRandom = true;
-  late List<User> _randomUsers;
+  List<User> _randomUsers = [];
+  bool _isFetchingMore = false;
+  final int _limit = 20;
   List<User> _likedUsers = [];
 
   int scrollCount = 0;
@@ -84,10 +86,9 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     super.initState();
     _verticalPageController = PageController();
     _randomUsers = List.from(widget.users);
-    _randomUsers.shuffle(); // Orden aleatorio de usuarios
+    _randomUsers.shuffle();
     previousPageIndex = 0;
 
-    // Cargar los usuarios que te han dado like al iniciar
     _fetchLikedUsers();
   }
 
@@ -111,11 +112,57 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
             result['usersWhoLiked'].map((x) => User.fromJson(x)));
       });
       print("Usuarios que me dieron like: ${_likedUsers.length}");
+      // Opcional: filtrar _randomUsers para quitar los que ya fueron liked
+      _randomUsers = _randomUsers
+          .where((user) => !_likedUsers.any((liked) => liked.id == user.id))
+          .toList();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(result['message'] ?? 'Error al obtener likes')),
       );
     }
+  }
+
+  Future<void> _fetchMoreUsers() async {
+    if (_isFetchingMore) return;
+    setState(() {
+      _isFetchingMore = true;
+    });
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final token = await authProvider.getToken();
+    if (token == null) return;
+    final matchService = MatchService(token: token);
+
+    // Construir filtros para la paginación
+    // Aquí se pueden incluir los filtros activos; en este ejemplo se envían vacíos
+    Map<String, String> filters = {};
+    filters['skip'] = _randomUsers.length.toString();
+    filters['limit'] = _limit.toString();
+
+    final result = await matchService.getSuggestedMatchesWithFilters(filters);
+    if (result['success'] == true) {
+      List<dynamic> matchesJson = result['matches'];
+      List<User> newUsers =
+          matchesJson.map((json) => User.fromJson(json)).toList();
+
+      // Filtrar usuarios que ya hayan sido liked
+      newUsers = newUsers
+          .where((user) => !_likedUsers.any((liked) => liked.id == user.id))
+          .toList();
+
+      setState(() {
+        _randomUsers.addAll(newUsers);
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content:
+                Text(result['message'] ?? 'Error al obtener más usuarios')),
+      );
+    }
+    setState(() {
+      _isFetchingMore = false;
+    });
   }
 
   Future<void> _handleLike(int userIndex) async {
@@ -146,7 +193,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
       }
     }
 
-    // Ya no incrementamos scrollCount aquí, solo likeCount
     _isProcessing = true;
     final user = _randomUsers[userIndex];
 
@@ -193,7 +239,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
 
     _isProcessing = false;
 
-    // Verifica el límite de likes nuevamente en caso de que se necesite mostrar el aviso
     if (!userIsPremium) {
       _checkLikeLimit(localMaxLike);
     }
@@ -360,7 +405,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                 style: const TextStyle(color: Colors.white70, fontSize: 16),
               ),
               const SizedBox(height: 20),
-              // Sección de las dos fotos
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -381,8 +425,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                       const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 ),
                 onPressed: () {
-                  Navigator.pop(context); // Cierra el modal
-                  // Luego navegas al chat
+                  Navigator.pop(context);
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -401,7 +444,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
               const SizedBox(height: 10),
               TextButton(
                 onPressed: () {
-                  Navigator.pop(context); // Simplemente cierras el modal
+                  Navigator.pop(context);
                 },
                 child: const Text(
                   'Seguir navegando',
@@ -434,11 +477,14 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
 
   @override
   Widget build(BuildContext context) {
-    super
-        .build(context);
+    super.build(context);
     final auth = Provider.of<AuthProvider>(context);
     final int maxScrollLimit = (auth.user?.gender == 'Masculino') ? 25 : 45;
-    final currentList = showRandom ? _randomUsers : _likedUsers;
+    // Filtrar los usuarios aleatorios para que no se muestren los ya liked
+    final List<User> filteredRandomUsers = _randomUsers
+        .where((user) => !_likedUsers.any((liked) => liked.id == user.id))
+        .toList();
+    final currentList = showRandom ? filteredRandomUsers : _likedUsers;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -487,6 +533,11 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                           _checkScrollLimit(maxScrollLimit);
                         }
                         previousPageIndex = pageIndex;
+                        // Si se acerca al final (por ejemplo, a 10 elementos del final)
+                        if (showRandom &&
+                            pageIndex >= currentList.length - 10) {
+                          _fetchMoreUsers();
+                        }
                       },
                       itemBuilder: (context, index) {
                         final user = currentList[index];
@@ -653,15 +704,12 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
 
 // Definición de FilterModalContent con valores iniciales
 class FilterModalContent extends StatefulWidget {
-  final bool hasLocation; // <-- Nuevo: si el user tiene location
+  final bool hasLocation;
   final RangeValues initialAgeRange;
   final RangeValues initialWeightRange;
   final RangeValues initialHeightRange;
   final String initialGymStage;
   final String initialRelationshipType;
-
-  // Podrías también recibir 'initialUseLocation' y 'initialDistanceRange' si quieres que se guarde
-  // el estado de la última vez. Para simplificar, supondremos que es false por defecto.
 
   const FilterModalContent({
     Key? key,
@@ -706,7 +754,6 @@ class _FilterModalContentState extends State<FilterModalContent> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Barra superior "drag"
             Container(
               width: 50,
               height: 5,
@@ -724,8 +771,6 @@ class _FilterModalContentState extends State<FilterModalContent> {
                   color: Colors.white),
             ),
             const SizedBox(height: 40),
-
-            // Filtros de edad, peso, altura
             _buildRangeSlider(
               label: "Rango de edad",
               values: ageRange,
@@ -762,7 +807,6 @@ class _FilterModalContentState extends State<FilterModalContent> {
                 });
               },
             ),
-
             const SizedBox(height: 10),
             _buildDropdown(
               label: "Etapa en el gym",
@@ -793,8 +837,6 @@ class _FilterModalContentState extends State<FilterModalContent> {
               },
             ),
             const SizedBox(height: 20),
-
-            // Solo si el user tiene location, mostramos la opción:
             if (widget.hasLocation)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -811,7 +853,6 @@ class _FilterModalContentState extends State<FilterModalContent> {
                       });
                     },
                   ),
-                  // Si useLocation = true, mostramos el RangeSlider de distancias
                   if (useLocation)
                     _buildRangeSlider(
                       label: "Distancia (km)",
@@ -827,10 +868,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
                     ),
                 ],
               ),
-
             const SizedBox(height: 20),
-
-            // Botón "Aplicar"
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
@@ -841,7 +879,6 @@ class _FilterModalContentState extends State<FilterModalContent> {
                 ),
               ),
               onPressed: () async {
-                // Construimos el map "filters" con strings
                 final filters = <String, String>{
                   'ageMin': ageRange.start.round().toString(),
                   'ageMax': ageRange.end.round().toString(),
@@ -851,20 +888,16 @@ class _FilterModalContentState extends State<FilterModalContent> {
                   'heightMax': heightRange.end.round().toString(),
                   'gymStage': selectedGymStage,
                   'relationshipGoal': selectedRelationshipType,
-                  // Enviamos si se filtra x ubicación:
                   'useLocation': useLocation ? 'true' : 'false',
                 };
 
-                // Si se filtra x ubicación, agregamos distanceMin y distanceMax:
                 if (useLocation) {
                   filters['distanceMin'] =
                       distanceRange.start.round().toString();
                   filters['distanceMax'] = distanceRange.end.round().toString();
                 }
 
-                // Llamada al backend:
                 final authProvider =
-                    // ignore: use_build_context_synchronously
                     Provider.of<AuthProvider>(context, listen: false);
                 final token = await authProvider.getToken();
 
@@ -878,9 +911,6 @@ class _FilterModalContentState extends State<FilterModalContent> {
                     List<User> matches =
                         matchesJson.map((json) => User.fromJson(json)).toList();
 
-                    // Retornar matches y los nuevos valores:
-                    // Devuelve un map para que el parent reciba.
-                    // Por ejemplo:
                     Navigator.of(context).pop({
                       'matches': matches,
                       'ageRange': ageRange,
@@ -909,10 +939,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
                 style: TextStyle(color: Colors.black),
               ),
             ),
-
             const SizedBox(height: 10),
-
-            // Botón "Quitar filtro"
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.grey[700],
@@ -935,10 +962,6 @@ class _FilterModalContentState extends State<FilterModalContent> {
       ),
     );
   }
-
-  // ---------------------------------
-  // Helpers para construir UI
-  // ---------------------------------
 
   Widget _buildRangeSlider({
     required String label,

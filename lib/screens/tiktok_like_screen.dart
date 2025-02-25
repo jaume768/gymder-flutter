@@ -78,6 +78,9 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
   String gymStageFilter = 'Mantenimiento';
   String relationshipTypeFilter = 'Amistad';
 
+  // Para controlar perfiles ya enviados al backend (ya vistos)
+  final Set<String> _seenProfileIds = {};
+
   @override
   bool get wantKeepAlive => true;
 
@@ -88,7 +91,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     _randomUsers = List.from(widget.users);
     _randomUsers.shuffle();
     previousPageIndex = 0;
-
     _fetchLikedUsers();
   }
 
@@ -134,7 +136,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     final matchService = MatchService(token: token);
 
     // Construir filtros para la paginación
-    // Aquí se pueden incluir los filtros activos; en este ejemplo se envían vacíos
     Map<String, String> filters = {};
     filters['skip'] = _randomUsers.length.toString();
     filters['limit'] = _limit.toString();
@@ -163,6 +164,15 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     setState(() {
       _isFetchingMore = false;
     });
+  }
+
+  // Llamada para actualizar en el backend el perfil "visto"
+  Future<void> _updateSeenProfile(String userId) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final token = await authProvider.getToken();
+    if (token == null) return;
+    final matchService = MatchService(token: token);
+    await matchService.updateSeenProfiles([userId]);
   }
 
   Future<void> _handleLike(int userIndex) async {
@@ -221,7 +231,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
 
     setState(() {
       _randomUsers.removeAt(userIndex);
-      // Incrementa solo el contador de likes aquí
       if (!userIsPremium) likeCount++;
     });
 
@@ -387,7 +396,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
         return AlertDialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          backgroundColor: Colors.black.withValues(alpha: 0.6),
+          backgroundColor: Colors.black.withOpacity(0.6),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -484,7 +493,8 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     final List<User> filteredRandomUsers = _randomUsers
         .where((user) => !_likedUsers.any((liked) => liked.id == user.id))
         .toList();
-    final currentList = showRandom ? filteredRandomUsers : _likedUsers;
+    final List<User> currentList =
+        showRandom ? filteredRandomUsers : _likedUsers;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -533,7 +543,15 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                           _checkScrollLimit(maxScrollLimit);
                         }
                         previousPageIndex = pageIndex;
-                        // Si se acerca al final (por ejemplo, a 10 elementos del final)
+
+                        // Al cambiar de página, actualizar el perfil "visto" en el backend
+                        final viewedUser = currentList[pageIndex];
+                        if (!_seenProfileIds.contains(viewedUser.id)) {
+                          _seenProfileIds.add(viewedUser.id);
+                          _updateSeenProfile(viewedUser.id);
+                        }
+
+                        // Si se acerca al final, cargar más usuarios
                         if (showRandom &&
                             pageIndex >= currentList.length - 10) {
                           _fetchMoreUsers();
@@ -662,8 +680,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                             _randomUsers = allUsers;
                             _randomUsers.shuffle();
                             showRandom = true;
-
-                            // Resetear filtros a valores predeterminados si se desea
                             ageRangeFilter = const RangeValues(18, 50);
                             weightRangeFilter = const RangeValues(50, 100);
                             heightRangeFilter = const RangeValues(150, 200);
@@ -677,8 +693,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                           _randomUsers = matches;
                           _randomUsers.shuffle();
                           showRandom = true;
-
-                          // Actualizar variables de filtro con los valores seleccionados
                           ageRangeFilter = result['ageRange'] as RangeValues;
                           weightRangeFilter =
                               result['weightRange'] as RangeValues;
@@ -702,7 +716,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
   }
 }
 
-// Definición de FilterModalContent con valores iniciales
 class FilterModalContent extends StatefulWidget {
   final bool hasLocation;
   final RangeValues initialAgeRange;
@@ -733,7 +746,6 @@ class _FilterModalContentState extends State<FilterModalContent> {
   late String selectedRelationshipType;
 
   bool useLocation = false;
-
   RangeValues distanceRange = const RangeValues(5, 50);
 
   @override
@@ -787,7 +799,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
               label: "Rango de peso (kg)",
               values: weightRange,
               min: 40,
-              max: 150,
+              max: 200,
               divisions: 110,
               onChanged: (values) {
                 setState(() {

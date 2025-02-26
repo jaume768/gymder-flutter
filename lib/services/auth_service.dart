@@ -112,7 +112,6 @@ class AuthService {
     return await storage.read(key: 'token');
   }
 
-  // Método para obtener datos del usuario usando el token
   Future<User?> fetchUserData(String token) async {
     final url = Uri.parse('$baseUrl/profile');
     final response = await http.get(

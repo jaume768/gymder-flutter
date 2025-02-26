@@ -195,7 +195,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
         );
         return; // Cancela el like sin enviarlo
       } else {
-        // Reinicia el contador si ya pasó el tiempo
         setState(() {
           likeCount = 0;
           likeLimitReachedTime = null;
@@ -445,20 +444,16 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                     ),
                   );
                 },
-                child: const Text(
-                  'Enviar mensaje',
-                  style: TextStyle(color: Colors.white),
-                ),
+                child: const Text('Enviar mensaje',
+                    style: TextStyle(color: Colors.white)),
               ),
               const SizedBox(height: 10),
               TextButton(
                 onPressed: () {
                   Navigator.pop(context);
                 },
-                child: const Text(
-                  'Seguir navegando',
-                  style: TextStyle(color: Colors.grey),
-                ),
+                child: const Text('Seguir navegando',
+                    style: TextStyle(color: Colors.grey)),
               )
             ],
           ),
@@ -537,14 +532,19 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                       onPageChanged: (pageIndex) {
                         if (!auth.user!.isPremium &&
                             pageIndex > previousPageIndex) {
-                          setState(() {
-                            scrollCount++;
-                          });
-                          _checkScrollLimit(maxScrollLimit);
+                          if (scrollCount >= maxScrollLimit) {
+                            _verticalPageController
+                                .jumpToPage(previousPageIndex);
+                            return;
+                          } else {
+                            setState(() {
+                              scrollCount++;
+                            });
+                            _checkScrollLimit(maxScrollLimit);
+                          }
                         }
                         previousPageIndex = pageIndex;
 
-                        // Al cambiar de página, actualizar el perfil "visto" en el backend
                         final viewedUser = currentList[pageIndex];
                         if (!_seenProfileIds.contains(viewedUser.id)) {
                           _seenProfileIds.add(viewedUser.id);

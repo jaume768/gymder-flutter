@@ -120,14 +120,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   double? parseHeight(String input) {
-    input = input.replaceAll("'", "").replaceAll(",", ".");
+    input = input.replaceAll("'", ".").replaceAll(",", ".");
+
     double? value = double.tryParse(input);
-    if (value == null) return null;
+    if (value == null) {
+      return null;
+    }
 
     if (value < 3) {
-      return (value * 100).roundToDouble();
+      return value * 100;
     }
-    return value.roundToDouble();
+
+    return value;
   }
 
   Future<void> _pickImages() async {
@@ -1005,9 +1009,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           TextFormField(
             style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration('Altura (cm)'),
-            keyboardType: TextInputType.numberWithOptions(decimal: true),
-            // Permite números, puntos y comas
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             onChanged: (value) {
               setState(() {
                 height = parseHeight(value);

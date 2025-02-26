@@ -150,6 +150,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         ),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.block, color: Colors.white),
+            tooltip: 'Bloquear usuario',
+            onPressed: _blockUser,
+          )
+        ],
       ),
       backgroundColor: Colors.grey[900],
       body: isLoading
@@ -234,22 +241,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                       'No especificado',
                                 ),
                               ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          // Botón para bloquear usuario
-                          ElevatedButton.icon(
-                            onPressed: _blockUser,
-                            icon: const Icon(Icons.block, color: Colors.white),
-                            label: const Text('Bloquear usuario',
-                                style: TextStyle(color: Colors.white)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.redAccent,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 24, vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12.0),
-                              ),
                             ),
                           ),
                         ],

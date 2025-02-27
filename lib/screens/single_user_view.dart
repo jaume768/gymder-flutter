@@ -74,8 +74,18 @@ class _SingleUserViewState extends State<SingleUserView>
         }
       });
     });
-    // Ejecuta la función de like
     widget.onDoubleTapLike();
+  }
+
+  @override
+  void didUpdateWidget(covariant SingleUserView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.user.id != widget.user.id) {
+      _horizontalPageController.jumpToPage(0);
+      setState(() {
+        _currentPhotoIndex = 0;
+      });
+    }
   }
 
   @override

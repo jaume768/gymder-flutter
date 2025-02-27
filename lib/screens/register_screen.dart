@@ -25,9 +25,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   late PageController _pageController;
 
   int _currentStep = 0;
-  final int _totalSteps = 10;
+  final int _totalSteps = 11;
+  String verificationCode = '';
+  final int emailVerificationStepIndex = 1;
 
   bool isCheckingUsername = false;
+  bool _emailVerified = false;
   String usernameCheckMessage = '';
 
   String email = '';
@@ -151,7 +154,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _nextStep() async {
-    if (_currentStep == 6 && location.isEmpty) {
+    if (_currentStep == 7 && location.isEmpty) {
       bool? continuar = await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
@@ -193,6 +196,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           });
           return;
         }
+        await _sendVerificationEmail();
       }
 
       if (_currentStep < _totalSteps - 1) {
@@ -242,14 +246,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
           return false;
         }
         break;
-      case 1:
+      case 1: // Paso de verificación de email
+        if (!_emailVerified) {
+          setState(() {
+            errorMessage = 'Debes verificar el código correctamente';
+          });
+          return false;
+        }
+        break;
+      case 2: // Username, nombre y apellido
         if (username.isEmpty || firstName.isEmpty || lastName.isEmpty) {
           setState(() {
             errorMessage = 'Ingresa tu username, nombre y apellido';
           });
           return false;
         }
-        // Expresión regular para detectar números
         RegExp digitRegex = RegExp(r'\d');
         if (digitRegex.hasMatch(firstName) || digitRegex.hasMatch(lastName)) {
           setState(() {
@@ -264,7 +275,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           return false;
         }
         break;
-      case 2:
+      case 3: // Fecha de nacimiento
         if (birthDate == null) {
           setState(() {
             errorMessage = 'Selecciona tu fecha de nacimiento';
@@ -284,8 +295,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           return false;
         }
         break;
-
-      case 3:
+      case 4: // Género
         if (gender.isEmpty) {
           setState(() {
             errorMessage = 'Selecciona tu género';
@@ -293,7 +303,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           return false;
         }
         break;
-      case 4:
+      case 5: // Opciones de búsqueda (seeking)
         if (seeking.isEmpty) {
           setState(() {
             errorMessage = 'Selecciona al menos una opción';
@@ -301,7 +311,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           return false;
         }
         break;
-      case 5:
+      case 6: // Propósito de conexión
         if (relationshipGoal.isEmpty) {
           setState(() {
             errorMessage = 'Selecciona tu propósito de conexión';
@@ -309,10 +319,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           return false;
         }
         break;
-      case 6:
-        break;
       case 7:
-        // Validamos etapa, altura y peso
+        break;
+      case 8: // Etapa del gym, altura y peso
         if (gymStage.isEmpty || height == null || weight == null) {
           setState(() {
             errorMessage =
@@ -321,10 +330,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           return false;
         }
         break;
-      case 8:
-        // Paso de foto de perfil, no obligatorio
+      case 9: // Foto de perfil (opcional)
         return true;
-      case 9:
+      case 10: // Fotos adicionales
         if (selectedPhotos.length < 2) {
           setState(() {
             errorMessage = 'Por favor, sube al menos 2 fotos';
@@ -336,6 +344,97 @@ class _RegisterScreenState extends State<RegisterScreen> {
         return true;
     }
     return true;
+  }
+
+  Future<void> _verifyEmailCode() async {
+    final url = Uri.parse(
+        'https://gymder-api-production.up.railway.app/api/users/verify-email');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'code': verificationCode}),
+      );
+      if (response.statusCode == 200) {
+        setState(() {
+          errorMessage = '';
+          _emailVerified = true; // Marcar como verificado
+          _currentStep = emailVerificationStepIndex + 1;
+        });
+        _pageController.animateToPage(
+          _currentStep,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      } else {
+        setState(() {
+          errorMessage = 'Código incorrecto';
+          _emailVerified = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error de conexión: $e';
+        _emailVerified = false;
+      });
+    }
+  }
+
+  Widget _buildStepEmailVerification() {
+    return _buildStepTemplate(
+      title: 'Verifica tu correo',
+      subtitle: 'Ingresa el código que te enviamos a tu correo',
+      child: Column(
+        children: [
+          TextFormField(
+            style: const TextStyle(color: Colors.white),
+            decoration: _inputDecoration('Código de verificación'),
+            keyboardType: TextInputType.number,
+            onChanged: (value) {
+              verificationCode = value;
+            },
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: _verifyEmailCode,
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+            child:
+                const Text('Verificar', style: TextStyle(color: Colors.black)),
+          ),
+          if (errorMessage.isNotEmpty &&
+              _currentStep == emailVerificationStepIndex)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Text(errorMessage,
+                  style: const TextStyle(color: Colors.redAccent)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _sendVerificationEmail() async {
+    final url = Uri.parse(
+        'https://gymder-api-production.up.railway.app/api/users/send-verification-email');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+      if (response.statusCode == 200) {
+        print("Código de verificación enviado");
+      } else {
+        setState(() {
+          errorMessage =
+              'Error al enviar correo de verificación: ${response.body}';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error de conexión al enviar el correo: $e';
+      });
+    }
   }
 
   Future<void> _submitRegister() async {
@@ -498,6 +597,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
                   _buildStep0(),
+                  _buildStepEmailVerification(),
                   _buildStep1(),
                   _buildStep2(),
                   _buildStep3(),

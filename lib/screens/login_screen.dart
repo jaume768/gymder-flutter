@@ -192,34 +192,44 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: isLoading
                               ? null
                               : () async {
-                                  if (_formKey.currentState!.validate()) {
-                                    _formKey.currentState!.save();
-                                    setState(() {
-                                      isLoading = true;
-                                      errorMessage = '';
-                                    });
-                                    final result = await authProvider.login(
-                                      email: email,
-                                      password: password,
-                                    );
-                                    setState(() {
-                                      isLoading = false;
-                                    });
-                                    if (result['success']) {
-                                      Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => const HomeScreen(),
-                                        ),
-                                      );
-                                    } else {
-                                      setState(() {
-                                        errorMessage = result['message'] ??
-                                            'Error al iniciar sesión';
-                                      });
-                                    }
-                                  }
-                                },
+                            if (_formKey.currentState!.validate()) {
+                              _formKey.currentState!.save();
+                              setState(() {
+                                isLoading = true;
+                                errorMessage = '';
+                              });
+                              final result = await authProvider.login(
+                                email: email,
+                                password: password,
+                              );
+                              setState(() {
+                                isLoading = false;
+                              });
+                              if (result['success']) {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const HomeScreen(),
+                                  ),
+                                );
+                              } else {
+                                if ((result['message'] as String)
+                                    .contains('Cuenta eliminada por error de registro') ||
+                                    (result['message'] as String)
+                                        .contains('regístrate de nuevo')) {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const RegisterScreen(),
+                                    ),
+                                  );
+                                } else {
+                                  setState(() {
+                                    errorMessage = result['message'] ?? 'Error al iniciar sesión';
+                                  });
+                                }
+                              }
+                            }},
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white, // Fondo blanco
                             shape: RoundedRectangleBorder(

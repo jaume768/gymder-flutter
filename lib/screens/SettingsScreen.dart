@@ -1,10 +1,12 @@
 // lib/screens/settingsScreen.dart
+import 'package:app/screens/splash_screen.dart';
 import 'package:app/screens/suscripciones_pagos_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/user_service.dart';
 import 'login_screen.dart';
 
 /// PANTALLA PRINCIPAL DE AJUSTES
@@ -195,8 +197,16 @@ class IdiomasScreen extends StatefulWidget {
 }
 
 class _IdiomasScreenState extends State<IdiomasScreen> {
-  String idiomaSeleccionado = "Spanish";
-  final List<String> idiomas = ["Spanish", "English"];
+  late String idiomaSeleccionado;
+  final List<String> idiomas = ["Español", "English"];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final currentLocale = context.locale;
+    idiomaSeleccionado =
+        currentLocale.languageCode == 'en' ? 'English' : 'Español';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -219,8 +229,11 @@ class _IdiomasScreenState extends State<IdiomasScreen> {
               setState(() {
                 idiomaSeleccionado = value!;
               });
-              // Cambia el locale. Nota: ajusta según la lógica que necesites.
-              context.setLocale(Locale(value == "Spanish" ? 'es' : 'en'));
+              context.setLocale(Locale(value == "Español" ? 'es' : 'en'));
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const SplashScreen()),
+              );
             },
           );
         }).toList(),
@@ -245,15 +258,37 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
   String updateMessage = '';
 
   Future<void> _changePassword() async {
+    if (_newPasswordController.text != _confirmPasswordController.text) {
+      setState(() {
+        updateMessage = tr("passwords_do_not_match");
+      });
+      return;
+    }
+
     setState(() {
       isUpdating = true;
       updateMessage = '';
     });
-    // Simulación de llamada a la API.
-    await Future.delayed(const Duration(seconds: 2));
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final token = await authProvider.getToken();
+    if (token == null) {
+      setState(() {
+        isUpdating = false;
+        updateMessage = tr("token_not_found_login");
+      });
+      return;
+    }
+
+    final userService = UserService(token: token);
+    final result = await userService.changePassword(
+      _currentPasswordController.text,
+      _newPasswordController.text,
+    );
+
     setState(() {
       isUpdating = false;
-      updateMessage = tr("password_updated");
+      updateMessage = result['message'];
     });
   }
 

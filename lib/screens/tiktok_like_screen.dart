@@ -630,8 +630,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                             }
                           }
                         },
-                        child: Text(tr("le_gustas_button",
-                            args: [_likedUsers.length.toString()])),
+                        child: Text(tr("le_gustas_button", namedArgs: {"count": _likedUsers.length.toString()})),
                       ),
                     ],
                   ),

@@ -34,6 +34,7 @@ class MyApp extends StatelessWidget {
       localizationsDelegates: context.localizationDelegates,
       supportedLocales: context.supportedLocales,
       locale: context.locale,
+      theme: ThemeData.dark(),
       home: const SplashScreen(),
     );
   }

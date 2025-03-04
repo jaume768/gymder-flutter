@@ -85,6 +85,30 @@ class UserService {
     }
   }
 
+  Future<Map<String, dynamic>> changePassword(
+      String currentPassword, String newPassword) async {
+    final url = Uri.parse('$baseUrl/change-password');
+    final response = await http.patch(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return {'success': true, 'message': data['message']};
+    } else {
+      final data = jsonDecode(response.body);
+      return {'success': false, 'message': data['message']};
+    }
+  }
+
   Future<Map<String, dynamic>> subscribePremium() async {
     final url = Uri.parse('$baseUrl/users/subscribe');
     final response = await http.post(

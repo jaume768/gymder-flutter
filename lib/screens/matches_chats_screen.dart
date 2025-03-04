@@ -1,5 +1,3 @@
-// lib/screens/matches_chats_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -8,6 +6,7 @@ import '../models/user.dart';
 import 'chat_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:easy_localization/easy_localization.dart';
 
 class MatchesChatsScreen extends StatefulWidget {
   const MatchesChatsScreen({Key? key}) : super(key: key);
@@ -37,7 +36,7 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
       if (token == null) {
         setState(() {
           isLoading = false;
-          errorMessage = 'Token no disponible, inicia sesión.';
+          errorMessage = tr("token_not_found_login");
         });
         return;
       }
@@ -60,13 +59,13 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
         });
       } else {
         setState(() {
-          errorMessage = result['message'] ?? 'Error al obtener matches';
+          errorMessage = result['message'] ?? tr("error_fetching_matches");
           isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
-        errorMessage = 'Error inesperado: $e';
+        errorMessage = tr("unexpected_error") + ": $e";
         isLoading = false;
       });
     }
@@ -92,7 +91,7 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
           final lastMsg = item['lastMsg'];
           map[matchId] = lastMsg;
         }
-        print('Last Messages: $map'); // Agrega este log
+        print('Last Messages: $map');
       }
     } else {
       print('Error en la respuesta: ${response.statusCode}');
@@ -125,14 +124,14 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
             lastMessages.remove(otherUserId);
           });
         } else {
-          print('No se pudo ocultar la conversación: ${data['message']}');
+          print(tr("cannot_hide_conversation") + ": ${data['message']}");
         }
       } else {
-        print('Error ocultando conversación: ${response.statusCode}');
-        print('Body: ${response.body}');
+        print(tr("error_hiding_conversation") +
+            ": ${response.statusCode}\nBody: ${response.body}");
       }
     } catch (e) {
-      print('Error en _hideConversation: $e');
+      print(tr("error_hiding_conversation") + ": $e");
     }
   }
 
@@ -151,21 +150,22 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
                   ),
                 )
               : myMatches.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text(
-                        'No tienes matches todavía.',
-                        style: TextStyle(color: Colors.white, fontSize: 20),
+                        tr("no_matches_yet"),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 20),
                       ),
                     )
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Padding(
-                          padding: EdgeInsets.only(
+                        Padding(
+                          padding: const EdgeInsets.only(
                               top: 82.0, left: 16.0, right: 16.0, bottom: 1.0),
                           child: Text(
-                            'Mensajes',
-                            style: TextStyle(
+                            tr("messages"),
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
@@ -174,30 +174,25 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
                         ),
                         Expanded(
                           child: () {
-                            // Crear una copia de myMatches para ordenar
+                            // Ordenar matches por el timestamp del último mensaje
                             final sortedMatches = List<User>.from(myMatches);
                             sortedMatches.sort((a, b) {
                               final msgA = lastMessages[a.id];
                               final msgB = lastMessages[b.id];
 
-                              // Si ambos no tienen mensaje, mantener su orden
                               if (msgA == null && msgB == null) return 0;
-                              // Si solo uno no tiene mensaje, se coloca al final
                               if (msgA == null) return 1;
                               if (msgB == null) return -1;
 
-                              // Convertir los timestamps usando 'createdAt' y comparar
                               final dateA = DateTime.tryParse(
                                   msgA['createdAt']?.toString() ?? '');
                               final dateB = DateTime.tryParse(
                                   msgB['createdAt']?.toString() ?? '');
 
-                              // Si la fecha es nula, poner al final
                               if (dateA == null && dateB == null) return 0;
                               if (dateA == null) return 1;
                               if (dateB == null) return -1;
 
-                              // Ordenar de más reciente a más antiguo
                               return dateB.compareTo(dateA);
                             });
 
@@ -210,22 +205,22 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
                                     showDialog(
                                       context: context,
                                       builder: (ctx) => AlertDialog(
-                                        title:
-                                            const Text('Eliminar conversación'),
-                                        content: Text(
-                                            '¿Deseas eliminar el chat con ${matchedUser.username}?'),
+                                        title: Text(tr("delete_conversation")),
+                                        content: Text(tr(
+                                            "delete_conversation_message",
+                                            args: [matchedUser.username])),
                                         actions: [
                                           TextButton(
                                             onPressed: () =>
                                                 Navigator.of(ctx).pop(),
-                                            child: const Text('Cancelar'),
+                                            child: Text(tr("cancel")),
                                           ),
                                           TextButton(
                                             onPressed: () {
                                               Navigator.of(ctx).pop();
                                               _hideConversation(matchedUser.id);
                                             },
-                                            child: const Text('Eliminar'),
+                                            child: Text(tr("delete")),
                                           ),
                                         ],
                                       ),
@@ -277,13 +272,13 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
                                                 lastMessages[matchedUser.id];
                                             if (lastMsg != null) {
                                               if (lastMsg['type'] == 'image') {
-                                                return '🖼️ imagen';
+                                                return "🖼️ " + tr("image");
                                               } else {
                                                 return lastMsg['message'] ??
-                                                    'Toca para chatear';
+                                                    tr("tap_to_chat");
                                               }
                                             }
-                                            return 'Toca para chatear';
+                                            return tr("tap_to_chat");
                                           }(),
                                           style: const TextStyle(
                                             color: Colors.white70,
@@ -306,7 +301,6 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
                                               ),
                                             ),
                                           ).then((_) {
-                                            // Al regresar del chat, refrescar la lista
                                             _fetchMyMatches();
                                           });
                                         },

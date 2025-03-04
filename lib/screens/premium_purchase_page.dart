@@ -1,3 +1,5 @@
+// lib/screens/premium_purchase_page.dart
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:provider/provider.dart';
@@ -47,7 +49,7 @@ class _PremiumPurchasePageState extends State<PremiumPurchasePage> {
           await _iap.completePurchase(purchase);
         }
       } else if (purchase.status == PurchaseStatus.error) {
-        // Manejar errores en la compra
+        // Manejar errores en la compra (puedes agregar lógica adicional aquí)
       }
     }
   }
@@ -62,11 +64,11 @@ class _PremiumPurchasePageState extends State<PremiumPurchasePage> {
     if (result['success'] == true) {
       await authProvider.refreshUser();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ahora eres usuario Premium')),
+        SnackBar(content: Text("become_premium".tr())),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message'] ?? 'Error en la suscripción')),
+        SnackBar(content: Text(result['message'] ?? "error_subscription".tr())),
       );
     }
   }
@@ -74,7 +76,7 @@ class _PremiumPurchasePageState extends State<PremiumPurchasePage> {
   void _buyPremium() {
     final product = _products.firstWhere(
       (p) => p.id == _premiumProductId,
-      orElse: () => throw Exception('Producto no encontrado'),
+      orElse: () => throw Exception("product_not_found".tr()),
     );
     final purchaseParam = PurchaseParam(productDetails: product);
     _iap.buyNonConsumable(purchaseParam: purchaseParam);
@@ -109,7 +111,7 @@ class _PremiumPurchasePageState extends State<PremiumPurchasePage> {
             ),
           ),
         ),
-        // Superposición oscura para resaltar el contenido
+        // Superposición oscura
         Container(
           color: Colors.black.withOpacity(0.6),
         ),
@@ -127,9 +129,9 @@ class _PremiumPurchasePageState extends State<PremiumPurchasePage> {
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
-                    const Text(
-                      "Hazte Premium",
-                      style: TextStyle(
+                    Text(
+                      "become_premium".tr(),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -139,7 +141,7 @@ class _PremiumPurchasePageState extends State<PremiumPurchasePage> {
                   ],
                 ),
                 const SizedBox(height: 40),
-                // Contenedor con efecto glassmorphism para mostrar beneficios
+                // Beneficios (glassmorphism)
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -150,25 +152,25 @@ class _PremiumPurchasePageState extends State<PremiumPurchasePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        "Beneficios Exclusivos",
-                        style: TextStyle(
+                      Text(
+                        "premium_screen_text".tr(),
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const Divider(color: Colors.white70),
-                      _buildAdvantage("Scrolls infinitos", Icons.swap_vert),
-                      _buildAdvantage("Likes ilimitados", Icons.favorite),
-                      _buildAdvantage("Acceso a 'Le gustas'", Icons.thumb_up),
-                      _buildAdvantage("Scroll hacia arriba desbloqueado",
-                          Icons.arrow_upward),
+                      _buildAdvantage("infinite_scrolls".tr(), Icons.swap_vert),
+                      _buildAdvantage("unlimited_likes".tr(), Icons.favorite),
+                      _buildAdvantage("access_le_gustas".tr(), Icons.thumb_up),
+                      _buildAdvantage(
+                          "upward_scroll_unlocked".tr(), Icons.arrow_upward),
                     ],
                   ),
                 ),
                 const SizedBox(height: 40),
-                // Botón para comprar premium con texto en negro
+                // Botón para comprar premium
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
@@ -179,9 +181,9 @@ class _PremiumPurchasePageState extends State<PremiumPurchasePage> {
                     ),
                   ),
                   onPressed: _buyPremium,
-                  child: const Text(
-                    "Comprar Premium",
-                    style: TextStyle(
+                  child: Text(
+                    "buy_premium".tr(),
+                    style: const TextStyle(
                       color: Colors.black,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -192,14 +194,16 @@ class _PremiumPurchasePageState extends State<PremiumPurchasePage> {
                 if (_products.isEmpty)
                   Column(
                     children: [
-                      const Text(
-                        "No se encontraron productos.",
-                        style: TextStyle(color: Colors.white),
+                      Text(
+                        "no_products_found".tr(),
+                        style: const TextStyle(color: Colors.white),
                       ),
                       TextButton(
                         onPressed: _initialize,
-                        child: const Text("Reintentar",
-                            style: TextStyle(color: Colors.white)),
+                        child: Text(
+                          "retry".tr(),
+                          style: const TextStyle(color: Colors.white),
+                        ),
                       ),
                     ],
                   ),
@@ -212,10 +216,10 @@ class _PremiumPurchasePageState extends State<PremiumPurchasePage> {
   }
 
   Widget _buildNotAvailable() {
-    return const Center(
+    return Center(
       child: Text(
-        'Las compras in-app no están disponibles.',
-        style: TextStyle(color: Colors.white),
+        "in_app_not_available".tr(),
+        style: const TextStyle(color: Colors.white),
       ),
     );
   }

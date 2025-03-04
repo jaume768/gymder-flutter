@@ -3,6 +3,7 @@ import 'package:app/screens/tiktok_like_screen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
@@ -62,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     } else {
       setState(() {
-        errorMessage = result['message'] ?? 'Error al obtener matches';
+        errorMessage = result['message'] ?? tr("error_fetching_matches");
         isLoading = false;
       });
     }
@@ -127,8 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   index: _selectedIndex,
                   children: _widgetOptions(),
                 ),
-      // Ahora el bottom nav solo tendrá 2 íconos: Chats y Swipes, y un 3er ícono que
-      // NO cambia el tab, sino que hace push al perfil.
+      // Bottom navigation con tres opciones: Matches, Swipes y Perfil (push)
       bottomNavigationBar: Container(
         color: Colors.transparent,
         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -165,7 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(width: 40),
-            // "Opción 2": Perfil -> Pero realmente hacemos un push
+            // "Opción 2": Perfil -> push al perfil
             GestureDetector(
               onTap: () {
                 Navigator.push(

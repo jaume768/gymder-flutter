@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../models/user.dart';
 import 'user_profile_screen.dart'; // Para navegar al perfil del usuario
 
@@ -117,10 +118,10 @@ class _SingleUserViewState extends State<SingleUserView>
               if (photos.isEmpty) {
                 return Container(
                   color: Colors.black54,
-                  child: const Center(
+                  child: Center(
                     child: Text(
-                      'No hay fotos adicionales',
-                      style: TextStyle(color: Colors.white, fontSize: 20),
+                      tr("no_additional_photos"),
+                      style: const TextStyle(color: Colors.white, fontSize: 20),
                     ),
                   ),
                 );

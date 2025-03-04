@@ -1,6 +1,6 @@
-// lib/screens/blocked_users_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
@@ -32,8 +32,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final token = await authProvider.getToken();
-      if (token == null) throw Exception('No se pudo obtener el token.');
-
+      if (token == null) throw Exception(tr("token_not_found"));
       final userService = UserService(token: token);
       final users = await userService.getBlockedUsers();
       setState(() {
@@ -52,26 +51,25 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final token = await authProvider.getToken();
-      if (token == null) throw Exception('No se pudo obtener el token.');
-
+      if (token == null) throw Exception(tr("token_not_found"));
       final userService = UserService(token: token);
       final result = await userService.unblockUser(userId);
-
       if (result['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'] ?? 'Usuario desbloqueado')),
+          SnackBar(content: Text(result['message'] ?? tr("user_unblocked"))),
         );
         setState(() {
           blockedUsers.removeWhere((user) => user.id == userId);
         });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'] ?? 'Error al desbloquear')),
+          SnackBar(
+              content: Text(result['message'] ?? tr("error_unblocking_user"))),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(content: Text(tr("error") + ": $e")),
       );
     }
   }
@@ -80,7 +78,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Usuarios bloqueados'),
+        title: Text(tr("blocked_users")),
         backgroundColor: Colors.black,
       ),
       backgroundColor: Colors.grey[900],
@@ -91,9 +89,10 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                   child: Text(error,
                       style: const TextStyle(color: Colors.redAccent)))
               : blockedUsers.isEmpty
-                  ? const Center(
-                      child: Text('No tienes usuarios bloqueados',
-                          style: TextStyle(color: Colors.white)))
+                  ? Center(
+                      child: Text(tr("no_blocked_users"),
+                          style: const TextStyle(color: Colors.white)),
+                    )
                   : ListView.builder(
                       itemCount: blockedUsers.length,
                       itemBuilder: (context, index) {
@@ -110,7 +109,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                               style: const TextStyle(color: Colors.white)),
                           trailing: ElevatedButton(
                             onPressed: () => _unblockUser(blockedUser.id),
-                            child: const Text('Desbloquear'),
+                            child: Text(tr("unblock")),
                             style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.green),
                           ),

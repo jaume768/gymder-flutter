@@ -65,6 +65,26 @@ class UserService {
     }
   }
 
+  Future<Map<String, dynamic>> cancelPremium() async {
+    final url = Uri.parse('$baseUrl/users/cancel');
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token'
+      },
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return {'success': true, 'user': User.fromJson(data['user'])};
+    } else {
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Error al cancelar Premium'
+      };
+    }
+  }
+
   Future<Map<String, dynamic>> subscribePremium() async {
     final url = Uri.parse('$baseUrl/users/subscribe');
     final response = await http.post(

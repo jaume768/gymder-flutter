@@ -3,6 +3,7 @@ import 'package:app/screens/single_user_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../services/match_service.dart';
@@ -113,10 +114,10 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
         _likedUsers = List<User>.from(
             result['usersWhoLiked'].map((x) => User.fromJson(x)));
       });
-      print("Usuarios que me dieron like: ${_likedUsers.length}");
+      print(tr("liked_users_count", args: [_likedUsers.length.toString()]));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message'] ?? 'Error al obtener likes')),
+        SnackBar(content: Text(result['message'] ?? tr("error_getting_likes"))),
       );
     }
   }
@@ -154,7 +155,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content:
-                Text(result['message'] ?? 'Error al obtener más usuarios')),
+                Text(result['message'] ?? tr("error_fetching_more_users"))),
       );
     }
     setState(() {
@@ -176,7 +177,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final userIsPremium = authProvider.user?.isPremium ?? false;
-
     int localMaxLike = (authProvider.user?.gender == 'Masculino') ? 20 : 40;
 
     // Verificar el límite de likes antes de proceder
@@ -186,10 +186,13 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
       if (timePassed < likeLimitDuration) {
         Duration remaining = likeLimitDuration - timePassed;
         _showPremiumDialog(
-          "Límite de likes alcanzado",
-          "Has llegado al número máximo de likes. Espera ${remaining.inHours} horas y ${remaining.inMinutes % 60} minutos o mira un video para expandirlo.",
+          tr("like_limit_reached"),
+          tr("like_limit_message", args: [
+            remaining.inHours.toString(),
+            (remaining.inMinutes % 60).toString()
+          ]),
         );
-        return; // Cancela el like sin enviarlo
+        return;
       } else {
         setState(() {
           likeCount = 0;
@@ -204,7 +207,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     final token = await authProvider.getToken();
     if (token == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Token no encontrado. Inicia sesión.')),
+        SnackBar(content: Text(tr("token_not_found_login"))),
       );
       _isProcessing = false;
       return;
@@ -220,7 +223,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message'] ?? 'Error al dar like')),
+        SnackBar(content: Text(result['message'] ?? tr("error_liking_user"))),
       );
     }
 
@@ -231,7 +234,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
 
     if (_randomUsers.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No hay más usuarios')),
+        SnackBar(content: Text(tr("no_more_users"))),
       );
     } else if (userIndex < _randomUsers.length) {
       _verticalPageController.animateToPage(
@@ -251,24 +254,22 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
   Future<void> _handleLikeFromLeGustas(int userIndex) async {
     if (_isProcessing) return;
     _isProcessing = true;
-
     final user = _likedUsers[userIndex];
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final token = await authProvider.getToken();
     if (token == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Token no encontrado. Inicia sesión.')),
+        SnackBar(content: Text(tr("token_not_found_login"))),
       );
       _isProcessing = false;
       return;
     }
-
     final userService = UserService(token: token);
     final result = await userService.likeUser(user.id);
 
     if (result['success'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Has dado like al usuario')),
+        SnackBar(content: Text(tr("like_success"))),
       );
       if (result['matchedUser'] != null) {
         final currentUser =
@@ -279,7 +280,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message'] ?? 'Error al dar like')),
+        SnackBar(content: Text(result['message'] ?? tr("error_liking_user"))),
       );
     }
 
@@ -297,8 +298,11 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
       if (timePassed < limitDuration) {
         Duration remaining = limitDuration - timePassed;
         _showPremiumDialog(
-          "Límite de scroll alcanzado",
-          "Has llegado al número máximo de scrolls. Espera ${remaining.inHours} horas y ${remaining.inMinutes % 60} minutos o mira un video para expandirlo.",
+          tr("premium_function"),
+          tr("scroll_limit_message", args: [
+            remaining.inHours.toString(),
+            (remaining.inMinutes % 60).toString()
+          ]),
         );
       } else {
         setState(() {
@@ -316,8 +320,11 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
       if (timePassed < likeLimitDuration) {
         Duration remaining = likeLimitDuration - timePassed;
         _showPremiumDialog(
-          "Límite de likes alcanzado",
-          "Has llegado al número máximo de likes. Espera ${remaining.inHours} horas y ${remaining.inMinutes % 60} minutos o mira un video para expandirlo.",
+          tr("like_limit_reached"),
+          tr("like_limit_message", args: [
+            remaining.inHours.toString(),
+            (remaining.inMinutes % 60).toString()
+          ]),
         );
       } else {
         setState(() {
@@ -348,8 +355,8 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Cancelar",
-                style: TextStyle(color: Colors.blueAccent)),
+            child: Text(tr("cancel"),
+                style: const TextStyle(color: Colors.blueAccent)),
           ),
           TextButton(
             onPressed: () {
@@ -361,8 +368,8 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                 ),
               );
             },
-            child: const Text("Comprar",
-                style: TextStyle(color: Colors.blueAccent)),
+            child: Text(tr("buy_premium"),
+                style: const TextStyle(color: Colors.blueAccent)),
           ),
         ],
       ),
@@ -395,16 +402,16 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                '¡Tienes un match!',
-                style: TextStyle(
+              Text(
+                tr("match_title"),
+                style: const TextStyle(
                     color: Colors.white,
                     fontSize: 24,
                     fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
               Text(
-                'Tú y ${matchedUser.username} os habéis dado like mutuamente',
+                tr("match_message", args: [matchedUser.username ?? ""]),
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white70, fontSize: 16),
               ),
@@ -440,16 +447,16 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                     ),
                   );
                 },
-                child: const Text('Enviar mensaje',
-                    style: TextStyle(color: Colors.white)),
+                child: Text(tr("send_message"),
+                    style: const TextStyle(color: Colors.white)),
               ),
               const SizedBox(height: 10),
               TextButton(
                 onPressed: () {
                   Navigator.pop(context);
                 },
-                child: const Text('Seguir navegando',
-                    style: TextStyle(color: Colors.grey)),
+                child: Text(tr("continue_browsing"),
+                    style: const TextStyle(color: Colors.grey)),
               )
             ],
           ),
@@ -494,10 +501,10 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
         children: [
           Positioned.fill(
             child: currentList.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text(
-                      'No hay usuarios para mostrar.',
-                      style: TextStyle(color: Colors.white),
+                      tr("no_users_to_show"),
+                      style: const TextStyle(color: Colors.white),
                     ),
                   )
                 : NotificationListener<UserScrollNotification>(
@@ -506,8 +513,8 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                         if (!auth.user!.isPremium &&
                             notification.direction == ScrollDirection.forward) {
                           _showPremiumDialog(
-                            "Función Premium",
-                            "Para hacer scroll hacia arriba y volver al usuario anterior necesitas ser premium. ¿Deseas comprarlo?",
+                            tr("premium_function"),
+                            tr("premium_scroll_message"),
                           );
                         }
                         if (!auth.user!.isPremium &&
@@ -590,7 +597,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                             showRandom = true;
                           });
                         },
-                        child: const Text('Aleatorio'),
+                        child: Text(tr("random")),
                       ),
                       const SizedBox(width: 8),
                       const Text(
@@ -611,8 +618,8 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                               Provider.of<AuthProvider>(context, listen: false);
                           if (!(auth.user?.isPremium ?? false)) {
                             _showPremiumDialog(
-                              "Función Premium",
-                              "Para ver a las personas que le gustas necesitas ser premium. ¿Deseas comprarlo?",
+                              tr("premium_function"),
+                              tr("premium_le_gustas_message"),
                             );
                           } else {
                             setState(() {
@@ -623,7 +630,8 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                             }
                           }
                         },
-                        child: Text('Le gustas (${_likedUsers.length})'),
+                        child: Text(tr("le_gustas_button",
+                            args: [_likedUsers.length.toString()])),
                       ),
                     ],
                   ),
@@ -671,7 +679,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
 
                     if (result != null && result is Map) {
                       if (result['remove'] == true) {
-                        // Quitar filtro: cargar todos los usuarios
                         var allUsers = await _fetchAllUsersWithoutFilter();
                         if (allUsers != null) {
                           setState(() {
@@ -773,16 +780,16 @@ class _FilterModalContentState extends State<FilterModalContent> {
               ),
             ),
             const SizedBox(height: 10),
-            const Text(
-              "Filtrar",
-              style: TextStyle(
+            Text(
+              tr("filter"),
+              style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.white),
             ),
             const SizedBox(height: 40),
             _buildRangeSlider(
-              label: "Rango de edad",
+              label: tr("age_range"),
               values: ageRange,
               min: 18,
               max: 100,
@@ -794,7 +801,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
               },
             ),
             _buildRangeSlider(
-              label: "Rango de peso (kg)",
+              label: tr("weight_range"),
               values: weightRange,
               min: 40,
               max: 200,
@@ -806,7 +813,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
               },
             ),
             _buildRangeSlider(
-              label: "Rango de altura (cm)",
+              label: tr("height_range"),
               values: heightRange,
               min: 100,
               max: 250,
@@ -819,7 +826,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
             ),
             const SizedBox(height: 10),
             _buildDropdown(
-              label: "Etapa en el gym",
+              label: tr("gym_stage_filter"),
               value: selectedGymStage,
               items: const ['Todos', 'Mantenimiento', 'Volumen', 'Definición'],
               onChanged: (String? newValue) {
@@ -830,7 +837,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
             ),
             const SizedBox(height: 10),
             _buildDropdown(
-              label: "Tipo de relación",
+              label: tr("relationship_type_filter"),
               value: selectedRelationshipType,
               items: const [
                 'Todos',
@@ -852,9 +859,9 @@ class _FilterModalContentState extends State<FilterModalContent> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SwitchListTile(
-                    title: const Text(
-                      "Filtrar por ubicación",
-                      style: TextStyle(color: Colors.white),
+                    title: Text(
+                      tr("filter_by_location"),
+                      style: const TextStyle(color: Colors.white),
                     ),
                     value: useLocation,
                     onChanged: (val) {
@@ -865,7 +872,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
                   ),
                   if (useLocation)
                     _buildRangeSlider(
-                      label: "Distancia (km)",
+                      label: tr("distance_km"),
                       values: distanceRange,
                       min: 0,
                       max: 100,
@@ -935,8 +942,8 @@ class _FilterModalContentState extends State<FilterModalContent> {
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(
-                            result['message'] ?? 'Error al obtener matches'),
+                        content: Text(result['message'] ??
+                            tr("error_fetching_more_users")),
                       ),
                     );
                   }
@@ -944,9 +951,9 @@ class _FilterModalContentState extends State<FilterModalContent> {
 
                 Navigator.of(context).pop();
               },
-              child: const Text(
-                "Aplicar",
-                style: TextStyle(color: Colors.black),
+              child: Text(
+                tr("apply"),
+                style: const TextStyle(color: Colors.black),
               ),
             ),
             const SizedBox(height: 10),
@@ -962,9 +969,9 @@ class _FilterModalContentState extends State<FilterModalContent> {
               onPressed: () {
                 Navigator.of(context).pop({'remove': true});
               },
-              child: const Text(
-                "Quitar filtro",
-                style: TextStyle(color: Colors.white),
+              child: Text(
+                tr("remove_filter"),
+                style: const TextStyle(color: Colors.white),
               ),
             ),
           ],

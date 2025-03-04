@@ -52,6 +52,7 @@ class User {
   final String email;
   final String username;
   final bool isPremium;
+  final DateTime? premiumExpiration;
   final String? goal;
   final ProfilePicture? profilePicture;
   final String? firstName;
@@ -74,6 +75,7 @@ class User {
     required this.email,
     required this.username,
     required this.isPremium,
+    this.premiumExpiration,
     this.goal,
     this.profilePicture,
     this.firstName,
@@ -98,6 +100,9 @@ class User {
       email: json['email'],
       username: json['username'],
       isPremium: json['isPremium'] ?? false,
+      premiumExpiration: json['premiumExpiration'] != null
+          ? DateTime.parse(json['premiumExpiration'])
+          : null,
       goal: json['goal'],
       profilePicture: json['profilePicture'] != null
           ? ProfilePicture.fromJson(json['profilePicture'])

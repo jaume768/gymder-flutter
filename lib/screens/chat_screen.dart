@@ -11,6 +11,7 @@ import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 import '../providers/auth_provider.dart';
 import '../models/user.dart';
@@ -65,7 +66,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   User? matchedUser;
   bool isLoadingUser = true;
-  // Variable para simular el estado en línea del matchedUser (a actualizar mediante socket)
+  // Estado en línea del matchedUser
   bool matchedUserOnline = false;
 
   @override
@@ -90,7 +91,7 @@ class _ChatScreenState extends State<ChatScreen> {
     socket.connect();
 
     socket.onConnect((_) {
-      print('Conectado al socket.io server');
+      print('Connected to socket.io server');
       socket.emit('joinRoom', {
         'userId': widget.currentUserId,
         'matchedUserId': widget.matchedUserId,
@@ -103,7 +104,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
     socket.on('receiveMessage', (data) {
       if (data['type'] == 'image' && data['senderId'] == widget.currentUserId) {
-        // Buscar mensaje temporal
         final index = messages.indexWhere((m) =>
             m['isLoading'] == true && m['senderId'] == widget.currentUserId);
         if (index != -1) {
@@ -137,7 +137,7 @@ class _ChatScreenState extends State<ChatScreen> {
     });
 
     socket.on('messagesMarkedAsRead', (data) {
-      print('Mensajes marcados como leídos: $data');
+      print('Messages marked as read: $data');
       setState(() {
         for (var msg in messages) {
           if (msg['senderId'] == widget.matchedUserId &&
@@ -156,8 +156,8 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     });
 
-    socket.onDisconnect((_) => print('Desconectado del servidor'));
-    socket.on('errorMessage', (data) => print('Error del servidor: $data'));
+    socket.onDisconnect((_) => print('Disconnected from server'));
+    socket.on('errorMessage', (data) => print('Server error: $data'));
   }
 
   Future<void> _fetchMatchedUser() async {
@@ -179,13 +179,13 @@ class _ChatScreenState extends State<ChatScreen> {
             isLoadingUser = false;
           });
         } else {
-          print('Usuario no encontrado en la respuesta.');
+          print(tr("user_not_found"));
         }
       } else {
-        print('Error al obtener datos del usuario: ${response.statusCode}');
+        print(tr("error_fetching_user_data") + ": ${response.statusCode}");
       }
     } catch (e) {
-      print('Error al obtener datos del usuario: $e');
+      print(tr("error_fetching_user_data") + ": $e");
     }
   }
 
@@ -194,7 +194,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final token = await authProvider.getToken();
       if (token == null) {
-        print('No hay token, no puedo obtener la conversación.');
+        print(tr("token_not_found_login"));
         return;
       }
       final url = Uri.parse(
@@ -223,14 +223,16 @@ class _ChatScreenState extends State<ChatScreen> {
           });
           _scrollToBottom();
         } else {
-          print('Error: ${data['message']}');
+          print(tr("error_fetching_messages") + ": ${data['message']}");
         }
       } else {
-        print('Error status code: ${response.statusCode}');
-        print('Body: ${response.body}');
+        print(tr("error_fetching_messages") +
+            ": ${response.statusCode}\n" +
+            tr("response_body") +
+            ": ${response.body}");
       }
     } catch (e) {
-      print('Error al obtener conversación: $e');
+      print(tr("error_fetching_messages") + ": $e");
     }
   }
 
@@ -259,7 +261,6 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollToBottom();
   }
 
-  /// Envía imagen con mensaje temporal de carga.
   Future<void> _sendImageMessage(File imageFile) async {
     final tempId = DateTime.now().millisecondsSinceEpoch.toString();
     setState(() {
@@ -280,7 +281,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final token = await authProvider.getToken();
       if (token == null) {
-        print('No hay token, no puedo subir la imagen.');
+        print(tr("token_not_found_login"));
         return;
       }
       final url = Uri.parse(
@@ -292,7 +293,7 @@ class _ChatScreenState extends State<ChatScreen> {
           lookupMimeType(imageFile.path) ?? 'application/octet-stream';
       final mimeTypeData = mimeType.split('/');
       if (mimeTypeData.length != 2) {
-        throw Exception('Tipo de archivo desconocido para la imagen');
+        throw Exception(tr("unknown_file_type"));
       }
 
       request.files.add(
@@ -318,14 +319,16 @@ class _ChatScreenState extends State<ChatScreen> {
           });
           _scrollToBottom();
         } else {
-          print('Error al subir imagen chat: ${data['message']}');
+          print(tr("error_sending_image") + ": ${data['message']}");
         }
       } else {
-        print('Error al subir imagen chat: ${response.statusCode}');
-        print('Body: ${response.body}');
+        print(tr("error_sending_image") +
+            ": ${response.statusCode}\n" +
+            tr("response_body") +
+            ": ${response.body}");
       }
     } catch (e) {
-      print('Error al enviar imagen: $e');
+      print(tr("error_sending_image") + ": $e");
     }
   }
 
@@ -368,11 +371,13 @@ class _ChatScreenState extends State<ChatScreen> {
           }
         });
       } else {
-        print('Error al ocultar mensaje: ${response.statusCode}');
-        print('Body: ${response.body}');
+        print(tr("error_hiding_message") +
+            ": ${response.statusCode}\n" +
+            tr("response_body") +
+            ": ${response.body}");
       }
     } catch (e) {
-      print('Error al ocultar mensaje: $e');
+      print(tr("error_hiding_message") + ": $e");
     }
   }
 
@@ -395,8 +400,7 @@ class _ChatScreenState extends State<ChatScreen> {
             child: const Center(child: CircularProgressIndicator()),
           ),
         );
-      }
-      else {
+      } else {
         return GestureDetector(
           onTap: () {
             Navigator.push(
@@ -441,16 +445,15 @@ class _ChatScreenState extends State<ChatScreen> {
             context: context,
             builder: (_) {
               return AlertDialog(
-                title: const Text('Eliminar mensaje'),
-                content:
-                    const Text('¿Deseas eliminar este mensaje solo para ti?'),
+                title: Text(tr("delete_message")),
+                content: Text(tr("delete_message_confirm")),
                 actions: [
                   TextButton(
-                    child: const Text('Cancelar'),
+                    child: Text(tr("cancel")),
                     onPressed: () => Navigator.pop(context, false),
                   ),
                   TextButton(
-                    child: const Text('Eliminar'),
+                    child: Text(tr("delete")),
                     onPressed: () => Navigator.pop(context, true),
                   ),
                 ],
@@ -566,17 +569,17 @@ class _ChatScreenState extends State<ChatScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          matchedUser?.username ?? 'Chat',
+                          matchedUser?.username ?? tr("chat"),
                           style: const TextStyle(color: Colors.white),
                         ),
                       ],
                     ),
                     if (matchedUserOnline)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 2.0),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2.0),
                         child: Text(
-                          "En línea",
-                          style: TextStyle(
+                          tr("online"),
+                          style: const TextStyle(
                             color: Colors.green,
                             fontSize: 10,
                           ),
@@ -627,7 +630,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     controller: _messageController,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      hintText: 'Escribe un mensaje...',
+                      hintText: tr("type_a_message"),
                       hintStyle: const TextStyle(color: Colors.white54),
                       filled: true,
                       fillColor: Colors.grey[800],

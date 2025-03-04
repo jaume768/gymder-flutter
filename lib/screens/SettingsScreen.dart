@@ -1,47 +1,54 @@
+// lib/screens/settingsScreen.dart
+import 'package:app/screens/suscripciones_pagos_screen.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import 'login_screen.dart';
 
-/// -----------------------
 /// PANTALLA PRINCIPAL DE AJUSTES
-/// -----------------------
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({Key? key}) : super(key: key);
 
-  // Función para navegar según la opción seleccionada.
   void _optionSelected(BuildContext context, String option) {
-    switch (option) {
-      case "Notificaciones":
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const NotificacionesScreen()));
-        break;
-      case "Idiomas":
-        Navigator.push(
-            context, MaterialPageRoute(builder: (_) => const IdiomasScreen()));
-        break;
-      case "Suscripciones y Pagos":
-        Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) => const SuscripcionesPagosScreen()));
-        break;
-      case "Seguridad":
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const SeguridadScreen()));
-        break;
-      case "Permisos de la Aplicación":
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const PermisosAppScreen()));
-        break;
-      case "Acerca de":
-        Navigator.push(
-            context, MaterialPageRoute(builder: (_) => const AcercaDeScreen()));
-        break;
-      case "Cerrar sesión":
-        _confirmLogout(context);
-        break;
-      default:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Seleccionaste: $option")),
-        );
+    // Usamos las claves localizadas sin const para evitar errores de compilación.
+    if (option == tr("notifications")) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const NotificacionesScreen()),
+      );
+    } else if (option == tr("languages")) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const IdiomasScreen()),
+      );
+    } else if (option == tr("subscriptions_payments")) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const SuscripcionesPagosScreen()),
+      );
+    } else if (option == tr("security")) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const SeguridadScreen()),
+      );
+    } else if (option == tr("app_permissions")) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const PermisosAppScreen()),
+      );
+    } else if (option == tr("about")) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AcercaDeScreen()),
+      );
+    } else if (option == tr("logout")) {
+      _confirmLogout(context);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(tr("selected_option", args: [option]))),
+      );
     }
   }
 
@@ -49,43 +56,47 @@ class SettingsScreen extends StatelessWidget {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Confirmar"),
-        content: const Text("¿Estás seguro que deseas cerrar sesión?"),
+        title: Text(tr("logout_confirm_title")),
+        content: Text(tr("logout_confirm_content")),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("Cancelar"),
+            child: Text(tr("cancel")),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text("Cerrar sesión"),
+            child: Text(tr("confirm")),
           ),
         ],
       ),
     );
 
     if (result == true) {
-      // Aquí debes implementar el logout, por ejemplo:
-      // Provider.of<AuthProvider>(context, listen: false).logoutUser();
-      // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => LoginScreen()));
+      Provider.of<AuthProvider>(context, listen: false).logoutUser();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Definimos la lista de opciones en tiempo de ejecución (no const)
     final List<Map<String, dynamic>> options = [
-      {"title": "Notificaciones", "icon": Icons.notifications},
-      {"title": "Idiomas", "icon": Icons.language},
-      {"title": "Suscripciones y Pagos", "icon": Icons.payment},
-      {"title": "Seguridad", "icon": Icons.security},
-      {"title": "Permisos de la Aplicación", "icon": Icons.apps},
-      {"title": "Acerca de", "icon": Icons.info},
-      {"title": "Cerrar sesión", "icon": Icons.logout},
+      {"title": tr("notifications"), "icon": Icons.notifications},
+      {"title": tr("languages"), "icon": Icons.language},
+      {"title": tr("subscriptions_payments"), "icon": Icons.payment},
+      {"title": tr("security"), "icon": Icons.security},
+      {"title": tr("app_permissions"), "icon": Icons.apps},
+      {"title": tr("about"), "icon": Icons.info},
+      {"title": tr("logout"), "icon": Icons.logout},
     ];
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Ajustes", style: TextStyle(color: Colors.white)),
+        title:
+            Text(tr("settings"), style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -110,9 +121,7 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
-/// -----------------------
 /// PANTALLA DE NOTIFICACIONES
-/// -----------------------
 class NotificacionesScreen extends StatefulWidget {
   const NotificacionesScreen({Key? key}) : super(key: key);
 
@@ -130,8 +139,8 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title:
-            const Text("Notificaciones", style: TextStyle(color: Colors.white)),
+        title: Text(tr("notifications"),
+            style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -139,33 +148,33 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
       body: ListView(
         children: [
           SwitchListTile(
-            title: const Text("Notificar nuevos matches",
-                style: TextStyle(color: Colors.white)),
+            title: Text(tr("notify_new_matches"),
+                style: const TextStyle(color: Colors.white)),
             value: notificarMatches,
             onChanged: (val) {
               setState(() => notificarMatches = val);
-              // Aquí puedes llamar a un API para guardar la configuración.
+              // Lógica para guardar configuración.
             },
           ),
           SwitchListTile(
-            title: const Text("Notificar mensajes",
-                style: TextStyle(color: Colors.white)),
+            title: Text(tr("notify_messages"),
+                style: const TextStyle(color: Colors.white)),
             value: notificarMensajes,
             onChanged: (val) {
               setState(() => notificarMensajes = val);
             },
           ),
           SwitchListTile(
-            title: const Text("Notificar likes",
-                style: TextStyle(color: Colors.white)),
+            title: Text(tr("notify_likes"),
+                style: const TextStyle(color: Colors.white)),
             value: notificarLikes,
             onChanged: (val) {
               setState(() => notificarLikes = val);
             },
           ),
           SwitchListTile(
-            title: const Text("Agrupar notificaciones",
-                style: TextStyle(color: Colors.white)),
+            title: Text(tr("group_notifications"),
+                style: const TextStyle(color: Colors.white)),
             value: agruparNotificaciones,
             onChanged: (val) {
               setState(() => agruparNotificaciones = val);
@@ -177,9 +186,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
   }
 }
 
-/// -----------------------
 /// PANTALLA DE IDIOMAS
-/// -----------------------
 class IdiomasScreen extends StatefulWidget {
   const IdiomasScreen({Key? key}) : super(key: key);
 
@@ -188,103 +195,41 @@ class IdiomasScreen extends StatefulWidget {
 }
 
 class _IdiomasScreenState extends State<IdiomasScreen> {
-  String idiomaSeleccionado = "Español";
-  final List<String> idiomas = ["Español", "Inglés"];
+  String idiomaSeleccionado = "Spanish";
+  final List<String> idiomas = ["Spanish", "English"];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Idiomas", style: TextStyle(color: Colors.white)),
+        title:
+            Text(tr("languages"), style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       backgroundColor: const Color.fromRGBO(20, 20, 20, 1.0),
       body: ListView(
-        children: idiomas
-            .map((idioma) => RadioListTile(
-                  title:
-                      Text(idioma, style: const TextStyle(color: Colors.white)),
-                  value: idioma,
-                  groupValue: idiomaSeleccionado,
-                  onChanged: (String? value) {
-                    setState(() {
-                      idiomaSeleccionado = value!;
-                    });
-                  },
-                ))
-            .toList(),
+        children: idiomas.map((idioma) {
+          return RadioListTile(
+            title:
+                Text(idioma.tr(), style: const TextStyle(color: Colors.white)),
+            value: idioma,
+            groupValue: idiomaSeleccionado,
+            onChanged: (String? value) {
+              setState(() {
+                idiomaSeleccionado = value!;
+              });
+              // Cambia el locale. Nota: ajusta según la lógica que necesites.
+              context.setLocale(Locale(value == "Spanish" ? 'es' : 'en'));
+            },
+          );
+        }).toList(),
       ),
     );
   }
 }
 
-/// -----------------------
-/// PANTALLA DE SUSCRIPCIONES Y PAGOS
-/// -----------------------
-class SuscripcionesPagosScreen extends StatelessWidget {
-  const SuscripcionesPagosScreen({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    // Estos valores deberían provenir de la información del usuario.
-    bool esPremium = false;
-    String fechaExpiracion = "30/09/2023";
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Suscripciones y Pagos",
-            style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.black,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      backgroundColor: const Color.fromRGBO(20, 20, 20, 1.0),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Card(
-              color: Colors.grey[850],
-              child: ListTile(
-                leading: const Icon(Icons.payment, color: Colors.white),
-                title: Text(
-                  esPremium ? "Eres usuario Premium" : "Usuario estándar",
-                  style: const TextStyle(color: Colors.white),
-                ),
-                subtitle: esPremium
-                    ? Text("Expira el: $fechaExpiracion",
-                        style: const TextStyle(color: Colors.white70))
-                    : null,
-              ),
-            ),
-            const SizedBox(height: 20),
-            if (!esPremium)
-              ElevatedButton(
-                onPressed: () {
-                  // Navega a la pantalla de compra premium.
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const PremiumPurchasePage()));
-                },
-                child: const Text("Hazte Premium"),
-              ),
-            if (esPremium)
-              ElevatedButton(
-                onPressed: () {
-                  // Acción para cancelar suscripción.
-                },
-                child: const Text("Cancelar suscripción"),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// -----------------------
 /// PANTALLA DE SEGURIDAD
-/// -----------------------
 class SeguridadScreen extends StatefulWidget {
   const SeguridadScreen({Key? key}) : super(key: key);
 
@@ -304,11 +249,11 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
       isUpdating = true;
       updateMessage = '';
     });
-    // Simula una llamada a la API para cambiar la contraseña.
+    // Simulación de llamada a la API.
     await Future.delayed(const Duration(seconds: 2));
     setState(() {
       isUpdating = false;
-      updateMessage = 'Contraseña actualizada exitosamente';
+      updateMessage = tr("password_updated");
     });
   }
 
@@ -316,7 +261,8 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Seguridad", style: TextStyle(color: Colors.white)),
+        title:
+            Text(tr("security"), style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -325,18 +271,20 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            const Text("Cambiar Contraseña",
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold)),
+            Text(
+              tr("change_password"),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 10),
             TextField(
               controller: _currentPasswordController,
               obscureText: true,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                labelText: "Contraseña actual",
+                labelText: tr("current_password"),
                 labelStyle: const TextStyle(color: Colors.white70),
                 enabledBorder: OutlineInputBorder(
                   borderSide: const BorderSide(color: Colors.white54),
@@ -350,7 +298,7 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
               obscureText: true,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                labelText: "Nueva contraseña",
+                labelText: tr("new_password"),
                 labelStyle: const TextStyle(color: Colors.white70),
                 enabledBorder: OutlineInputBorder(
                   borderSide: const BorderSide(color: Colors.white54),
@@ -364,7 +312,7 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
               obscureText: true,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                labelText: "Confirmar nueva contraseña",
+                labelText: tr("confirm_new_password"),
                 labelStyle: const TextStyle(color: Colors.white70),
                 enabledBorder: OutlineInputBorder(
                   borderSide: const BorderSide(color: Colors.white54),
@@ -377,7 +325,7 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
               onPressed: isUpdating ? null : _changePassword,
               child: isUpdating
                   ? const CircularProgressIndicator()
-                  : const Text("Actualizar Contraseña"),
+                  : Text(tr("update_password")),
             ),
             const SizedBox(height: 10),
             if (updateMessage.isNotEmpty)
@@ -389,38 +337,35 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
   }
 }
 
-/// -----------------------
 /// PANTALLA DE PERMISOS DE LA APLICACIÓN
-/// -----------------------
 class PermisosAppScreen extends StatelessWidget {
   const PermisosAppScreen({Key? key}) : super(key: key);
 
-  void _openAppSettings() {
-    // Aquí puedes utilizar el paquete permission_handler para abrir la configuración de la app.
-    // Ejemplo: openAppSettings();
+  void _openAppSettings() async {
+    await openAppSettings();
   }
 
   @override
   Widget build(BuildContext context) {
     final List<Map<String, String>> permisos = [
       {
-        "title": "Ubicación",
-        "description": "Para encontrar coincidencias cercanas"
+        "title": tr("location"),
+        "description": tr("location_permission_description")
       },
       {
-        "title": "Cámara",
-        "description": "Para subir fotos de perfil y adicionales"
+        "title": tr("camera"),
+        "description": tr("camera_permission_description")
       },
       {
-        "title": "Almacenamiento",
-        "description": "Para guardar fotos en el dispositivo"
+        "title": tr("storage"),
+        "description": tr("storage_permission_description")
       },
     ];
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Permisos de la Aplicación",
-            style: TextStyle(color: Colors.white)),
+        title: Text(tr("app_permissions"),
+            style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -439,7 +384,7 @@ class PermisosAppScreen extends StatelessWidget {
                 style: const TextStyle(color: Colors.white70)),
             trailing: ElevatedButton(
               onPressed: _openAppSettings,
-              child: const Text("Modificar"),
+              child: Text(tr("modify")),
             ),
           );
         },
@@ -448,9 +393,7 @@ class PermisosAppScreen extends StatelessWidget {
   }
 }
 
-/// -----------------------
 /// PANTALLA ACERCA DE
-/// -----------------------
 class AcercaDeScreen extends StatelessWidget {
   const AcercaDeScreen({Key? key}) : super(key: key);
 
@@ -458,7 +401,7 @@ class AcercaDeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Acerca de", style: TextStyle(color: Colors.white)),
+        title: Text(tr("about"), style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -467,34 +410,34 @@ class AcercaDeScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text("Gymder",
-                style: TextStyle(
+          children: [
+            Text(tr("app_name"),
+                style: const TextStyle(
                     color: Colors.white,
                     fontSize: 24,
                     fontWeight: FontWeight.bold)),
-            SizedBox(height: 10),
-            Text("Versión 1.0.0",
-                style: TextStyle(color: Colors.white70, fontSize: 16)),
-            SizedBox(height: 20),
-            Text("Desarrollado por:",
-                style: TextStyle(color: Colors.white, fontSize: 18)),
-            Text("Tu Nombre o Empresa",
-                style: TextStyle(color: Colors.white70, fontSize: 16)),
-            SizedBox(height: 20),
-            Text("Contacto:",
-                style: TextStyle(color: Colors.white, fontSize: 18)),
-            Text("correo@ejemplo.com",
-                style: TextStyle(color: Colors.white70, fontSize: 16)),
-            SizedBox(height: 20),
-            Text("Términos y Condiciones",
-                style: TextStyle(
+            const SizedBox(height: 10),
+            Text(tr("app_version"),
+                style: const TextStyle(color: Colors.white70, fontSize: 16)),
+            const SizedBox(height: 20),
+            Text(tr("developed_by"),
+                style: const TextStyle(color: Colors.white, fontSize: 18)),
+            Text(tr("company_name"),
+                style: const TextStyle(color: Colors.white70, fontSize: 16)),
+            const SizedBox(height: 20),
+            Text(tr("contact"),
+                style: const TextStyle(color: Colors.white, fontSize: 18)),
+            Text(tr("contact_email"),
+                style: const TextStyle(color: Colors.white70, fontSize: 16)),
+            const SizedBox(height: 20),
+            Text(tr("terms_and_conditions"),
+                style: const TextStyle(
                     color: Colors.blue,
                     fontSize: 16,
                     decoration: TextDecoration.underline)),
-            SizedBox(height: 10),
-            Text("Política de Privacidad",
-                style: TextStyle(
+            const SizedBox(height: 10),
+            Text(tr("privacy_policy"),
+                style: const TextStyle(
                     color: Colors.blue,
                     fontSize: 16,
                     decoration: TextDecoration.underline)),
@@ -505,10 +448,7 @@ class AcercaDeScreen extends StatelessWidget {
   }
 }
 
-/// -----------------------
 /// PLACEHOLDER PARA PREMIUM PURCHASE
-/// (Este widget es un ejemplo; en tu proyecto ya cuentas con la implementación)
-/// -----------------------
 class PremiumPurchasePage extends StatelessWidget {
   const PremiumPurchasePage({Key? key}) : super(key: key);
 
@@ -516,14 +456,14 @@ class PremiumPurchasePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title:
-            const Text("Hazte Premium", style: TextStyle(color: Colors.white)),
+        title: Text(tr("become_premium"),
+            style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
       ),
       backgroundColor: Colors.black,
-      body: const Center(
-        child: Text("Pantalla de compra Premium",
-            style: TextStyle(color: Colors.white)),
+      body: Center(
+        child: Text(tr("premium_screen_text"),
+            style: const TextStyle(color: Colors.white)),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
@@ -22,7 +23,7 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  // Keys distintas para cada Form
+  // Keys para formularios
   final _usernameFormKey = GlobalKey<FormState>();
   final _personalInfoFormKey = GlobalKey<FormState>();
 
@@ -118,8 +119,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
         setState(() {
-          errorMessage =
-          'Permiso de ubicación denegado. No se puede continuar.';
+          errorMessage = tr("location_permission_denied");
           isLoadingLocation = false;
         });
         return;
@@ -145,13 +145,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _checkChanges();
       } else {
         setState(() {
-          errorMessage = 'No se pudo determinar la ciudad.';
+          errorMessage = tr("could_not_determine_city");
           isLoadingLocation = false;
         });
       }
     } catch (e) {
       setState(() {
-        errorMessage = 'Error al obtener la ubicación: $e';
+        errorMessage = tr("error_getting_location") + ": $e";
         isLoadingLocation = false;
       });
     }
@@ -195,7 +195,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (token == null) {
       setState(() {
         isUploading = false;
-        errorMessage = 'Token no encontrado. Inicia sesión nuevamente.';
+        errorMessage = tr("token_not_found_login");
       });
       return;
     }
@@ -206,7 +206,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         await authProvider.refreshUser();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Perfil actualizado exitosamente'),
+            content: Text(tr("profile_updated_successfully")),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
@@ -220,12 +220,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       } else {
         setState(() {
           errorMessage =
-              result['message'] ?? 'Error al subir la foto de perfil';
+              result['message'] ?? tr("error_uploading_profile_picture");
         });
       }
     } catch (e) {
       setState(() {
-        errorMessage = 'Error al subir la foto de perfil: $e';
+        errorMessage = tr("error_uploading_profile_picture") + ": $e";
       });
     } finally {
       setState(() {
@@ -242,7 +242,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (pickedFiles != null) {
       if (pickedFiles.length > 5) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Puedes seleccionar un máximo de 5 fotos')),
+          SnackBar(content: Text(tr("max_5_photos"))),
         );
         return;
       }
@@ -263,7 +263,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (token == null) {
       setState(() {
         isUploading = false;
-        errorMessage = 'Token no encontrado. Inicia sesión nuevamente.';
+        errorMessage = tr("token_not_found_login");
       });
       return;
     }
@@ -273,7 +273,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (result['success']) {
         await authProvider.refreshUser();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Fotos adicionales subidas exitosamente')),
+          SnackBar(
+              content: Text(tr("additional_photos_uploaded_successfully"))),
         );
         setState(() {
           _additionalImages = [];
@@ -281,12 +282,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       } else {
         setState(() {
           errorMessage =
-              result['message'] ?? 'Error al subir fotos adicionales';
+              result['message'] ?? tr("error_uploading_additional_photos");
         });
       }
     } catch (e) {
       setState(() {
-        errorMessage = 'Error al subir fotos adicionales: $e';
+        errorMessage = tr("error_uploading_additional_photos") + ": $e";
       });
     } finally {
       setState(() {
@@ -308,19 +309,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         await authProvider.refreshUser();
       } else {
         setState(() {
-          errorMessage =
-              result['message'] ?? 'Error al actualizar orden de fotos';
+          errorMessage = result['message'] ?? tr("error_updating_photo_order");
         });
       }
     } catch (e) {
       setState(() {
-        errorMessage = 'Error al actualizar orden de fotos: $e';
+        errorMessage = tr("error_updating_photo_order") + ": $e";
       });
     }
   }
 
   Future<void> _saveProfile() async {
-    // Validamos ambos formularios
     if (!_usernameFormKey.currentState!.validate() ||
         !_personalInfoFormKey.currentState!.validate()) {
       return;
@@ -338,7 +337,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final token = await authProvider.getToken();
       if (token == null) {
         setState(() {
-          errorMessage = 'Token no encontrado. Inicia sesión nuevamente.';
+          errorMessage = tr("token_not_found_login");
         });
         return;
       }
@@ -353,12 +352,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'biography': biography,
       };
 
-      // Si el username cambió, se intenta actualizarlo en el backend
       if (username != authProvider.user?.username) {
         final usernameResponse = await userService.updateUsername(username);
         if (!usernameResponse['success']) {
           setState(() {
-            errorMessage = usernameResponse['message'];
+            errorMessage = usernameResponse['message'] ?? tr("enter_username");
           });
           return;
         }
@@ -369,7 +367,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         await authProvider.refreshUser();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Perfil actualizado exitosamente'),
+            content: Text(tr("profile_updated_successfully")),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
@@ -386,12 +384,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         );
       } else {
         setState(() {
-          errorMessage = result['message'];
+          errorMessage = result['message'] ?? tr("error_updating_profile");
         });
       }
     } catch (e) {
       setState(() {
-        errorMessage = 'Error al actualizar el perfil: $e';
+        errorMessage = tr("error_updating_profile") + ": $e";
       });
     } finally {
       setState(() {
@@ -410,7 +408,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (token == null) {
       setState(() {
         isUploading = false;
-        errorMessage = 'Token no encontrado. Inicia sesión nuevamente.';
+        errorMessage = tr("token_not_found_login");
       });
       return;
     }
@@ -420,16 +418,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (result['success']) {
         await authProvider.refreshUser();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Foto eliminada exitosamente')),
+          SnackBar(content: Text(tr("photo_deleted_successfully"))),
         );
       } else {
         setState(() {
-          errorMessage = result['message'] ?? 'Error al eliminar la foto';
+          errorMessage = result['message'] ?? tr("error_deleting_photo");
         });
       }
     } catch (e) {
       setState(() {
-        errorMessage = 'Error al eliminar la foto: $e';
+        errorMessage = tr("error_deleting_photo") + ": $e";
       });
     } finally {
       setState(() {
@@ -454,30 +452,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final showSaveButton = hasChanges || _photoOrderChanged;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Editar Perfil', style: TextStyle(color: Colors.white)),
+        title: Text(tr("edit_profile"),
+            style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       backgroundColor: const Color.fromRGBO(20, 20, 20, 0.0),
       floatingActionButton: showSaveButton
           ? FloatingActionButton.extended(
-        onPressed: isUploading ? null : _saveProfile,
-        backgroundColor: Colors.blueAccent,
-        icon: isUploading
-            ? const SizedBox(
-          height: 24,
-          width: 24,
-          child: CircularProgressIndicator(
-            color: Colors.white,
-            strokeWidth: 2,
-          ),
-        )
-            : const Icon(Icons.save, color: Colors.white),
-        label: Text(
-          isUploading ? 'Guardando...' : 'Guardar Cambios',
-          style: const TextStyle(color: Colors.white),
-        ),
-      )
+              onPressed: isUploading ? null : _saveProfile,
+              backgroundColor: Colors.blueAccent,
+              icon: isUploading
+                  ? const SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Icon(Icons.save, color: Colors.white),
+              label: Text(
+                isUploading ? tr("saving") : tr("save_changes"),
+                style: const TextStyle(color: Colors.white),
+              ),
+            )
           : null,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -490,13 +489,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               onPickImage: _pickProfileImage,
             ),
             const SizedBox(height: 30),
-            // Form para el username
             Form(
               key: _usernameFormKey,
               child: TextFormField(
                 initialValue: username,
                 decoration: InputDecoration(
-                  labelText: 'Username',
+                  labelText: tr("username"),
                   labelStyle: const TextStyle(color: Colors.white70),
                   enabledBorder: OutlineInputBorder(
                     borderSide: const BorderSide(color: Colors.white54),
@@ -513,12 +511,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   username = val;
                   _checkChanges();
                 },
-                validator: (value) =>
-                (value == null || value.isEmpty) ? 'Ingresa un username' : null,
+                validator: (value) => (value == null || value.isEmpty)
+                    ? tr("enter_username")
+                    : null,
               ),
             ),
             const SizedBox(height: 30),
-            // PersonalInfoForm para el resto de la información
             PersonalInfoForm(
               formKey: _personalInfoFormKey,
               firstName: firstName,
@@ -567,25 +565,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 borderRadius: BorderRadius.circular(16.0),
               ),
               child: ListTile(
-                leading: const Icon(Icons.location_on, color: Colors.white, size: 30),
+                leading: const Icon(Icons.location_on,
+                    color: Colors.white, size: 30),
                 title: isLoadingLocation
                     ? const Center(
-                  child: SizedBox(
-                    height: 24,
-                    width: 24,
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  ),
-                )
+                        child: SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                      )
                     : Text(
-                  location.isNotEmpty ? location : 'Ubicación no definida',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                        location.isNotEmpty
+                            ? location
+                            : tr("location_not_defined"),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                 trailing: IconButton(
                   icon: const Icon(Icons.refresh, color: Colors.white),
                   onPressed: _obtenerUbicacion,

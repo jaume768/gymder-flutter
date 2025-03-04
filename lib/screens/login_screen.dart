@@ -1,3 +1,5 @@
+// lib/screens/login.dart
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -20,15 +22,12 @@ class _LoginScreenState extends State<LoginScreen> {
   String errorMessage = '';
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: [
-      'email',
-    ],
+    scopes: ['email'],
     serverClientId:
         '559547590565-fglo48susn9evd2607gklgti1s8eo1vb.apps.googleusercontent.com',
   );
 
   Future<void> _handleGoogleSignIn() async {
-    // 1) Arrancas la animación de carga
     if (!mounted) return;
     setState(() {
       isLoading = true;
@@ -42,14 +41,13 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => isLoading = false);
         return;
       }
-
       final googleAuth = await googleUser.authentication;
       final idToken = googleAuth.idToken;
       if (idToken == null) {
         if (!mounted) return;
         setState(() {
           isLoading = false;
-          errorMessage = 'No se recibió idToken.';
+          errorMessage = "no_id_token".tr();
         });
         return;
       }
@@ -61,8 +59,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!result['success']) {
         setState(() {
           isLoading = false;
-          errorMessage =
-              result['message'] ?? 'Error al iniciar sesión con Google';
+          errorMessage = result['message'] ?? "error_google_signin".tr();
         });
         return;
       }
@@ -72,7 +69,6 @@ class _LoginScreenState extends State<LoginScreen> {
       await authProvider.refreshUser();
 
       if (!mounted) return;
-
       if (isNewAccount) {
         Navigator.pushReplacement(
           context,
@@ -89,7 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       setState(() {
         isLoading = false;
-        errorMessage = 'Error al iniciar sesión con Google: $e';
+        errorMessage = "error_google_signin".tr(args: [e.toString()]);
       });
     }
   }
@@ -97,7 +93,6 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
-
     return Scaffold(
       backgroundColor: const Color.fromRGBO(34, 34, 34, 0.0),
       body: SafeArea(
@@ -114,9 +109,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 40),
                 // Título
-                const Text(
-                  'Iniciar Sesión',
-                  style: TextStyle(
+                Text(
+                  "login".tr(),
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
@@ -132,7 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       TextFormField(
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
-                          labelText: 'Correo o Nombre de usuario',
+                          labelText: "email_or_username".tr(),
                           labelStyle: const TextStyle(color: Colors.white),
                           enabledBorder: OutlineInputBorder(
                             borderSide: const BorderSide(color: Colors.white54),
@@ -146,7 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Por favor ingresa tu correo o nombre de usuario';
+                            return "please_enter_email_or_username".tr();
                           }
                           return null;
                         },
@@ -158,7 +153,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       TextFormField(
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
-                          labelText: 'Contraseña',
+                          labelText: "password".tr(),
                           labelStyle: const TextStyle(color: Colors.white),
                           enabledBorder: OutlineInputBorder(
                             borderSide: const BorderSide(color: Colors.white54),
@@ -173,10 +168,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         obscureText: true,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Por favor ingresa tu contraseña';
+                            return "please_enter_password".tr();
                           }
                           if (value.length < 6) {
-                            return 'La contraseña debe tener al menos 6 caracteres';
+                            return "password_min_length".tr();
                           }
                           return null;
                         },
@@ -192,46 +187,47 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: isLoading
                               ? null
                               : () async {
-                            if (_formKey.currentState!.validate()) {
-                              _formKey.currentState!.save();
-                              setState(() {
-                                isLoading = true;
-                                errorMessage = '';
-                              });
-                              final result = await authProvider.login(
-                                email: email,
-                                password: password,
-                              );
-                              setState(() {
-                                isLoading = false;
-                              });
-                              if (result['success']) {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const HomeScreen(),
-                                  ),
-                                );
-                              } else {
-                                if ((result['message'] as String)
-                                    .contains('Cuenta eliminada por error de registro') ||
-                                    (result['message'] as String)
-                                        .contains('regístrate de nuevo')) {
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const RegisterScreen(),
-                                    ),
-                                  );
-                                } else {
-                                  setState(() {
-                                    errorMessage = result['message'] ?? 'Error al iniciar sesión';
-                                  });
-                                }
-                              }
-                            }},
+                                  if (_formKey.currentState!.validate()) {
+                                    _formKey.currentState!.save();
+                                    setState(() {
+                                      isLoading = true;
+                                      errorMessage = '';
+                                    });
+                                    final result = await authProvider.login(
+                                      email: email,
+                                      password: password,
+                                    );
+                                    setState(() {
+                                      isLoading = false;
+                                    });
+                                    if (result['success']) {
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => const HomeScreen(),
+                                        ),
+                                      );
+                                    } else {
+                                      if ((result['message'] as String)
+                                          .contains("error_register")) {
+                                        Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const RegisterScreen(),
+                                          ),
+                                        );
+                                      } else {
+                                        setState(() {
+                                          errorMessage = result['message'] ??
+                                              "error_login".tr();
+                                        });
+                                      }
+                                    }
+                                  }
+                                },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white, // Fondo blanco
+                            backgroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12.0),
                             ),
@@ -241,9 +237,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   valueColor: AlwaysStoppedAnimation<Color>(
                                       Colors.black),
                                 )
-                              : const Text(
-                                  'Iniciar Sesión',
-                                  style: TextStyle(
+                              : Text(
+                                  "login".tr(),
+                                  style: const TextStyle(
                                     color: Colors.black,
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
@@ -258,13 +254,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         height: 50,
                         child: ElevatedButton.icon(
                           icon: Image.asset(
-                            'assets/images/google_logo.png', // O un icon de Google
+                            'assets/images/google_logo.png',
                             height: 24,
                             width: 24,
                           ),
-                          label: const Text(
-                            'Inicia Sesión con Google',
-                            style: TextStyle(
+                          label: Text(
+                            "login_with_google".tr(),
+                            style: const TextStyle(
                               color: Colors.black,
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -272,18 +268,15 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           onPressed: isLoading
                               ? null
-                              : () async {
-                                  await _handleGoogleSignIn();
-                                },
+                              : () async => await _handleGoogleSignIn(),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white, // Botón blanco
+                            backgroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12.0),
                             ),
                           ),
                         ),
                       ),
-                      // Mensaje de Error
                       if (errorMessage.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 16.0),
@@ -298,9 +291,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
-                            '¿No tienes una cuenta?',
-                            style: TextStyle(color: Colors.white),
+                          Text(
+                            "dont_have_account".tr(),
+                            style: const TextStyle(color: Colors.white),
                           ),
                           TextButton(
                             onPressed: () {
@@ -311,9 +304,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               );
                             },
-                            child: const Text(
-                              'Regístrate',
-                              style: TextStyle(
+                            child: Text(
+                              "register".tr(),
+                              style: const TextStyle(
                                 color: Colors.white,
                                 decoration: TextDecoration.underline,
                               ),

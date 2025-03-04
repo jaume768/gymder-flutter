@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:http/http.dart' as http;
+import 'package:easy_localization/easy_localization.dart';
 
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
@@ -32,17 +33,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Bloquear usuario'),
-        content:
-            const Text('¿Estás seguro de que deseas bloquear a este usuario?'),
+        title: Text(tr("block_user")),
+        content: Text(tr("block_user_confirm")),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(tr("cancel")),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Bloquear'),
+            child: Text(tr("block")),
           ),
         ],
       ),
@@ -58,7 +58,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final token = await authProvider.getToken();
     if (token == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error de autenticación')));
+        SnackBar(content: Text(tr("auth_error"))),
+      );
       setState(() {
         isLoading = false;
       });
@@ -74,11 +75,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
     if (result['success']) {
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'] ?? 'Usuario bloqueado')));
+        SnackBar(content: Text(result['message'] ?? tr("user_blocked"))),
+      );
       Navigator.pop(context);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(result['message'] ?? 'Error al bloquear usuario')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message'] ?? tr("error_blocking_user"))),
+      );
     }
   }
 
@@ -89,7 +92,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       if (token == null) {
         setState(() {
           isLoading = false;
-          errorMessage = 'No se encontró token de autenticación.';
+          errorMessage = tr("token_not_found_auth");
         });
         return;
       }
@@ -110,19 +113,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           });
         } else {
           setState(() {
-            errorMessage = 'Usuario no encontrado.';
+            errorMessage = tr("user_not_found");
             isLoading = false;
           });
         }
       } else {
         setState(() {
-          errorMessage = 'Error al obtener datos del usuario.';
+          errorMessage = tr("error_fetching_user_data");
           isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
-        errorMessage = 'Error: $e';
+        errorMessage = "Error: $e";
         isLoading = false;
       });
     }
@@ -144,16 +147,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Perfil del Usuario',
-          style: TextStyle(color: Colors.white),
+        title: Text(
+          tr("user_profile"),
+          style: const TextStyle(color: Colors.white),
         ),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
             icon: const Icon(Icons.block, color: Colors.white),
-            tooltip: 'Bloquear usuario',
+            tooltip: tr("block_user"),
             onPressed: _blockUser,
           )
         ],
@@ -169,7 +172,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   ),
                 )
               : user == null
-                  ? const Center(child: Text('Usuario no encontrado.'))
+                  ? Center(child: Text(tr("user_not_found")))
                   : SingleChildScrollView(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
@@ -194,7 +197,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white),
                           ),
-                          // Biografía alineada a la izquierda
+                          // Biografía
                           if (user!.biography != null &&
                               user!.biography!.isNotEmpty)
                             Padding(
@@ -218,8 +221,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                               children: [
                                 _buildInfoTile(
                                   icon: Icons.flag,
-                                  title: 'Objetivo',
-                                  content: user!.goal ?? 'No especificado',
+                                  title: tr("goal_title"),
+                                  content: user!.goal ?? tr("not_specified"),
                                 ),
                                 const Divider(
                                     color: Colors.white24,
@@ -227,8 +230,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                     endIndent: 16),
                                 _buildInfoTile(
                                   icon: Icons.wc,
-                                  title: 'Género',
-                                  content: user!.gender ?? 'No especificado',
+                                  title: tr("gender_display"),
+                                  content: user!.gender ?? tr("not_specified"),
                                 ),
                                 const Divider(
                                     color: Colors.white24,
@@ -236,9 +239,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                     endIndent: 16),
                                 _buildInfoTile(
                                   icon: Icons.favorite,
-                                  title: 'Objetivo de Relación',
+                                  title: tr("relationship_goal"),
                                   content: user!.relationshipGoal ??
-                                      'No especificado',
+                                      tr("not_specified"),
                                 ),
                               ],
                             ),

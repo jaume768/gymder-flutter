@@ -1,16 +1,24 @@
+import 'package:app/providers/auth_provider.dart';
+import 'package:app/screens/splash_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
-import 'package:upgrader/upgrader.dart';
-import 'providers/auth_provider.dart';
-import 'screens/splash_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await EasyLocalization.ensureInitialized();
+
   runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-      ],
-      child: const MyApp(),
+    EasyLocalization(
+      supportedLocales: const [Locale('es'), Locale('en')],
+      path: 'assets/translations',
+      fallbackLocale: const Locale('es'),
+      child: MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ],
+        child: const MyApp(),
+      ),
     ),
   );
 }
@@ -21,56 +29,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Gymder',
       debugShowCheckedModeBanner: false,
-      builder: (context, child) {
-        return UpgradeAlert(
-          upgrader: Upgrader(
-            showIgnore: false,
-            canDismissDialog: false,
-          ),
-          child: child!,
-        );
-      },
-      theme: ThemeData.dark().copyWith(
-        primaryColor: Colors.black,
-        scaffoldBackgroundColor: Colors.black,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.black,
-          iconTheme: IconThemeData(color: Colors.white),
-          titleTextStyle: TextStyle(
-              color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold
-          ),
-        ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: Colors.blueAccent,
-          foregroundColor: Colors.white,
-        ),
-        inputDecorationTheme: const InputDecorationTheme(
-          filled: true,
-          fillColor: Color(0xFF2C2C2C),
-          labelStyle: TextStyle(color: Colors.white70),
-          enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.white54),
-            borderRadius: BorderRadius.all(Radius.circular(12.0)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.white),
-            borderRadius: BorderRadius.all(Radius.circular(12.0)),
-          ),
-          errorStyle: TextStyle(color: Colors.redAccent),
-        ),
-        buttonTheme: const ButtonThemeData(
-          buttonColor: Colors.blueAccent,
-          textTheme: ButtonTextTheme.primary,
-        ),
-        colorScheme: ColorScheme.fromSwatch(
-          brightness: Brightness.dark,
-          primarySwatch: Colors.blue,
-        ).copyWith(
-          secondary: Colors.blueAccent,
-        ),
-      ),
+      title: 'Gymder',
+      localizationsDelegates: context.localizationDelegates,
+      supportedLocales: context.supportedLocales,
+      locale: context.locale,
       home: const SplashScreen(),
     );
   }

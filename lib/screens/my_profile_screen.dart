@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
@@ -56,7 +57,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             );
           },
         ),
-        title: const Text('Mi Perfil', style: TextStyle(color: Colors.white)),
+        title:
+            Text(tr("my_profile"), style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
@@ -104,8 +106,10 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                         shape: BoxShape.circle,
                       ),
                       padding: const EdgeInsets.all(8),
-                      child:
-                          const Icon(Icons.edit, color: Colors.white, size: 24),
+                      child: Icon(Icons.edit,
+                          color: Colors.white,
+                          size: 24,
+                          semanticLabel: tr("edit_profile")),
                     ),
                   ),
                 ),
@@ -121,7 +125,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                 color: Colors.white,
               ),
             ),
-            // Mostrar la biografía debajo del nombre
+            // Biografía
             if (user.biography != null && user.biography!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
@@ -140,47 +144,49 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                 children: [
                   _buildInfoTile(
                     icon: Icons.flag,
-                    title: 'Objetivo',
-                    content: user.goal ?? 'No especificado',
+                    title: tr("objective"),
+                    content: user.goal ?? tr("not_specified"),
                   ),
                   const Divider(
                       color: Colors.white24, indent: 16, endIndent: 16),
                   _buildInfoTile(
                     icon: Icons.wc,
-                    title: 'Género',
-                    content: user.gender ?? 'No especificado',
+                    title: tr("gender_display"),
+                    content: user.gender ?? tr("not_specified"),
                   ),
                   const Divider(
                       color: Colors.white24, indent: 16, endIndent: 16),
                   _buildInfoTile(
                     icon: Icons.favorite,
-                    title: 'Objetivo de Relación',
-                    content: user.relationshipGoal ?? 'No especificado',
+                    title: tr("relationship_goal"),
+                    content: user.relationshipGoal ?? tr("not_specified"),
                   ),
                   const Divider(
                       color: Colors.white24, indent: 16, endIndent: 16),
                   _buildInfoTile(
                     icon: Icons.location_on,
-                    title: 'Ubicación',
+                    title: tr("location"),
                     content: (user.city != null && user.city!.isNotEmpty) ||
                             (user.country != null && user.country!.isNotEmpty)
                         ? '${user.city ?? ''}, ${user.country ?? ''}'
-                        : 'Falta definir tu ubicación',
+                        : tr("location_not_defined"),
                   ),
                 ],
               ),
             ),
-            // Mostrar fotos adicionales si existen
+            // Fotografías adicionales
             if (user.photos != null && user.photos!.isNotEmpty) ...[
               const SizedBox(height: 16),
               const Text(
-                'Fotografías:',
+                "Fotografías:",
                 style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
               ),
+              // Si deseas usar traducción para "Fotografías:" reemplázalo por:
+              // Text(tr("photographs"), style: ... )
               const SizedBox(height: 8),
               GridView.builder(
                 shrinkWrap: true,

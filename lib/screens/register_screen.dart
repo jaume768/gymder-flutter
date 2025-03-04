@@ -5,6 +5,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../providers/auth_provider.dart';
 import '../services/user_service.dart';
 import 'home_screen.dart';
@@ -38,7 +39,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String password = '';
   String username = '';
 
-  /// -- NUEVO: variables para nombre y apellido
+  // NUEVO: variables para nombre y apellido
   String firstName = '';
   String lastName = '';
 
@@ -52,7 +53,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   double userLatitude = 0.0;
   double userLongitude = 0.0;
 
-  /// -- NUEVO: variables para altura y peso
+  // NUEVO: variables para altura y peso
   double? height;
   double? weight;
 
@@ -78,7 +79,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _checkUsernameAvailability(String username) async {
     setState(() {
       isCheckingUsername = true;
-      usernameCheckMessage = 'Comprobando disponibilidad...';
+      usernameCheckMessage = tr("checking_availability");
     });
 
     final url = Uri.parse(
@@ -91,18 +92,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
         setState(() {
           isCheckingUsername = false;
           usernameCheckMessage =
-              available ? 'Username disponible' : 'Username no disponible';
+              available ? tr("username_available") : tr("username_unavailable");
         });
       } else {
         setState(() {
           isCheckingUsername = false;
-          usernameCheckMessage = 'Error al comprobar disponibilidad';
+          usernameCheckMessage = tr("error_checking_availability");
         });
       }
     } catch (e) {
       setState(() {
         isCheckingUsername = false;
-        usernameCheckMessage = 'Error de conexión';
+        usernameCheckMessage = tr("connection_error");
       });
     }
   }
@@ -118,7 +119,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         return available;
       }
     } catch (e) {
-      print('Error comprobando email: $e');
+      print('${tr("error_checking_email")} $e');
     }
     return false;
   }
@@ -143,7 +144,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (pickedFiles != null) {
       if (selectedPhotos.length + pickedFiles.length > 5) {
         setState(() {
-          errorMessage = 'Máximo 5 fotos en total';
+          errorMessage = tr("max_photos_error");
         });
         return;
       }
@@ -159,18 +160,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
       bool? continuar = await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
-                title: const Text("¿Sin ubicación?"),
-                content: const Text(
-                    "Si no proporcionas tu ubicación, se te mostrarán usuarios de manera aleatoria. "
-                    "Podrás cambiar esto más tarde en tu perfil. ¿Deseas continuar sin ubicación?"),
+                title: Text(tr("no_location")),
+                content: Text(tr("no_location_dialog_content")),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context, false),
-                    child: const Text("Cancelar"),
+                    child: Text(tr("cancel")),
                   ),
                   TextButton(
                     onPressed: () => Navigator.pop(context, true),
-                    child: const Text("Continuar"),
+                    child: Text(tr("continue")),
                   ),
                 ],
               ));
@@ -183,17 +182,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (_currentStep == 0) {
         if (email.isEmpty || password.isEmpty) {
           setState(() {
-            errorMessage = 'Completa tu correo y contraseña';
+            errorMessage = tr("fill_email_password");
           });
           return;
         }
         setState(() {
-          errorMessage = 'Comprobando disponibilidad de email...';
+          errorMessage = tr("checking_email_availability");
         });
         bool emailAvailable = await _checkEmailAvailability(email);
         if (!emailAvailable) {
           setState(() {
-            errorMessage = 'El correo ya está en uso';
+            errorMessage = tr("email_in_use");
           });
           return;
         }
@@ -236,57 +235,56 @@ class _RegisterScreenState extends State<RegisterScreen> {
       case 0:
         if (email.isEmpty || password.isEmpty) {
           setState(() {
-            errorMessage = 'Completa tu correo y contraseña';
+            errorMessage = tr("fill_email_password");
           });
           return false;
         }
-        final RegExp emailRegex = RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$");
         if (!emailRegex.hasMatch(email)) {
           setState(() {
-            errorMessage = 'Ingresa un correo electrónico válido';
+            errorMessage = tr("enter_email_password");
           });
           return false;
         }
         if (password.length < 6) {
           setState(() {
-            errorMessage = 'La contraseña debe tener al menos 6 carácteres';
+            errorMessage = tr("password_min_length");
           });
           return false;
         }
         break;
-      case 1: // Paso de verificación de email
+      case 1:
         if (!_emailVerified) {
           setState(() {
-            errorMessage = 'Debes verificar el código correctamente';
+            errorMessage = tr("verify_code_error");
           });
           return false;
         }
         break;
-      case 2: // Username, nombre y apellido
+      case 2:
         if (username.isEmpty || firstName.isEmpty || lastName.isEmpty) {
           setState(() {
-            errorMessage = 'Ingresa tu username, nombre y apellido';
+            errorMessage = tr("enter_username_first_last");
           });
           return false;
         }
         RegExp digitRegex = RegExp(r'\d');
         if (digitRegex.hasMatch(firstName) || digitRegex.hasMatch(lastName)) {
           setState(() {
-            errorMessage = 'El nombre y apellido no deben contener números';
+            errorMessage = tr("name_no_numbers");
           });
           return false;
         }
-        if (usernameCheckMessage == 'Username no disponible') {
+        if (usernameCheckMessage == tr("username_unavailable")) {
           setState(() {
-            errorMessage = 'El username no está disponible';
+            errorMessage = tr("username_not_available");
           });
           return false;
         }
         break;
-      case 3: // Fecha de nacimiento
+      case 3:
         if (birthDate == null) {
           setState(() {
-            errorMessage = 'Selecciona tu fecha de nacimiento';
+            errorMessage = tr("select_your_birthdate");
           });
           return false;
         }
@@ -298,52 +296,51 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
         if (age < 18) {
           setState(() {
-            errorMessage = 'Debes ser mayor de 18 años para continuar';
+            errorMessage = tr("must_be_18");
           });
           return false;
         }
         break;
-      case 4: // Género
+      case 4:
         if (gender.isEmpty) {
           setState(() {
-            errorMessage = 'Selecciona tu género';
+            errorMessage = tr("select_gender");
           });
           return false;
         }
         break;
-      case 5: // Opciones de búsqueda (seeking)
+      case 5:
         if (seeking.isEmpty) {
           setState(() {
-            errorMessage = 'Selecciona al menos una opción';
+            errorMessage = tr("select_one_or_more");
           });
           return false;
         }
         break;
-      case 6: // Propósito de conexión
+      case 6:
         if (relationshipGoal.isEmpty) {
           setState(() {
-            errorMessage = 'Selecciona tu propósito de conexión';
+            errorMessage = tr("select_connection_purpose");
           });
           return false;
         }
         break;
       case 7:
         break;
-      case 8: // Etapa del gym, altura y peso
+      case 8:
         if (gymStage.isEmpty || height == null || weight == null) {
           setState(() {
-            errorMessage =
-                'Selecciona tu etapa del gym, e ingresa altura y peso';
+            errorMessage = tr("select_your_gym_stage_height_weight");
           });
           return false;
         }
         break;
-      case 9: // Foto de perfil (opcional)
+      case 9:
         return true;
-      case 10: // Fotos adicionales
+      case 10:
         if (selectedPhotos.length < 2) {
           setState(() {
-            errorMessage = 'Por favor, sube al menos 2 fotos';
+            errorMessage = tr("upload_minimum_photos");
           });
           return false;
         }
@@ -366,7 +363,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (response.statusCode == 200) {
         setState(() {
           errorMessage = '';
-          _emailVerified = true; // Marcar como verificado
+          _emailVerified = true;
           _currentStep = emailVerificationStepIndex + 1;
         });
         _pageController.animateToPage(
@@ -376,13 +373,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
       } else {
         setState(() {
-          errorMessage = 'Código incorrecto';
+          errorMessage = tr("invalid_code");
           _emailVerified = false;
         });
       }
     } catch (e) {
       setState(() {
-        errorMessage = 'Error de conexión: $e';
+        errorMessage = tr("connection_error") + ": $e";
         _emailVerified = false;
       });
     }
@@ -390,13 +387,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Widget _buildStepEmailVerification() {
     return _buildStepTemplate(
-      title: 'Verifica tu correo',
-      subtitle: 'Ingresa el código que te enviamos a tu correo',
+      title: tr("verify_your_email"),
+      subtitle: tr("enter_verification_code"),
       child: Column(
         children: [
           TextFormField(
             style: const TextStyle(color: Colors.white),
-            decoration: _inputDecoration('Código de verificación'),
+            decoration: _inputDecoration(tr("verification_code")),
             keyboardType: TextInputType.number,
             onChanged: (value) {
               verificationCode = value;
@@ -407,7 +404,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             onPressed: _verifyEmailCode,
             style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
             child:
-                const Text('Verificar', style: TextStyle(color: Colors.black)),
+                Text(tr("verify"), style: const TextStyle(color: Colors.black)),
           ),
           if (errorMessage.isNotEmpty &&
               _currentStep == emailVerificationStepIndex)
@@ -435,12 +432,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       } else {
         setState(() {
           errorMessage =
-              'Error al enviar correo de verificación: ${response.body}';
+              tr("error_sending_verification_email") + ": ${response.body}";
         });
       }
     } catch (e) {
       setState(() {
-        errorMessage = 'Error de conexión al enviar el correo: $e';
+        errorMessage = tr("connection_error_sending_email") + ": $e";
       });
     }
   }
@@ -459,7 +456,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (token == null) {
         setState(() {
           isLoading = false;
-          errorMessage = 'No se encontró token';
+          errorMessage = tr("token_not_found");
         });
         return;
       }
@@ -481,7 +478,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         setState(() {
           isLoading = false;
           errorMessage =
-              updateResult['message'] ?? 'Error al actualizar el perfil';
+              updateResult['message'] ?? tr("error_updating_profile");
         });
         return;
       }
@@ -492,13 +489,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
         if (profileResult['success'] != true) {
           setState(() {
             isLoading = false;
-            errorMessage =
-                profileResult['message'] ?? 'Error al subir foto de perfil';
+            errorMessage = profileResult['message'] ??
+                tr("error_uploading_profile_picture");
           });
           return;
         }
       }
-      // Subir fotos
       final uploadResult = await userService.uploadPhotos(selectedPhotos);
       if (uploadResult['success'] == true) {
         await authProvider.refreshUser();
@@ -512,13 +508,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
       } else {
         setState(() {
           isLoading = false;
-          errorMessage = uploadResult['message'] ?? 'Error al subir fotos';
+          errorMessage =
+              uploadResult['message'] ?? tr("error_uploading_photos");
         });
       }
     } else {
       print(
           "Enviando => height: $height, weight: $weight, gymStage: $gymStage");
-      // Flujo normal de registro
       final result = await authProvider.register(
         email: email,
         password: password,
@@ -545,8 +541,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             if (profileResult['success'] != true) {
               setState(() {
                 isLoading = false;
-                errorMessage =
-                    profileResult['message'] ?? 'Error al subir foto de perfil';
+                errorMessage = profileResult['message'] ??
+                    tr("error_uploading_profile_picture");
               });
               return;
             }
@@ -563,19 +559,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
           } else {
             setState(() {
               isLoading = false;
-              errorMessage = uploadResult['message'] ?? 'Error al subir fotos';
+              errorMessage =
+                  uploadResult['message'] ?? tr("error_uploading_photos");
             });
           }
         } else {
           setState(() {
             isLoading = false;
-            errorMessage = 'No se recibió token tras registrar';
+            errorMessage = tr("no_token_received_after_register");
           });
         }
       } else {
         setState(() {
           isLoading = false;
-          errorMessage = result['message'] ?? 'Error al registrar';
+          errorMessage = result['message'] ?? tr("error_register");
         });
       }
     }
@@ -590,7 +587,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Barra de Progreso
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: LinearProgressIndicator(
@@ -658,9 +654,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ? const CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
                     )
-                  : const Text(
-                      'Finalizar',
-                      style: TextStyle(color: Colors.black),
+                  : Text(
+                      tr("finalize"),
+                      style: const TextStyle(color: Colors.black),
                     ),
             ),
         ],
@@ -668,27 +664,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // ========================
-  // Steps (Screens)
-  // ========================
-
   Widget _buildStep0() {
     return _buildStepTemplate(
-      title: 'Bienvenido',
-      subtitle: 'Ingresa tu correo electrónico y contraseña',
+      title: tr("welcome"),
+      subtitle: tr("enter_email_password"),
       child: Column(
         children: [
           const SizedBox(height: 20),
           TextFormField(
             style: const TextStyle(color: Colors.white),
-            decoration: _inputDecoration('Correo Electrónico'),
+            decoration: _inputDecoration(tr("email_or_username")),
             keyboardType: TextInputType.emailAddress,
             onChanged: (value) => email = value,
           ),
           const SizedBox(height: 20),
           TextFormField(
             style: const TextStyle(color: Colors.white),
-            decoration: _inputDecoration('Contraseña'),
+            decoration: _inputDecoration(tr("password")),
             obscureText: true,
             onChanged: (value) => password = value,
           ),
@@ -698,13 +690,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Text(errorMessage,
                   style: const TextStyle(color: Colors.redAccent)),
             ),
-          const SizedBox(height: 20), // Espacio adicional
+          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
-                '¿Ya tienes una cuenta?',
-                style: TextStyle(color: Colors.white),
+              Text(
+                tr("already_have_account"),
+                style: const TextStyle(color: Colors.white),
               ),
               TextButton(
                 onPressed: () {
@@ -713,9 +705,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     MaterialPageRoute(builder: (_) => const LoginScreen()),
                   );
                 },
-                child: const Text(
-                  'Inicia Sesión',
-                  style: TextStyle(
+                child: Text(
+                  tr("login"),
+                  style: const TextStyle(
                     color: Colors.white,
                     decoration: TextDecoration.underline,
                   ),
@@ -730,14 +722,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Widget _buildStep1() {
     return _buildStepTemplate(
-      title: '¿Cómo te llamas?',
-      subtitle: 'Introduce tu username, nombre y apellido',
+      title: tr("name_prompt"),
+      subtitle: tr("enter_username_first_last"),
       child: Column(
         children: [
           const SizedBox(height: 20),
           TextFormField(
             style: const TextStyle(color: Colors.white),
-            decoration: _inputDecoration('Username'),
+            decoration: _inputDecoration("Username"),
             onChanged: (value) {
               setState(() {
                 username = value;
@@ -746,7 +738,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 if (value.length < 4) {
                   setState(() {
                     isCheckingUsername = false;
-                    usernameCheckMessage = 'Username no disponible';
+                    usernameCheckMessage = tr("username_unavailable");
                   });
                 } else {
                   _checkUsernameAvailability(value);
@@ -764,7 +756,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Text(
                 usernameCheckMessage,
                 style: TextStyle(
-                  color: usernameCheckMessage == 'Username disponible'
+                  color: usernameCheckMessage == tr("username_available")
                       ? Colors.green
                       : Colors.redAccent,
                 ),
@@ -773,13 +765,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const SizedBox(height: 20),
           TextFormField(
             style: const TextStyle(color: Colors.white),
-            decoration: _inputDecoration('Nombre'),
+            decoration: _inputDecoration(
+                tr("name_prompt").replaceAll('¿Cómo te llamas?', 'Nombre')),
             onChanged: (value) => firstName = value,
           ),
           const SizedBox(height: 20),
           TextFormField(
             style: const TextStyle(color: Colors.white),
-            decoration: _inputDecoration('Apellido'),
+            decoration: _inputDecoration(
+                tr("name_prompt").replaceAll('¿Cómo te llamas?', 'Apellido')),
             onChanged: (value) => lastName = value,
           ),
           if (errorMessage.isNotEmpty && _currentStep == 1)
@@ -795,8 +789,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Widget _buildStep2() {
     return _buildStepTemplate(
-      title: '¿Cuándo es tu cumpleaños?',
-      subtitle: 'Selecciona tu fecha de nacimiento',
+      title: tr("select_birthdate"),
+      subtitle: tr("select_your_birthdate"),
       child: Column(
         children: [
           const SizedBox(height: 20),
@@ -820,8 +814,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             child: Text(
               birthDate == null
-                  ? 'Seleccionar fecha'
-                  : 'Tu cumpleaños: ${birthDate!.day}/${birthDate!.month}/${birthDate!.year}',
+                  ? tr("select_birthdate")
+                  : tr("welcome") +
+                      ": ${birthDate!.day}/${birthDate!.month}/${birthDate!.year}",
               style: const TextStyle(color: Colors.black),
             ),
           ),
@@ -846,10 +841,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     ];
 
     return _buildStepTemplate(
-      title: '¿Qué género te representa mejor?',
-      subtitle: 'Selecciona tu género',
+      title: tr("select_gender"),
+      subtitle: tr("select_gender"),
       child: DropdownButtonFormField<String>(
-        decoration: _dropdownDecoration('Género'),
+        decoration: _dropdownDecoration(tr("select_gender")),
         value: gender.isEmpty ? null : gender,
         style: const TextStyle(color: Colors.white),
         selectedItemBuilder: (context) {
@@ -882,8 +877,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     ];
 
     return _buildStepTemplate(
-      title: '¿A quién quieres conocer?',
-      subtitle: 'Selecciona uno o varios',
+      title: tr("whom_to_meet"),
+      subtitle: tr("select_one_or_more"),
       child: Column(
         children: [
           const SizedBox(height: 16),
@@ -923,14 +918,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final goals = ['Amistad', 'Relación', 'Casual', 'Otro'];
 
     return _buildStepTemplate(
-      title: '¿Qué estás buscando?',
-      subtitle: 'Propósito de conexión',
+      title: tr("what_are_you_looking_for"),
+      subtitle: tr("connection_purpose"),
       child: DropdownButtonFormField<String>(
-        decoration: _dropdownDecoration('Propósito de conexión'),
+        decoration: _dropdownDecoration(tr("select_objective")),
         style: const TextStyle(color: Colors.white),
-        hint: const Text(
-          'Seleccionar objetivo',
-          style: TextStyle(color: Colors.white70),
+        hint: Text(
+          tr("select_objective"),
+          style: const TextStyle(color: Colors.white70),
         ),
         selectedItemBuilder: (context) {
           return goals.map((item) {
@@ -955,8 +950,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Widget _buildStep6() {
     return _buildStepTemplate(
-      title: '¿Dónde te encuentras?',
-      subtitle: 'Comparte tu ubicación actual',
+      title: tr("share_your_location"),
+      subtitle: tr("share_your_current_location"),
       child: Column(
         children: [
           ElevatedButton.icon(
@@ -968,12 +963,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 borderRadius: BorderRadius.circular(12.0),
               ),
             ),
-            icon: Icon(
+            icon: const Icon(
               Icons.my_location,
               color: Colors.black,
             ),
             label: Text(
-              location.isEmpty ? 'Obtener mi ubicación' : 'Ubicación detectada',
+              location.isEmpty
+                  ? tr("get_my_location")
+                  : tr("location_detected"),
               style: const TextStyle(color: Colors.black, fontSize: 16),
             ),
           ),
@@ -1043,8 +1040,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
         setState(() {
-          errorMessage =
-              'Permiso de ubicación denegado. No se puede continuar.';
+          errorMessage = tr("location_permission_denied");
           isLoadingLocation = false;
         });
         return;
@@ -1072,13 +1068,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         });
       } else {
         setState(() {
-          errorMessage = 'No se pudo determinar la ciudad.';
+          errorMessage = tr("could_not_determine_city");
           isLoadingLocation = false;
         });
       }
     } catch (e) {
       setState(() {
-        errorMessage = 'Error al obtener la ubicación: $e';
+        errorMessage = tr("error_getting_location") + ": $e";
         isLoadingLocation = false;
       });
     }
@@ -1088,12 +1084,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final gymStages = ['Volumen', 'Definición', 'Mantenimiento'];
 
     return _buildStepTemplate(
-      title: 'Tu etapa del gym, altura y peso',
-      subtitle: 'Selecciona tu objetivo actual, e ingresa altura y peso',
+      title: tr("gym_stage_height_weight"),
+      subtitle: tr("select_your_gym_stage_height_weight"),
       child: Column(
         children: [
           DropdownButtonFormField<String>(
-            decoration: _dropdownDecoration('Etapa'),
+            decoration: _dropdownDecoration(tr("stage")),
             style: const TextStyle(color: Colors.white),
             selectedItemBuilder: (context) {
               return gymStages.map((stage) {
@@ -1116,7 +1112,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const SizedBox(height: 20),
           TextFormField(
             style: const TextStyle(color: Colors.white),
-            decoration: _inputDecoration('Altura (cm)'),
+            decoration: _inputDecoration(tr("height_cm")),
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             onChanged: (value) {
@@ -1128,7 +1124,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const SizedBox(height: 20),
           TextFormField(
             style: const TextStyle(color: Colors.white),
-            decoration: _inputDecoration('Peso (kg)'),
+            decoration: _inputDecoration(tr("weight_kg")),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
@@ -1152,8 +1148,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Widget _buildStepProfilePicture() {
     return _buildStepTemplate(
-      title: 'Foto de perfil',
-      subtitle: 'Selecciona una foto de perfil',
+      title: tr("profile_picture"),
+      subtitle: tr("select_profile_picture"),
       child: Column(
         children: [
           const SizedBox(height: 20),
@@ -1161,7 +1157,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             radius: 75,
             backgroundImage: profilePictureFile != null
                 ? FileImage(profilePictureFile!)
-                : const AssetImage('assets/images/default_profile.png'),
+                : const AssetImage('assets/images/default_profile.png')
+                    as ImageProvider,
           ),
           const SizedBox(height: 20),
           ElevatedButton(
@@ -1175,9 +1172,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
-            child: const Text(
-              'Cambiar foto',
-              style: TextStyle(color: Colors.black),
+            child: Text(
+              tr("change_photo"),
+              style: const TextStyle(color: Colors.black),
             ),
           ),
         ],
@@ -1187,22 +1184,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Widget _buildStep8() {
     return _buildStepTemplate(
-      title: 'Agrega tus fotos',
-      subtitle: 'Necesitas al menos 2 fotos (máximo 5)',
+      title: tr("add_photos"),
+      subtitle: tr("upload_minimum_photos"),
       child: Column(
         children: [
           const SizedBox(height: 20),
           Text(
-            'Has seleccionado: ${selectedPhotos.length} foto(s)',
+            tr("photos_selected", args: ["${selectedPhotos.length}"]),
             style: const TextStyle(color: Colors.white),
           ),
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: _pickImages,
             style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
-            child: const Text(
-              'Seleccionar fotos',
-              style: TextStyle(color: Colors.black),
+            child: Text(
+              tr("select_photos"),
+              style: const TextStyle(color: Colors.black),
             ),
           ),
           const SizedBox(height: 20),
@@ -1256,10 +1253,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
-
-  // ====================================================
-  // Plantillas de estilo
-  // ====================================================
 
   Widget _buildStepTemplate({
     required String title,

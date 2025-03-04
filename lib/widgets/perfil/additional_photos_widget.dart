@@ -62,9 +62,9 @@ class _AdditionalPhotosWidgetState extends State<AdditionalPhotosWidget> {
 
     // Construir una lista combinada de items (fotos y placeholders)
     final List<Widget> items = List.generate(totalSlots, (index) {
-      if (index < photoList.length) {
-        // Foto existente
-        final photo = photoList[index];
+      final photos = widget.user.photos ?? [];
+      if (index < photos.length) {
+        final photo = photos[index];
         return Container(
           key: ValueKey(photo.id),
           width: itemSize,

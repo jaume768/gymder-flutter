@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:upgrader/upgrader.dart';
 import 'providers/auth_provider.dart';
 import 'screens/splash_screen.dart';
 
@@ -22,6 +23,15 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Gymder',
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        return UpgradeAlert(
+          upgrader: Upgrader(
+            showIgnore: false,
+            canDismissDialog: false,
+          ),
+          child: child!,
+        );
+      },
       theme: ThemeData.dark().copyWith(
         primaryColor: Colors.black,
         scaffoldBackgroundColor: Colors.black,
@@ -29,7 +39,8 @@ class MyApp extends StatelessWidget {
           backgroundColor: Colors.black,
           iconTheme: IconThemeData(color: Colors.white),
           titleTextStyle: TextStyle(
-              color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+              color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold
+          ),
         ),
         floatingActionButtonTheme: const FloatingActionButtonThemeData(
           backgroundColor: Colors.blueAccent,
@@ -54,7 +65,7 @@ class MyApp extends StatelessWidget {
           textTheme: ButtonTextTheme.primary,
         ),
         colorScheme: ColorScheme.fromSwatch(
-          brightness: Brightness.dark, // Asegurando brightness oscuro
+          brightness: Brightness.dark,
           primarySwatch: Colors.blue,
         ).copyWith(
           secondary: Colors.blueAccent,

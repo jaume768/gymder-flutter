@@ -28,6 +28,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final int _totalSteps = 11;
   String verificationCode = '';
   final int emailVerificationStepIndex = 1;
+  final RegExp emailRegex = RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$");
 
   bool isCheckingUsername = false;
   bool _emailVerified = false;
@@ -67,8 +68,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void initState() {
     super.initState();
     if (widget.fromGoogle) {
-      _currentStep = 1;
-      _pageController = PageController(initialPage: 1);
+      _currentStep = 2;
+      _pageController = PageController(initialPage: 2);
     } else {
       _pageController = PageController();
     }
@@ -236,6 +237,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         if (email.isEmpty || password.isEmpty) {
           setState(() {
             errorMessage = 'Completa tu correo y contraseña';
+          });
+          return false;
+        }
+        final RegExp emailRegex = RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$");
+        if (!emailRegex.hasMatch(email)) {
+          setState(() {
+            errorMessage = 'Ingresa un correo electrónico válido';
           });
           return false;
         }

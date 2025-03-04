@@ -114,10 +114,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
             result['usersWhoLiked'].map((x) => User.fromJson(x)));
       });
       print("Usuarios que me dieron like: ${_likedUsers.length}");
-      // Opcional: filtrar _randomUsers para quitar los que ya fueron liked
-      _randomUsers = _randomUsers
-          .where((user) => !_likedUsers.any((liked) => liked.id == user.id))
-          .toList();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(result['message'] ?? 'Error al obtener likes')),
@@ -484,12 +480,13 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     super.build(context);
     final auth = Provider.of<AuthProvider>(context);
     final int maxScrollLimit = (auth.user?.gender == 'Masculino') ? 25 : 45;
-    // Filtrar los usuarios aleatorios para que no se muestren los ya liked
-    final List<User> filteredRandomUsers = _randomUsers
-        .where((user) => !_likedUsers.any((liked) => liked.id == user.id))
-        .toList();
-    final List<User> currentList =
-        showRandom ? filteredRandomUsers : _likedUsers;
+    final List<User> combinedUsers = List<User>.from(_randomUsers);
+    for (var likedUser in _likedUsers) {
+      if (!combinedUsers.any((user) => user.id == likedUser.id)) {
+        combinedUsers.add(likedUser);
+      }
+    }
+    final List<User> currentList = showRandom ? combinedUsers : _likedUsers;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -521,6 +518,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                       return false;
                     },
                     child: PageView.builder(
+                      key: ValueKey(showRandom),
                       controller: _verticalPageController,
                       scrollDirection: Axis.vertical,
                       physics: LimitedScrollPhysics(

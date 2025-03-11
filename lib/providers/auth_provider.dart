@@ -3,9 +3,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:easy_localization/easy_localization.dart';
 
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../utils/error_handler.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -13,11 +15,22 @@ class AuthProvider with ChangeNotifier {
   String? _token;
   bool _isAuthenticated = false;
   bool _isLoading = true;
+  Map<String, String> _fieldErrors = {};
 
   User? get user => _user;
   String? get token => _token;
   bool get isAuthenticated => _isAuthenticated;
   bool get isLoading => _isLoading;
+  Map<String, String> get fieldErrors => _fieldErrors;
+
+  void clearFieldErrors() {
+    _fieldErrors = {};
+    notifyListeners();
+  }
+
+  String? getFieldError(String fieldName) {
+    return _fieldErrors[fieldName];
+  }
 
   AuthProvider() {
     _checkAuthStatus();
@@ -46,6 +59,7 @@ class AuthProvider with ChangeNotifier {
     required String email,
     required String password,
   }) async {
+    _fieldErrors = {};
     final result = await _authService.login(email: email, password: password);
 
     if (result['success'] == true) {
@@ -54,6 +68,9 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       // Vuelve a cargar datos de usuario (por si hay info extra)
       await refreshUser();
+    } else {
+      // Procesar errores específicos de campos
+      _processFieldErrors(result);
     }
     return result;
   }
@@ -75,6 +92,7 @@ class AuthProvider with ChangeNotifier {
     double? latitude,
     double? longitude,
   }) async {
+    _fieldErrors = {};
     try {
       // Llamamos a AuthService.register y le pasamos la ubicación
       final result = await _authService.register(
@@ -112,23 +130,39 @@ class AuthProvider with ChangeNotifier {
             notifyListeners();
             return {
               'success': false,
-              'message':
-              'Error: token inválido o usuario no encontrado. Por favor, inicia sesión.'
+              'message': tr('error_invalid_token_or_user'),
             };
           }
         }
         return result; // { success: true, message, token, user }
       } else {
+        // Procesar errores específicos de campos
+        _processFieldErrors(result);
+        
         return {
           'success': false,
-          'message': result['message'] ?? 'Error al registrar',
+          'message': result['message'] ?? tr('error_register'),
+          'fieldErrors': _fieldErrors,
         };
       }
     } catch (e) {
       return {
         'success': false,
-        'message': 'Error de conexión: $e',
+        'message': '${tr('connection_error')}: $e',
       };
+    }
+  }
+
+  // Procesa errores específicos de campos que vienen del backend
+  void _processFieldErrors(Map<String, dynamic> result) {
+    if (result.containsKey('fieldErrors') && result['fieldErrors'] != null) {
+      Map<String, dynamic> fieldErrors = result['fieldErrors'];
+      
+      fieldErrors.forEach((key, value) {
+        _fieldErrors[key] = value.toString();
+      });
+      
+      notifyListeners();
     }
   }
 
@@ -142,28 +176,31 @@ class AuthProvider with ChangeNotifier {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'token': googleIdToken}),
       );
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200) {
-        // Guardar el token en SecureStorage
-        await _authService.storage.write(key: 'token', value: data['token']);
-
-        // Actualizar usuario en el AuthProvider
-        _user = User.fromJson(data['user']);
-        _isAuthenticated = true;
-        notifyListeners();
-
-        // Retornamos también si es newAccount
-        return {
-          'success': true,
-          'message': data['message'],
-          'newAccount': data['newAccount'] ?? false,
-        };
-      } else {
-        return {'success': false, 'message': data['message']};
+      
+      if (response.statusCode != 200) {
+        final apiError = ApiError.fromResponse(response);
+        return {'success': false, 'message': apiError.message};
       }
+      
+      final data = jsonDecode(response.body);
+      
+      // Guardar el token en SecureStorage
+      await _authService.storage.write(key: 'token', value: data['token']);
+
+      // Actualizar usuario en el AuthProvider
+      _user = User.fromJson(data['user']);
+      _isAuthenticated = true;
+      notifyListeners();
+
+      // Retornamos también si es newAccount
+      return {
+        'success': true,
+        'message': data['message'],
+        'newAccount': data['newAccount'] ?? false,
+      };
     } catch (e) {
-      return {'success': false, 'message': 'Error de conexión: $e'};
+      final apiError = ApiError.network(e.toString());
+      return {'success': false, 'message': apiError.message};
     }
   }
 
@@ -172,6 +209,7 @@ class AuthProvider with ChangeNotifier {
     await _authService.logout();
     _user = null;
     _isAuthenticated = false;
+    _fieldErrors = {};
     notifyListeners();
   }
 

@@ -217,5 +217,8 @@
   "error_sending_image": "Error sending image",
   "error": "Error",
   "user_unblocked": "User unblocked",
-  "error_unblocking_user": "Error unblocking user"
+  "error_unblocking_user": "Error unblocking user",
+  "explicit_content_detected": "Explicit or inappropriate content detected",
+  "image_validation_error": "Image Validation Error",
+  "cannot_proceed_with_explicit": "Registration cannot proceed with explicit content. Please select different images."
 }

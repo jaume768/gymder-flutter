@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user.dart';
+import '../utils/error_handler.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class AuthService {
   final String baseUrl = 'https://gymder-api-production.up.railway.app/api/users';
@@ -47,32 +49,46 @@ class AuthService {
       };
     }
 
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(bodyData),
-    );
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(bodyData),
+      );
 
-    final data = jsonDecode(response.body);
+      final data = jsonDecode(response.body);
 
-    if (response.statusCode == 201) {
-      final token = data['token'];
-      if (token != null) {
-        // Guardar en secure storage
-        await storage.write(key: 'token', value: token);
+      if (response.statusCode == 201) {
+        final token = data['token'];
+        if (token != null) {
+          // Guardar en secure storage
+          await storage.write(key: 'token', value: token);
+        }
+        return {
+          'success': true,
+          'message': data['message'],
+          'token': token,
+          'user': data['user'], // si devuelves user
+        };
       }
+
+      // Procesar el error usando el nuevo sistema de manejo de errores
+      final apiError = ApiError.fromResponse(response);
       return {
-        'success': true,
-        'message': data['message'],
-        'token': token,
-        'user': data['user'], // si devuelves user
+        'success': false,
+        'message': apiError.message,
+        'errorType': apiError.type.toString(),
+        'fieldErrors': apiError.fieldErrors,
+      };
+    } catch (e) {
+      // Manejar errores de red o conexión
+      final apiError = ApiError.network(e.toString());
+      return {
+        'success': false,
+        'message': apiError.message,
+        'errorType': apiError.type.toString(),
       };
     }
-
-    return {
-      'success': false,
-      'message': data['message'] ?? 'Error al registrar usuario',
-    };
   }
 
   Future<Map<String, dynamic>> login({
@@ -80,26 +96,41 @@ class AuthService {
     required String password,
   }) async {
     final url = Uri.parse('$baseUrl/login');
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': email,
-        'password': password,
-      }),
-    );
+    
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+        }),
+      );
 
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200) {
-      await storage.write(key: 'token', value: data['token']);
-      return {
-        'success': true,
-        'user': User.fromJson(data['user']),
-      };
-    } else {
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        await storage.write(key: 'token', value: data['token']);
+        return {
+          'success': true,
+          'user': User.fromJson(data['user']),
+        };
+      } else {
+        // Procesar el error usando el nuevo sistema de manejo de errores
+        final apiError = ApiError.fromResponse(response);
+        return {
+          'success': false,
+          'message': apiError.message,
+          'errorType': apiError.type.toString(),
+          'fieldErrors': apiError.fieldErrors,
+        };
+      }
+    } catch (e) {
+      // Manejar errores de red o conexión
+      final apiError = ApiError.network(e.toString());
       return {
         'success': false,
-        'message': data['message'] ?? 'Error al iniciar sesión',
+        'message': apiError.message,
+        'errorType': apiError.type.toString(),
       };
     }
   }
@@ -114,18 +145,25 @@ class AuthService {
 
   Future<User?> fetchUserData(String token) async {
     final url = Uri.parse('$baseUrl/profile');
-    final response = await http.get(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
+    
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return User.fromJson(data['user']);
-    } else {
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return User.fromJson(data['user']);
+      } else {
+        // En caso de error, retornamos null pero podríamos manejar errores específicos
+        return null;
+      }
+    } catch (e) {
+      print("Error fetching user data: $e");
       return null;
     }
   }

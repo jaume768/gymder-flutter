@@ -416,4 +416,54 @@ class UserService {
       };
     }
   }
+
+  // Método para validar imágenes sin subir (verificar contenido explícito)
+  Future<Map<String, dynamic>> validateImages(List<File> photos) async {
+    if (photos.isEmpty) {
+      return {
+        'success': true,
+        'message': 'No hay imágenes para validar',
+      };
+    }
+
+    final url = Uri.parse('$baseUrl/users/validate/images');
+    final request = http.MultipartRequest('POST', url);
+
+    // Añadir cada foto al request con el tipo MIME correcto
+    for (var photo in photos) {
+      final mimeType = lookupMimeType(photo.path) ?? 'application/octet-stream';
+      final mimeTypeData = mimeType.split('/');
+
+      if (mimeTypeData.length != 2) {
+        return {
+          'success': false,
+          'message': 'Tipo de archivo desconocido para el archivo: ${photo.path}',
+        };
+      }
+
+      request.files.add(await http.MultipartFile.fromPath(
+        'photos',
+        photo.path,
+        contentType: MediaType(mimeTypeData[0], mimeTypeData[1]),
+      ));
+    }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return {
+        'success': true,
+        'message': data['message'] ?? 'Imágenes validadas correctamente',
+      };
+    } else {
+      final data = jsonDecode(response.body);
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Error al validar imágenes',
+        'explicitImages': data['explicitImages'] ?? [],
+      };
+    }
+  }
 }

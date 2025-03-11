@@ -218,5 +218,8 @@
   "error_hiding_message": "Error al ocultar mensaje",
   "error": "Error",
   "user_unblocked": "Usuario desbloqueado",
-  "error_unblocking_user": "Error al desbloquear"
+  "error_unblocking_user": "Error al desbloquear",
+  "explicit_content_detected": "Contenido explícito o inapropiado detectado",
+  "image_validation_error": "Error de Validación de Imágenes",
+  "cannot_proceed_with_explicit": "El registro no puede continuar con contenido explícito. Por favor, seleccione imágenes diferentes."
 }

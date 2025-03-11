@@ -2,6 +2,7 @@ import 'package:app/screens/premium_purchase_page.dart';
 import 'package:app/screens/single_user_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../models/user.dart';
@@ -9,6 +10,7 @@ import '../providers/auth_provider.dart';
 import '../services/match_service.dart';
 import '../services/user_service.dart';
 import 'chat_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LimitedScrollPhysics extends ScrollPhysics {
   final bool premium;
@@ -67,6 +69,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
   int scrollCount = 0;
   int likeCount = 0;
   int previousPageIndex = 0;
+  int _currentPageIndex = 0;
   DateTime? scrollLimitReachedTime;
   DateTime? likeLimitReachedTime;
   final Duration limitDuration = const Duration(hours: 10);
@@ -88,11 +91,66 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
   @override
   void initState() {
     super.initState();
-    _verticalPageController = PageController();
+    _loadLimitsData();
+    _verticalPageController = PageController(keepPage: true);
     _randomUsers = List.from(widget.users);
     _randomUsers.shuffle();
     previousPageIndex = 0;
     _fetchLikedUsers();
+
+    // Programar un salto a la posición guardada después de que se construya la UI
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_currentPageIndex > 0 && _currentPageIndex < _randomUsers.length) {
+        _verticalPageController.jumpToPage(_currentPageIndex);
+        previousPageIndex = _currentPageIndex;
+      }
+    });
+  }
+
+  // Método para cargar los datos de límites guardados
+  Future<void> _loadLimitsData() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    setState(() {
+      scrollCount = prefs.getInt('scrollCount') ?? 0;
+      likeCount = prefs.getInt('likeCount') ?? 0;
+      _currentPageIndex = prefs.getInt('currentPageIndex') ?? 0;
+
+      // Recuperar tiempos de límites alcanzados, si existen
+      final scrollLimitTimeString = prefs.getString('scrollLimitReachedTime');
+      final likeLimitTimeString = prefs.getString('likeLimitReachedTime');
+
+      if (scrollLimitTimeString != null) {
+        scrollLimitReachedTime = DateTime.parse(scrollLimitTimeString);
+      }
+
+      if (likeLimitTimeString != null) {
+        likeLimitReachedTime = DateTime.parse(likeLimitTimeString);
+      }
+    });
+  }
+
+  // Método para guardar los datos de límites
+  Future<void> _saveLimitsData() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    prefs.setInt('scrollCount', scrollCount);
+    prefs.setInt('likeCount', likeCount);
+    prefs.setInt('currentPageIndex', _currentPageIndex);
+
+    if (scrollLimitReachedTime != null) {
+      prefs.setString(
+          'scrollLimitReachedTime', scrollLimitReachedTime!.toIso8601String());
+    } else {
+      prefs.remove('scrollLimitReachedTime');
+    }
+
+    if (likeLimitReachedTime != null) {
+      prefs.setString(
+          'likeLimitReachedTime', likeLimitReachedTime!.toIso8601String());
+    } else {
+      prefs.remove('likeLimitReachedTime');
+    }
   }
 
   @override
@@ -248,6 +306,8 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
 
     if (!userIsPremium) {
       _checkLikeLimit(localMaxLike);
+      // Guardar el estado del contador de likes
+      _saveLimitsData();
     }
   }
 
@@ -304,11 +364,15 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
             (remaining.inMinutes % 60).toString()
           ]),
         );
+        // Guardamos el estado de límite alcanzado
+        _saveLimitsData();
       } else {
         setState(() {
           scrollCount = 0;
           scrollLimitReachedTime = null;
         });
+        // Actualizamos al eliminar el límite
+        _saveLimitsData();
       }
     }
   }
@@ -326,11 +390,15 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
             (remaining.inMinutes % 60).toString()
           ]),
         );
+        // Guardamos el estado de límite alcanzado
+        _saveLimitsData();
       } else {
         setState(() {
           likeCount = 0;
           likeLimitReachedTime = null;
         });
+        // Actualizamos al eliminar el límite
+        _saveLimitsData();
       }
     }
   }
@@ -550,6 +618,10 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                         }
                         previousPageIndex = pageIndex;
 
+                        // Guardar la posición actual para mantenerla entre navegaciones
+                        _currentPageIndex = pageIndex;
+                        _saveLimitsData();
+
                         final viewedUser = currentList[pageIndex];
                         if (!_seenProfileIds.contains(viewedUser.id)) {
                           _seenProfileIds.add(viewedUser.id);
@@ -630,7 +702,9 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                             }
                           }
                         },
-                        child: Text(tr("le_gustas_button", namedArgs: {"count": _likedUsers.length.toString()})),
+                        child: Text(tr("le_gustas_button", namedArgs: {
+                          "count": _likedUsers.length.toString()
+                        })),
                       ),
                     ],
                   ),

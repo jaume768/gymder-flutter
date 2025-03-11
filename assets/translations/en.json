@@ -66,7 +66,7 @@
   "name_prompt": "What's your name?",
   "enter_username_first_last": "Enter your username, first name, and last name",
   "select_birthdate": "When is your birthday?",
-  "select_your_birthdate": "Select your birthdate",
+  "select_your_birthdate": "Please select your birthdate",
   "select_gender": "Select your gender",
   "whom_to_meet": "Who do you want to meet?",
   "select_one_or_more": "Select one or more",
@@ -123,7 +123,7 @@
   "password_min_length": "Password must be at least 6 characters",
   "name_no_numbers": "First and last name should not contain numbers",
   "username_not_available": "Username is not available",
-  "must_be_18": "You must be at least 18 years old to continue",
+  "must_be_18": "You must be at least 18 years old to register",
   "select_connection_purpose": "Select your connection purpose",
   "error_getting_location": "Error getting location",
   "location_permission_denied": "Location permission denied. Cannot continue.",
@@ -220,5 +220,8 @@
   "error_unblocking_user": "Error unblocking user",
   "explicit_content_detected": "Explicit or inappropriate content detected",
   "image_validation_error": "Image Validation Error",
-  "cannot_proceed_with_explicit": "Registration cannot proceed with explicit content. Please select different images."
+  "cannot_proceed_with_explicit": "Registration cannot proceed with explicit content. Please select different images.",
+  "email_only": "Email",
+  "profile_picture_required": "Profile picture is required",
+  "must_select_profile_picture": "You must select a profile picture to continue"
 }

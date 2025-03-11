@@ -1,0 +1,34 @@
+name: Build IPA
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.1'  # Ajusta a la versión de Flutter que usas
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build IPA
+        run: flutter build ipa --release
+        # Si necesitas exportar con un método específico, puedes usar:
+        # run: flutter build ipa --release --export-method ad-hoc
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: gymder-flutter-ipa
+          path: build/ios/ipa/*.ipa

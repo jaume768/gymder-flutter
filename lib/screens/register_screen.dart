@@ -1,17 +1,17 @@
+import 'dart:convert';
 import 'dart:io';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:easy_localization/easy_localization.dart';
 import '../providers/auth_provider.dart';
 import '../services/user_service.dart';
 import '../utils/error_handler.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
-import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class RegisterScreen extends StatefulWidget {
@@ -1023,9 +1023,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
           TextFormField(
             style: const TextStyle(color: Colors.white),
             decoration:
-                _inputDecoration(tr("email_or_username"), fieldName: 'email'),
+                _inputDecoration(tr("email_only"), fieldName: 'email'),
             keyboardType: TextInputType.emailAddress,
             onChanged: (value) => email = value,
+            onEditingComplete: () {
+              if (email.isNotEmpty && !emailRegex.hasMatch(email)) {
+                setState(() {
+                  fieldErrors['email'] = tr("invalid_email_format");
+                });
+              } else if (email.isNotEmpty) {
+                setState(() {
+                  fieldErrors.remove('email');
+                });
+                _checkEmailAvailability(email);
+              }
+              FocusScope.of(context).nextFocus();
+            },
           ),
           const SizedBox(height: 20),
           TextFormField(
@@ -1083,21 +1096,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
             onChanged: (value) {
               setState(() {
                 username = value;
+                usernameCheckMessage = '';
+                isCheckingUsername = false;
               });
-              if (value.isNotEmpty) {
-                if (value.length < 4) {
+            },
+            onEditingComplete: () {
+              if (username.isNotEmpty) {
+                if (username.length < 4) {
                   setState(() {
                     isCheckingUsername = false;
                     usernameCheckMessage = tr("username_unavailable");
                   });
                 } else {
-                  _checkUsernameAvailability(value);
+                  _checkUsernameAvailability(username);
                 }
-              } else {
-                setState(() {
-                  usernameCheckMessage = '';
-                });
               }
+              FocusScope.of(context).nextFocus();
             },
           ),
           if (usernameCheckMessage.isNotEmpty)

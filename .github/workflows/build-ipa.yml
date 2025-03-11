@@ -28,7 +28,7 @@ jobs:
         # run: flutter build ipa --release --export-method ad-hoc
 
       - name: Upload IPA artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v2.3.1
         with:
           name: gymder-flutter-ipa
           path: build/ios/ipa/*.ipa

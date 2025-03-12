@@ -1,50 +1,40 @@
-import 'package:app/screens/premium_purchase_page.dart';
 import 'package:app/screens/single_user_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:app/screens/premium_purchase_page.dart';
+
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../services/match_service.dart';
 import '../services/user_service.dart';
-import 'chat_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../screens/chat_screen.dart';
 
+// ScrollPhysics personalizado para bloquear el scroll cuando se alcanza el límite
 class LimitedScrollPhysics extends ScrollPhysics {
-  final bool premium;
-  final int scrollCount;
-  final int maxDownwardScroll;
+  final bool isLimitReached;
 
   const LimitedScrollPhysics({
     ScrollPhysics? parent,
-    required this.premium,
-    required this.scrollCount,
-    required this.maxDownwardScroll,
+    required this.isLimitReached,
   }) : super(parent: parent);
 
   @override
   LimitedScrollPhysics applyTo(ScrollPhysics? ancestor) {
     return LimitedScrollPhysics(
       parent: buildParent(ancestor),
-      premium: premium,
-      scrollCount: scrollCount,
-      maxDownwardScroll: maxDownwardScroll,
+      isLimitReached: isLimitReached,
     );
   }
 
   @override
-  double applyBoundaryConditions(ScrollMetrics position, double value) {
-    if (!premium && value < position.pixels) {
-      return value - position.pixels;
+  bool shouldAcceptUserOffset(ScrollMetrics position) {
+    // Si el límite está alcanzado, no permitir scroll hacia abajo
+    if (isLimitReached) {
+      return false;
     }
-    if (!premium &&
-        scrollCount >= maxDownwardScroll &&
-        value > position.pixels) {
-      return value - position.pixels;
-    }
-    return super.applyBoundaryConditions(position, value);
+    return true;
   }
 }
 
@@ -65,25 +55,20 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
   bool _isFetchingMore = false;
   final int _limit = 20;
   List<User> _likedUsers = [];
+  int _lastFetchThreshold = 0;
 
-  int scrollCount = 0;
-  int likeCount = 0;
-  int previousPageIndex = 0;
   int _currentPageIndex = 0;
-  DateTime? scrollLimitReachedTime;
-  DateTime? likeLimitReachedTime;
-  final Duration limitDuration = const Duration(hours: 10);
-  final Duration likeLimitDuration = const Duration(hours: 10);
+  int previousPageIndex = 0;
 
-  // Variables para persistir filtros
-  RangeValues ageRangeFilter = const RangeValues(18, 50);
-  RangeValues weightRangeFilter = const RangeValues(50, 100);
-  RangeValues heightRangeFilter = const RangeValues(150, 200);
-  String gymStageFilter = 'Mantenimiento';
-  String relationshipTypeFilter = 'Amistad';
+  // Variables para manejar los IDs de perfiles ya cargados
+  Set<String> _loadedProfileIds = {};
+  // Set para controlar los perfiles que ya se han visto para enviar al backend
+  Set<String> _seenProfileIds = {};
 
-  // Para controlar perfiles ya enviados al backend (ya vistos)
-  final Set<String> _seenProfileIds = {};
+  // Variables para el límite de scroll (ahora manejadas por el backend)
+  bool _isScrollLimitReached = false;
+  DateTime? _limitExpirationTime;
+  int _remainingHours = 0;
 
   @override
   bool get wantKeepAlive => true;
@@ -91,72 +76,68 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
   @override
   void initState() {
     super.initState();
-    _loadLimitsData();
     _verticalPageController = PageController(keepPage: true);
+
+    // Inicializar lista de usuarios y registrar sus IDs
     _randomUsers = List.from(widget.users);
-    _randomUsers.shuffle();
+    for (var user in _randomUsers) {
+      _loadedProfileIds.add(user.id);
+    }
+    
+    // Establecer el umbral de carga inicial
+    _lastFetchThreshold = (_randomUsers.length / 2).floor();
+    
+    // No barajar la lista inicialmente, lo haremos después de verificar el límite
     previousPageIndex = 0;
-    _fetchLikedUsers();
 
-    // Programar un salto a la posición guardada después de que se construya la UI
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_currentPageIndex > 0 && _currentPageIndex < _randomUsers.length) {
-        _verticalPageController.jumpToPage(_currentPageIndex);
-        previousPageIndex = _currentPageIndex;
-      }
-    });
+    // Inicializar completamente la pantalla
+    _initializeScreen();
   }
 
-  // Método para cargar los datos de límites guardados
-  Future<void> _loadLimitsData() async {
-    final prefs = await SharedPreferences.getInstance();
+  // Método para la inicialización completa de la pantalla
+  Future<void> _initializeScreen() async {
+    // Primero verificar si hay un límite de scroll activo
+    await _checkScrollLimitStatus();
 
-    setState(() {
-      scrollCount = prefs.getInt('scrollCount') ?? 0;
-      likeCount = prefs.getInt('likeCount') ?? 0;
-      _currentPageIndex = prefs.getInt('currentPageIndex') ?? 0;
+    // Cargar usuarios que le dieron like
+    await _fetchLikedUsers();
 
-      // Recuperar tiempos de límites alcanzados, si existen
-      final scrollLimitTimeString = prefs.getString('scrollLimitReachedTime');
-      final likeLimitTimeString = prefs.getString('likeLimitReachedTime');
-
-      if (scrollLimitTimeString != null) {
-        scrollLimitReachedTime = DateTime.parse(scrollLimitTimeString);
-      }
-
-      if (likeLimitTimeString != null) {
-        likeLimitReachedTime = DateTime.parse(likeLimitTimeString);
-      }
-    });
-  }
-
-  // Método para guardar los datos de límites
-  Future<void> _saveLimitsData() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    prefs.setInt('scrollCount', scrollCount);
-    prefs.setInt('likeCount', likeCount);
-    prefs.setInt('currentPageIndex', _currentPageIndex);
-
-    if (scrollLimitReachedTime != null) {
-      prefs.setString(
-          'scrollLimitReachedTime', scrollLimitReachedTime!.toIso8601String());
-    } else {
-      prefs.remove('scrollLimitReachedTime');
-    }
-
-    if (likeLimitReachedTime != null) {
-      prefs.setString(
-          'likeLimitReachedTime', likeLimitReachedTime!.toIso8601String());
-    } else {
-      prefs.remove('likeLimitReachedTime');
+    // Si no hay límite de scroll, barajar la lista
+    if (!_isScrollLimitReached) {
+      setState(() {
+        _randomUsers.shuffle();
+      });
     }
   }
 
-  @override
-  void dispose() {
-    _verticalPageController.dispose();
-    super.dispose();
+  // Verificar el estado del límite de scroll desde el backend
+  Future<void> _checkScrollLimitStatus() async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = await authProvider.getToken();
+      if (token == null) return;
+
+      final matchService = MatchService(token: token);
+      final result = await matchService.getScrollLimitStatus();
+
+      if (result['success'] == true) {
+        setState(() {
+          _isScrollLimitReached = result['limitActive'] ?? false;
+
+          // Si hay un límite activo, guardar la información relevante
+          if (_isScrollLimitReached && result['limitInfo'] != null) {
+            final limitInfo = result['limitInfo'];
+            _limitExpirationTime = DateTime.parse(limitInfo['limitExpiration']);
+            _remainingHours = limitInfo['remainingHours'] ?? 0;
+          }
+        });
+
+        print(
+            "Estado de límite de scroll: activo=$_isScrollLimitReached, horas restantes=$_remainingHours");
+      }
+    } catch (e) {
+      print('Error al verificar estado de límite de scroll: $e');
+    }
   }
 
   Future<void> _fetchLikedUsers() async {
@@ -180,57 +161,167 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     }
   }
 
+  // Método para actualizar el contador de scroll en el backend
+  Future<void> _updateScrollCount() async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = await authProvider.getToken();
+      if (token == null) return;
+
+      // Obtener el ID del perfil actual
+      String? currentProfileId;
+      if (_currentPageIndex < _randomUsers.length) {
+        currentProfileId = _randomUsers[_currentPageIndex].id;
+      }
+
+      final matchService = MatchService(token: token);
+      final result = await matchService.updateScrollCount(currentProfileId);
+
+      if (result['success'] == true) {
+        // Verificar si se ha alcanzado el límite
+        final limitReached = result['limitReached'] ?? false;
+
+        if (limitReached && !_isScrollLimitReached) {
+          setState(() {
+            _isScrollLimitReached = true;
+
+            // Guardar información del límite
+            if (result['limitInfo'] != null) {
+              final limitInfo = result['limitInfo'];
+              _limitExpirationTime =
+                  DateTime.parse(limitInfo['limitExpiration']);
+              _remainingHours = limitInfo['remainingHours'] ?? 0;
+            }
+          });
+
+          // Mostrar diálogo de límite alcanzado
+          _showScrollLimitDialog();
+
+          // Bloquear el scroll inmediatamente
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _verticalPageController.jumpToPage(_currentPageIndex);
+          });
+        }
+      }
+    } catch (e) {
+      print('Error al actualizar contador de scroll: $e');
+    }
+  }
+
+  // Método para enviar al backend el perfil visto
+  Future<void> _updateSeenProfile(String userId) async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = await authProvider.getToken();
+      if (token == null) return;
+
+      final matchService = MatchService(token: token);
+      await matchService.updateSeenProfiles([userId]);
+    } catch (e) {
+      print('Error al actualizar perfil visto: $e');
+    }
+  }
+
+  // Mostrar diálogo cuando se alcanza el límite de scroll
+  void _showScrollLimitDialog() {
+    if (_remainingHours <= 0) return;
+
+    final hours = _remainingHours;
+    final minutes = 0; // No tenemos minutos detallados en esta implementación
+
+    _showPremiumDialog(
+      tr("premium_function"),
+      tr("scroll_limit_message", args: [hours.toString()]),
+    );
+  }
+
   Future<void> _fetchMoreUsers() async {
-    if (_isFetchingMore) return;
+    if (_isFetchingMore) {
+      print("Ya se está ejecutando una carga de usuarios, ignorando solicitud");
+      return;
+    }
+
+    print("Iniciando carga de más usuarios. Tenemos ${_randomUsers.length} usuarios actualmente");
     setState(() {
       _isFetchingMore = true;
     });
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final token = await authProvider.getToken();
-    if (token == null) return;
-    final matchService = MatchService(token: token);
 
-    // Construir filtros para la paginación
-    Map<String, String> filters = {};
-    filters['skip'] = _randomUsers.length.toString();
-    filters['limit'] = _limit.toString();
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = await authProvider.getToken();
+      if (token == null) {
+        setState(() {
+          _isFetchingMore = false;
+        });
+        return;
+      }
 
-    final result = await matchService.getSuggestedMatchesWithFilters(filters);
-    if (result['success'] == true) {
-      List<dynamic> matchesJson = result['matches'];
-      List<User> newUsers =
-          matchesJson.map((json) => User.fromJson(json)).toList();
+      final matchService = MatchService(token: token);
+      
+      // Crear una lista de los IDs que ya tenemos cargados
+      final loadedIds = List<String>.from(_loadedProfileIds);
+      
+      // Primero, registrar los perfiles vistos para que no se repitan
+      await matchService.updateSeenProfiles(loadedIds);
+      
+      // Preparar los filtros para la solicitud
+      final Map<String, String> filters = {
+        'limit': _limit.toString(),
+        'skip': '0', // Siempre pedir desde el inicio, el backend filtrará los ya vistos
+      };
+      
+      print("Solicitando usuarios con filtros: $filters");
+      final result = await matchService.getSuggestedMatchesWithFilters(filters);
 
-      // Filtrar usuarios que ya hayan sido liked
-      newUsers = newUsers
-          .where((user) => !_likedUsers.any((liked) => liked.id == user.id))
-          .toList();
+      if (result['success'] == true) {
+        List<dynamic> matchesData = result['matches'];
+        print("Recibidos ${matchesData.length} usuarios del backend");
+        
+        List<User> newUsers = matchesData.map((data) => User.fromJson(data)).toList();
 
-      setState(() {
-        _randomUsers.addAll(newUsers);
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content:
-                Text(result['message'] ?? tr("error_fetching_more_users"))),
-      );
+        if (mounted) {
+          setState(() {
+            // Filtrar usuarios ya cargados para evitar duplicados
+            List<User> uniqueNewUsers = newUsers.where((user) {
+              return !_loadedProfileIds.contains(user.id);
+            }).toList();
+
+            // Añadir solo usuarios únicos
+            if (uniqueNewUsers.isNotEmpty) {
+              _randomUsers.addAll(uniqueNewUsers);
+              
+              // Registrar los nuevos IDs
+              for (var user in uniqueNewUsers) {
+                _loadedProfileIds.add(user.id);
+              }
+              
+              print("Añadidos ${uniqueNewUsers.length} nuevos usuarios únicos. Total: ${_randomUsers.length}");
+            } else {
+              print("No se encontraron nuevos usuarios para añadir (todos los recibidos ya estaban cargados)");
+            }
+            
+            _isFetchingMore = false;
+          });
+        }
+      } else {
+        print("Error al cargar más usuarios: ${result['message']}");
+        if (mounted) {
+          setState(() {
+            _isFetchingMore = false;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error fetching more users: $e');
+      if (mounted) {
+        setState(() {
+          _isFetchingMore = false;
+        });
+      }
     }
-    setState(() {
-      _isFetchingMore = false;
-    });
   }
 
-  // Llamada para actualizar en el backend el perfil "visto"
-  Future<void> _updateSeenProfile(String userId) async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final token = await authProvider.getToken();
-    if (token == null) return;
-    final matchService = MatchService(token: token);
-    await matchService.updateSeenProfiles([userId]);
-  }
-
-  Future<void> _handleLike(int userIndex) async {
+  void _handleLike(int userIndex) async {
     if (_isProcessing) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -238,25 +329,8 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     int localMaxLike = (authProvider.user?.gender == 'Masculino') ? 20 : 40;
 
     // Verificar el límite de likes antes de proceder
-    if (!userIsPremium && likeCount >= localMaxLike) {
-      likeLimitReachedTime ??= DateTime.now();
-      Duration timePassed = DateTime.now().difference(likeLimitReachedTime!);
-      if (timePassed < likeLimitDuration) {
-        Duration remaining = likeLimitDuration - timePassed;
-        _showPremiumDialog(
-          tr("like_limit_reached"),
-          tr("like_limit_message", args: [
-            remaining.inHours.toString(),
-            (remaining.inMinutes % 60).toString()
-          ]),
-        );
-        return;
-      } else {
-        setState(() {
-          likeCount = 0;
-          likeLimitReachedTime = null;
-        });
-      }
+    if (!userIsPremium) {
+      // No hay implementación de límite de likes en este código
     }
 
     _isProcessing = true;
@@ -287,7 +361,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
 
     setState(() {
       _randomUsers.removeAt(userIndex);
-      if (!userIsPremium) likeCount++;
     });
 
     if (_randomUsers.isEmpty) {
@@ -303,15 +376,9 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     }
 
     _isProcessing = false;
-
-    if (!userIsPremium) {
-      _checkLikeLimit(localMaxLike);
-      // Guardar el estado del contador de likes
-      _saveLimitsData();
-    }
   }
 
-  Future<void> _handleLikeFromLeGustas(int userIndex) async {
+  void _handleLikeFromLeGustas(int userIndex) async {
     if (_isProcessing) return;
     _isProcessing = true;
     final user = _likedUsers[userIndex];
@@ -349,58 +416,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     });
 
     _isProcessing = false;
-  }
-
-  void _checkScrollLimit(int maxScrollLimit) {
-    if (scrollCount >= maxScrollLimit) {
-      scrollLimitReachedTime ??= DateTime.now();
-      Duration timePassed = DateTime.now().difference(scrollLimitReachedTime!);
-      if (timePassed < limitDuration) {
-        Duration remaining = limitDuration - timePassed;
-        _showPremiumDialog(
-          tr("premium_function"),
-          tr("scroll_limit_message", args: [
-            remaining.inHours.toString(),
-            (remaining.inMinutes % 60).toString()
-          ]),
-        );
-        // Guardamos el estado de límite alcanzado
-        _saveLimitsData();
-      } else {
-        setState(() {
-          scrollCount = 0;
-          scrollLimitReachedTime = null;
-        });
-        // Actualizamos al eliminar el límite
-        _saveLimitsData();
-      }
-    }
-  }
-
-  void _checkLikeLimit(int maxLikeLimit) {
-    if (likeCount >= maxLikeLimit) {
-      likeLimitReachedTime ??= DateTime.now();
-      Duration timePassed = DateTime.now().difference(likeLimitReachedTime!);
-      if (timePassed < likeLimitDuration) {
-        Duration remaining = likeLimitDuration - timePassed;
-        _showPremiumDialog(
-          tr("like_limit_reached"),
-          tr("like_limit_message", args: [
-            remaining.inHours.toString(),
-            (remaining.inMinutes % 60).toString()
-          ]),
-        );
-        // Guardamos el estado de límite alcanzado
-        _saveLimitsData();
-      } else {
-        setState(() {
-          likeCount = 0;
-          likeLimitReachedTime = null;
-        });
-        // Actualizamos al eliminar el límite
-        _saveLimitsData();
-      }
-    }
   }
 
   void _showPremiumDialog(String title, String content) {
@@ -550,11 +565,72 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     return null;
   }
 
+  // Método para cargar un perfil específico por ID
+  Future<void> _loadProfileById(String profileId) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final token = await authProvider.getToken();
+    if (token == null) return;
+    try {
+      print("Intentando cargar perfil con ID: $profileId");
+      final userService = UserService(token: token);
+      final result = await userService.getUserProfile(profileId);
+
+      if (result['success'] == true && result['user'] != null) {
+        final loadedUser = User.fromJson(result['user']);
+        print("Perfil cargado: ${loadedUser.username}");
+
+        // Asegurarse de que el usuario no esté ya en la lista
+        if (!_loadedProfileIds.contains(loadedUser.id)) {
+          setState(() {
+            // Insertar al principio para asegurarnos de que sea visible
+            _randomUsers.insert(0, loadedUser);
+            _loadedProfileIds.add(loadedUser.id);
+
+            // Saltar al primer elemento (perfil cargado)
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _verticalPageController.jumpToPage(0);
+              previousPageIndex = 0;
+              _currentPageIndex = 0;
+            });
+          });
+        } else {
+          // Si ya está en la lista, saltar a él
+          int indexToJump =
+              _randomUsers.indexWhere((user) => user.id == profileId);
+          if (indexToJump != -1) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _verticalPageController.jumpToPage(indexToJump);
+              previousPageIndex = indexToJump;
+              _currentPageIndex = indexToJump;
+            });
+          }
+        }
+      } else {
+        print("Error al cargar perfil: ${result['message']}");
+        // Si falla la carga, barajar la lista
+        setState(() {
+          _randomUsers.shuffle();
+        });
+      }
+    } catch (e) {
+      print('Error al cargar el perfil: $e');
+      // Si hay excepción, barajar la lista
+      setState(() {
+        _randomUsers.shuffle();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _verticalPageController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
     final auth = Provider.of<AuthProvider>(context);
-    final int maxScrollLimit = (auth.user?.gender == 'Masculino') ? 25 : 45;
     final List<User> combinedUsers = List<User>.from(_randomUsers);
     for (var likedUser in _likedUsers) {
       if (!combinedUsers.any((user) => user.id == likedUser.id)) {
@@ -575,19 +651,41 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                       style: const TextStyle(color: Colors.white),
                     ),
                   )
-                : NotificationListener<UserScrollNotification>(
+                : NotificationListener<ScrollNotification>(
                     onNotification: (notification) {
-                      if (notification.metrics.axis == Axis.vertical) {
-                        if (!auth.user!.isPremium &&
-                            notification.direction == ScrollDirection.forward) {
-                          _showPremiumDialog(
-                            tr("premium_function"),
-                            tr("premium_scroll_message"),
-                          );
+                      // Usamos el controlador de página directamente en lugar de intentar
+                      // acceder a la propiedad inexistente currentPage
+                      if (notification is ScrollUpdateNotification &&
+                          notification.metrics.axis == Axis.vertical) {
+                        // Obtener la página actual desde el controlador
+                        final currentPage =
+                            _verticalPageController.page?.round() ?? 0;
+
+                        // Si el límite de scroll está alcanzado y el usuario intenta hacer scroll hacia abajo
+                        if (_isScrollLimitReached && currentPage > previousPageIndex) {
+                          // Bloquear el scroll volviendo a la página anterior
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            _verticalPageController.jumpToPage(previousPageIndex);
+                          });
+
+                          // Mostrar el diálogo de límite alcanzado
+                          _showScrollLimitDialog();
+                          return false;
                         }
-                        if (!auth.user!.isPremium &&
-                            notification.direction == ScrollDirection.reverse) {
-                          _checkScrollLimit(maxScrollLimit);
+
+                        if (currentPage > previousPageIndex) {
+                          _updateScrollCount();
+
+                          // Registrar el perfil como visto y enviarlo al backend
+                          if (currentPage < _randomUsers.length) {
+                            final viewedUser = _randomUsers[currentPage];
+                            if (!_seenProfileIds.contains(viewedUser.id)) {
+                              _seenProfileIds.add(viewedUser.id);
+                              _updateSeenProfile(viewedUser.id);
+                            }
+                          }
+
+                          previousPageIndex = currentPage;
                         }
                       }
                       return false;
@@ -595,42 +693,20 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                     child: PageView.builder(
                       key: ValueKey(showRandom),
                       controller: _verticalPageController,
-                      scrollDirection: Axis.vertical,
                       physics: LimitedScrollPhysics(
-                        premium: auth.user?.isPremium ?? false,
-                        scrollCount: scrollCount,
-                        maxDownwardScroll: maxScrollLimit,
+                        isLimitReached: _isScrollLimitReached,
                       ),
+                      scrollDirection: Axis.vertical,
                       itemCount: currentList.length,
                       onPageChanged: (pageIndex) {
-                        if (!auth.user!.isPremium &&
-                            pageIndex > previousPageIndex) {
-                          if (scrollCount >= maxScrollLimit) {
-                            _verticalPageController
-                                .jumpToPage(previousPageIndex);
-                            return;
-                          } else {
-                            setState(() {
-                              scrollCount++;
-                            });
-                            _checkScrollLimit(maxScrollLimit);
-                          }
-                        }
-                        previousPageIndex = pageIndex;
+                        setState(() {
+                          _currentPageIndex = pageIndex;
+                        });
 
-                        // Guardar la posición actual para mantenerla entre navegaciones
-                        _currentPageIndex = pageIndex;
-                        _saveLimitsData();
-
-                        final viewedUser = currentList[pageIndex];
-                        if (!_seenProfileIds.contains(viewedUser.id)) {
-                          _seenProfileIds.add(viewedUser.id);
-                          _updateSeenProfile(viewedUser.id);
-                        }
-
-                        // Si se acerca al final, cargar más usuarios
-                        if (showRandom &&
-                            pageIndex >= currentList.length - 10) {
+                        // Ya estamos manejando la actualización del contador en el NotificationListener,
+                        // así que aquí solo verificamos si necesitamos cargar más usuarios
+                        if (pageIndex >= _randomUsers.length - 5) {
+                          print("Alcanzado umbral de carga: $pageIndex >= ${_randomUsers.length - 5}");
                           _fetchMoreUsers();
                         }
                       },
@@ -740,11 +816,11 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                           ),
                           child: FilterModalContent(
                             hasLocation: hasLocation,
-                            initialAgeRange: ageRangeFilter,
-                            initialWeightRange: weightRangeFilter,
-                            initialHeightRange: heightRangeFilter,
-                            initialGymStage: gymStageFilter,
-                            initialRelationshipType: relationshipTypeFilter,
+                            initialAgeRange: const RangeValues(18, 50),
+                            initialWeightRange: const RangeValues(50, 100),
+                            initialHeightRange: const RangeValues(150, 200),
+                            initialGymStage: 'Mantenimiento',
+                            initialRelationshipType: 'Amistad',
                           ),
                         );
                       },
@@ -758,11 +834,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                             _randomUsers = allUsers;
                             _randomUsers.shuffle();
                             showRandom = true;
-                            ageRangeFilter = const RangeValues(18, 50);
-                            weightRangeFilter = const RangeValues(50, 100);
-                            heightRangeFilter = const RangeValues(150, 200);
-                            gymStageFilter = 'Mantenimiento';
-                            relationshipTypeFilter = 'Amistad';
                           });
                         }
                       } else if (result['matches'] != null) {
@@ -771,14 +842,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                           _randomUsers = matches;
                           _randomUsers.shuffle();
                           showRandom = true;
-                          ageRangeFilter = result['ageRange'] as RangeValues;
-                          weightRangeFilter =
-                              result['weightRange'] as RangeValues;
-                          heightRangeFilter =
-                              result['heightRange'] as RangeValues;
-                          gymStageFilter = result['gymStage'] as String;
-                          relationshipTypeFilter =
-                              result['relationshipType'] as String;
                         });
                       }
                     }
@@ -878,7 +941,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
               values: weightRange,
               min: 40,
               max: 200,
-              divisions: 110,
+              divisions: 160,
               onChanged: (values) {
                 setState(() {
                   weightRange = values;

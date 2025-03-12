@@ -417,6 +417,32 @@ class UserService {
     }
   }
 
+  // Método para obtener el perfil de un usuario por su ID
+  Future<Map<String, dynamic>> getUserProfile(String userId) async {
+    final url = Uri.parse('$baseUrl/users/profile/$userId');
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return {
+        'success': true, 
+        'user': data['user'],
+      };
+    } else {
+      final data = jsonDecode(response.body);
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Error al obtener el perfil del usuario'
+      };
+    }
+  }
+
   // Método para validar imágenes sin subir (verificar contenido explícito)
   Future<Map<String, dynamic>> validateImages(List<File> photos) async {
     if (photos.isEmpty) {

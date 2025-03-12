@@ -222,5 +222,11 @@
   "image_validation_error": "Error de Validación de Imágenes",
   "cannot_proceed_with_explicit": "El registro no puede continuar con contenido explícito. Por favor, seleccione imágenes diferentes.",
   "profile_picture_required": "La foto de perfil es obligatoria",
-  "must_select_profile_picture": "Debes seleccionar una foto de perfil para continuar"
+  "must_select_profile_picture": "Debes seleccionar una foto de perfil para continuar",
+  "random": "Aleatorio",
+  "le_gustas_button": "Le gustas ({count})",
+  "premium_function": "Función Premium",
+  "premium_le_gustas_message": "Para ver los usuarios que te han dado like, necesitas ser premium. ¿Te gustaría adquirirlo?",
+  "scroll_limit_message": "Has alcanzado el límite de perfiles para ver. Espera {0} horas para ver más perfiles o hazte premium para continuar.",
+  "liked_users_count": "Usuarios que te han dado like: {0}"
 }

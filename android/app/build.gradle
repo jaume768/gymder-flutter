@@ -8,25 +8,26 @@ plugins {
 android {
     namespace "com.gymswipe.app"
 
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.gymswipe.app"
-
-        minSdk = 21
+        minSdk = 24
         targetSdk = 34
-
-        versionCode 22
+        versionCode 24
         versionName "1.0.0"
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 
     signingConfigs {
         release {
-            // Carga las propiedades del archivo key.properties
             def keystoreProperties = new Properties()
             def keystorePropertiesFile = rootProject.file("key.properties")
             keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-
             keyAlias keystoreProperties["keyAlias"]
             keyPassword keystoreProperties["keyPassword"]
             storeFile file(keystoreProperties["storeFile"])
@@ -37,10 +38,16 @@ android {
     buildTypes {
         release {
             signingConfig signingConfigs.release
-            shrinkResources true  // Reduce el tamaño de la app eliminando recursos no usados
-            minifyEnabled true    // Activa el Proguard para optimizar el código
+            shrinkResources true
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+    }
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    kotlinOptions {
+        jvmTarget = "1.8"
     }
 }
 

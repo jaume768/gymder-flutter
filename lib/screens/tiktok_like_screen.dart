@@ -59,6 +59,9 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
 
   int _currentPageIndex = 0;
   int previousPageIndex = 0;
+  
+  // Variable para guardar la posición en la lista de aleatoria
+  int _savedRandomPosition = 0;
 
   // Variables para manejar los IDs de perfiles ya cargados
   Set<String> _loadedProfileIds = {};
@@ -691,7 +694,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                       return false;
                     },
                     child: PageView.builder(
-                      key: ValueKey(showRandom),
+                      // Eliminamos la key para que no reconstruya el widget al cambiar de pestaña
                       controller: _verticalPageController,
                       physics: LimitedScrollPhysics(
                         isLimitReached: _isScrollLimitReached,
@@ -701,6 +704,10 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                       onPageChanged: (pageIndex) {
                         setState(() {
                           _currentPageIndex = pageIndex;
+                          // Guardamos la posición actual cuando estamos en la pestaña de aleatorios
+                          if (showRandom) {
+                            _savedRandomPosition = pageIndex;
+                          }
                         });
 
                         // Ya estamos manejando la actualización del contador en el NotificationListener,
@@ -741,9 +748,20 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                           elevation: 0,
                         ),
                         onPressed: () {
-                          setState(() {
-                            showRandom = true;
-                          });
+                          if (!showRandom) {
+                            setState(() {
+                              showRandom = true;
+                            });
+                            
+                            // Restaurar la posición guardada de la lista aleatoria
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (_savedRandomPosition < _randomUsers.length) {
+                                _verticalPageController.jumpToPage(_savedRandomPosition);
+                                _currentPageIndex = _savedRandomPosition;
+                                previousPageIndex = _savedRandomPosition;
+                              }
+                            });
+                          }
                         },
                         child: Text(tr("random")),
                       ),
@@ -770,9 +788,22 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                               tr("premium_le_gustas_message"),
                             );
                           } else {
+                            // Guardar la posición actual de la lista aleatoria antes de cambiar
+                            if (showRandom) {
+                              _savedRandomPosition = _currentPageIndex;
+                            }
+                            
                             setState(() {
                               showRandom = false;
                             });
+                            
+                            // Restaurar al inicio de la lista "Le gustas"
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              _verticalPageController.jumpToPage(0);
+                              _currentPageIndex = 0;
+                              previousPageIndex = 0;
+                            });
+                            
                             if (_likedUsers.isEmpty) {
                               _fetchLikedUsers();
                             }

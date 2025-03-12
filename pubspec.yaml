@@ -3,7 +3,7 @@ description: "A new Flutter project."
 
 publish_to: 'none'
 
-version: 1.0.0+22
+version: 1.0.0+24
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -35,6 +35,9 @@ dependencies:
   in_app_purchase: ^3.2.0
   google_sign_in: ^5.4.0
   reorderables: ^0.4.2
+  flutter_sound: ^9.25.4
+  path_provider: ^2.1.5
+  flutter_image_compress: ^2.4.0
 
 dev_dependencies:
   flutter_test:

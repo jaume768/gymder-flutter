@@ -3,10 +3,10 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/user_service.dart';
 import '../models/user.dart';
-import 'chat_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:easy_localization/easy_localization.dart';
+import './chat_screen.dart';
 
 class MatchesChatsScreen extends StatefulWidget {
   const MatchesChatsScreen({Key? key}) : super(key: key);

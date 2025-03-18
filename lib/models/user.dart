@@ -8,8 +8,8 @@ class ProfilePicture {
 
   factory ProfilePicture.fromJson(Map<String, dynamic> json) {
     return ProfilePicture(
-      url: json['url'],
-      publicId: json['public_id'],
+      url: json['url'] ?? '',
+      publicId: json['public_id'] ?? '',
     );
   }
 }
@@ -95,6 +95,14 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    // Print debugging info for profile picture
+    print('User.fromJson: ${json['username']}');
+    if (json['profilePicture'] != null) {
+      print('Profile picture data: ${json['profilePicture']}');
+    } else {
+      print('Profile picture is null for user: ${json['username']}');
+    }
+    
     return User(
       id: json['id'] ?? json['_id'],
       email: json['email'],

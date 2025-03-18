@@ -1,46 +1,24 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-
-import 'package:app/screens/user_profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart';
-import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
-import 'package:intl/intl.dart';
-import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
-import 'package:easy_localization/easy_localization.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
-import 'package:path/path.dart' as path;
-
+// Importa el paquete record, que ahora expone la clase AudioRecorder en lugar de Record.
+import 'package:record/record.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_sound/flutter_sound.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../providers/auth_provider.dart';
 import '../models/user.dart';
-
-/// Pantalla para ver imagen en pantalla completa
-class FullScreenImageScreen extends StatelessWidget {
-  final String imageUrl;
-  const FullScreenImageScreen({Key? key, required this.imageUrl})
-      : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: Center(
-        child: InteractiveViewer(
-          child: Image.network(imageUrl),
-        ),
-      ),
-    );
-  }
-}
+import '../models/message.dart';
+import '../widgets/audio_bubble.dart';
+import '../services/socket_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final String currentUserId;
@@ -56,894 +34,999 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
-  late IO.Socket socket;
+class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final ImagePicker _imagePicker = ImagePicker();
-  final DateFormat timeFormatter = DateFormat('hh:mm a');
+  final ImagePicker _picker = ImagePicker();
+  // Cambiado: se usa AudioRecorder (clase concreta) en lugar de Record (abstracta)
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
-  // Lista de mensajes; cada mensaje es un Map con campos: _id, senderId, type, message, imageUrl, timestamp, seenAt y opcional isLoading o pending
-  List<Map<String, dynamic>> messages = [];
-
-  // Variables para paginación
-  int _currentPage = 1;
-  final int _pageSize = 20;
-  bool _isLoadingMoreMessages = false;
-  bool _hasMoreMessages = true;
-
-  // Variables para emojis y estado de conexión
-  bool _showEmojiPicker = false;
-  bool _isConnected = true;
-  List<Map<String, dynamic>> _pendingMessages = [];
-
+  SocketService? _socketService;
+  List<Message> messages = [];
+  bool isLoading = true;
+  bool isLoadingMore = false;
+  bool hasMoreMessages = true;
+  bool isTyping = false;
+  bool isRecording = false;
+  String recordingPath = '';
+  Timer? typingTimer;
+  Timer? typingIndicatorTimer;
   User? matchedUser;
-  bool isLoadingUser = true;
-  // Estado en línea del matchedUser
-  bool matchedUserOnline = false;
+  int currentPage = 0;
+  int pageSize = 20;
+  String? typingUserId;
+  String apiUrl = 'https://gymder-api-production.up.railway.app/api';
 
   @override
   void initState() {
     super.initState();
-    _connectToSocket();
-    _fetchConversation();
-    _fetchMatchedUser();
+    WidgetsBinding.instance.addObserver(this);
+    _initSocket();
+    _loadMatchedUserInfo();
+    _loadMessages();
 
-    // Listener para detectar cuando el usuario llega al inicio de la lista y cargar más mensajes
+    // Agrega listener para paginación
     _scrollController.addListener(() {
-      if (_scrollController.position.pixels <=
-              _scrollController.position.minScrollExtent + 200 &&
-          !_isLoadingMoreMessages &&
-          _hasMoreMessages) {
-        _loadMoreMessages();
+      if (_scrollController.position.pixels ==
+          _scrollController.position.maxScrollExtent) {
+        if (!isLoadingMore && hasMoreMessages) {
+          _loadMoreMessages();
+        }
       }
-    });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToBottom();
     });
   }
 
-  // Función para comprimir imágenes antes de enviarlas
-  Future<File> _compressImage(File imageFile) async {
-    // Obtener la extensión del archivo
-    final fileName = path.basename(imageFile.path);
-    final extension = path.extension(fileName);
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _messageController.dispose();
+    _scrollController.dispose();
+    _audioPlayer.dispose();
+    _socketService?.disconnect();
+    typingTimer?.cancel();
+    typingIndicatorTimer?.cancel();
+    super.dispose();
+  }
 
-    // Obtener directorio temporal para guardar la imagen comprimida
-    final dir = await getTemporaryDirectory();
-    final targetPath = path.join(dir.path,
-        'compressed_${DateTime.now().millisecondsSinceEpoch}$extension');
-
-    // Determinar el formato de compresión
-    CompressFormat format;
-    if (extension.toLowerCase() == '.png') {
-      format = CompressFormat.png;
-    } else if (extension.toLowerCase() == '.heic') {
-      format = CompressFormat.heic;
-    } else {
-      format = CompressFormat.jpeg;
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Reconecta el socket si es necesario
+      if (_socketService == null || _socketService!.isDisconnected) {
+        _initSocket();
+      }
+      // Marca los mensajes como leídos al reanudar la app
+      _markMessagesAsRead();
     }
+  }
 
-    var result = await FlutterImageCompress.compressAndGetFile(
-      imageFile.path,
-      targetPath,
-      quality: 70, // Calidad de compresión (0-100)
-      minWidth: 1000, // Ancho mínimo
-      minHeight: 1000, // Alto mínimo
-      format: format, // Formato de compresión
+  void _initSocket() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final token = await authProvider.getToken();
+
+    _socketService = SocketService(
+      'https://gymder-api-production.up.railway.app',
+      token!,
+      widget.currentUserId,
+      widget.matchedUserId,
     );
 
-    if (result == null) {
-      print(tr("error_compressing_image"));
-      return imageFile; // Devolver la imagen original si hay error
-    }
+    _socketService!.connect();
 
-    return File(result.path);
-  }
-
-  Future<void> _fetchMatchedUser() async {
-    try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final token = await authProvider.getToken();
-      if (token == null) return;
-      final url = Uri.parse(
-          'https://gymder-api-production.up.railway.app/api/users/profile/${widget.matchedUserId}');
-      final response = await http.get(url, headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      });
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data != null && data['user'] != null) {
-          setState(() {
-            matchedUser = User.fromJson(data['user']);
-            isLoadingUser = false;
-          });
-        } else {
-          print(tr("user_not_found"));
-        }
-      } else {
-        print(tr("error_fetching_user_data") + ": ${response.statusCode}");
-      }
-    } catch (e) {
-      print(tr("error_fetching_user_data") + ": $e");
-    }
-  }
-
-  // Modificada para comprimir la imagen antes de enviarla y eliminar el mensaje de carga en caso de error
-  Future<void> _sendImageMessage(File imageFile) async {
-    final tempId = DateTime.now().millisecondsSinceEpoch.toString();
-
-    // Mostrar mensaje con estado "cargando"
-    setState(() {
-      messages.add({
-        '_id': tempId,
-        'senderId': widget.currentUserId,
-        'type': 'image',
-        'message': '',
-        'imageUrl': '',
-        'timestamp': DateTime.now().toIso8601String(),
-        'seenAt': null,
-        'isLoading': true,
-      });
+    _socketService!.onConnect(() {
+      print('Connected to socket server');
     });
-    _scrollToBottom();
 
-    try {
-      // Comprimir la imagen antes de enviarla
-      final compressedImage = await _compressImage(imageFile);
-
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final token = await authProvider.getToken();
-      if (token == null) {
-        print(tr("token_not_found_login"));
-        return;
-      }
-      final url = Uri.parse(
-          'https://gymder-api-production.up.railway.app/api/messages/upload');
-      var request = http.MultipartRequest('POST', url);
-      request.headers['Authorization'] = 'Bearer $token';
-
-      final mimeType =
-          lookupMimeType(compressedImage.path) ?? 'application/octet-stream';
-      final mimeTypeData = mimeType.split('/');
-      if (mimeTypeData.length != 2) {
-        throw Exception(tr("unknown_file_type"));
-      }
-
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'chatImage',
-          compressedImage.path,
-          contentType: MediaType(mimeTypeData[0], mimeTypeData[1]),
-        ),
+    _socketService!.onReceiveMessage((data) {
+      final newMessage = Message(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        senderId: data['senderId'],
+        message: data['message'] ?? '',
+        type: data['type'] ?? 'text',
+        imageUrl: data['imageUrl'] ?? '',
+        audioUrl: data['audioUrl'] ?? '',
+        audioDuration: data['audioDuration'] != null
+          ? (data['audioDuration'] is int
+              ? data['audioDuration'].toDouble()
+              : data['audioDuration']) 
+          : 0.0,
+        createdAt: DateTime.parse(data['timestamp']),
+        seenAt: null,
       );
 
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['success'] == true) {
-          final imageUrl = data['url'];
-          socket.emit('sendMessage', {
-            'senderId': widget.currentUserId,
-            'receiverId': widget.matchedUserId,
-            'type': 'image',
-            'imageUrl': imageUrl,
-          });
-          _scrollToBottom();
-        } else {
-          print(tr("error_sending_image") + ": ${data['message']}");
-          // Eliminar el mensaje de carga si hay error
-          setState(() {
-            messages.removeWhere((msg) => msg['_id'] == tempId);
-          });
-        }
-      } else {
-        print(tr("error_sending_image") +
-            ": ${response.statusCode}\n" +
-            tr("response_body") +
-            ": ${response.body}");
-        // Eliminar el mensaje de carga si hay error
-        setState(() {
-          messages.removeWhere((msg) => msg['_id'] == tempId);
-        });
-      }
-    } catch (e) {
-      print(tr("error_sending_image") + ": $e");
-      // Eliminar el mensaje de carga si hay error
       setState(() {
-        messages.removeWhere((msg) => msg['_id'] == tempId);
+        messages.insert(0, newMessage);
       });
-    }
-  }
 
-  Future<void> _pickImageFromGallery() async {
-    final pickedFile =
-        await _imagePicker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      final file = File(pickedFile.path);
-      await _sendImageMessage(file);
-    }
-  }
-
-  void _toggleEmojiPicker() {
-    setState(() {
-      _showEmojiPicker = !_showEmojiPicker;
+      // Marca el mensaje como leído si es del usuario emparejado
+      if (newMessage.senderId == widget.matchedUserId) {
+        _markMessagesAsRead();
+      }
     });
-  }
 
-  Future<void> _hideMessage(String messageId) async {
-    try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final token = await authProvider.getToken();
-      if (token == null) return;
-      final url = Uri.parse(
-          'https://gymder-api-production.up.railway.app/api/messages/$messageId/hide');
-      final response = await http.delete(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-      if (response.statusCode == 200) {
+    _socketService!.onMessagesMarkedAsRead((data) {
+      if (data['userId'] == widget.matchedUserId) {
         setState(() {
-          for (var msg in messages) {
-            if (msg['senderId'] == widget.matchedUserId &&
-                msg['seenAt'] == null) {
-              msg['seenAt'] = DateTime.now().toIso8601String();
+          for (var i = 0; i < messages.length; i++) {
+            if (messages[i].senderId == widget.currentUserId &&
+                messages[i].seenAt == null) {
+              messages[i] = messages[i].copyWith(seenAt: DateTime.now());
             }
           }
         });
+      }
+    });
+
+    _socketService!.onUserTyping((data) {
+      if (data['userId'] == widget.matchedUserId) {
+        setState(() {
+          typingUserId = data['userId'];
+        });
+
+        // Limpia el indicador de "escribiendo" después de 3 segundos
+        typingIndicatorTimer?.cancel();
+        typingIndicatorTimer = Timer(const Duration(seconds: 3), () {
+          if (mounted) {
+            setState(() {
+              typingUserId = null;
+            });
+          }
+        });
+      }
+    });
+
+    _socketService!.onUserStoppedTyping((data) {
+      if (data['userId'] == widget.matchedUserId) {
+        setState(() {
+          typingUserId = null;
+        });
+      }
+    });
+
+    _socketService!
+        .onDisconnect(() => print('Disconnected from socket server'));
+    _socketService!.onError((error) => print('Socket error: $error'));
+  }
+
+  Future<void> _loadMatchedUserInfo() async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = await authProvider.getToken();
+
+      // Use the getUserProfile endpoint instead of the generic users endpoint
+      final response = await http.get(
+        Uri.parse('$apiUrl/users/profile/${widget.matchedUserId}'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${token!}',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('API Response: ${response.body}');
+        
+        if (data['user'] != null) {
+          setState(() {
+            matchedUser = User.fromJson(data['user']);
+          });
+          print('Matched user loaded: ${matchedUser?.username}');
+          print('Profile picture URL: ${matchedUser?.profilePicture?.url}');
+        } else {
+          print('Error: User data not found in response');
+          print('Response data: $data');
+        }
       } else {
-        print(tr("error_hiding_message") +
-            ": ${response.statusCode}\n" +
-            tr("response_body") +
-            ": ${response.body}");
+        print('Error loading matched user: ${response.statusCode}');
+        print('Response body: ${response.body}');
       }
     } catch (e) {
-      print(tr("error_hiding_message") + ": $e");
+      print('Error loading matched user info: $e');
     }
   }
 
-  Widget _buildMessageItem(Map<String, dynamic> msg) {
-    final bool isMe = msg['senderId'] == widget.currentUserId;
-    final String type = msg['type'] ?? 'text';
+  Future<void> _loadMessages() async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
 
-    if (type == 'image') {
-      if (msg['isLoading'] == true) {
-        return Align(
-          alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-          child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-            width: 200,
-            height: 200,
-            decoration: BoxDecoration(
-              color: isMe ? Colors.white : Colors.grey[800],
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Center(child: CircularProgressIndicator()),
-          ),
-        );
-      } else {
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) =>
-                    FullScreenImageScreen(imageUrl: msg['imageUrl']),
-              ),
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = await authProvider.getToken();
+
+      final response = await http.get(
+        Uri.parse(
+            '$apiUrl/messages/conversation?user1=${widget.currentUserId}&user2=${widget.matchedUserId}&limit=$pageSize&skip=${currentPage * pageSize}'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${token!}',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success']) {
+          final List<dynamic> messageData = data['messages'];
+          final List<Message> loadedMessages =
+              messageData.map((msg) => Message.fromJson(msg)).toList();
+
+          setState(() {
+            messages = loadedMessages;
+            isLoading = false;
+            hasMoreMessages = loadedMessages.length >= pageSize;
+          });
+
+          // Marca los mensajes como leídos
+          _markMessagesAsRead();
+        }
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      print('Error loading messages: $e');
+    }
+  }
+
+  Future<void> _loadMoreMessages() async {
+    if (isLoadingMore || !hasMoreMessages) return;
+
+    try {
+      setState(() {
+        isLoadingMore = true;
+        currentPage++;
+      });
+
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = await authProvider.getToken();
+
+      final response = await http.get(
+        Uri.parse(
+            '$apiUrl/messages/conversation?user1=${widget.currentUserId}&user2=${widget.matchedUserId}&limit=$pageSize&skip=${currentPage * pageSize}'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${token!}',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success']) {
+          final List<dynamic> messageData = data['messages'];
+          final List<Message> loadedMessages =
+              messageData.map((msg) => Message.fromJson(msg)).toList();
+
+          setState(() {
+            messages.addAll(loadedMessages);
+            isLoadingMore = false;
+            hasMoreMessages = loadedMessages.length >= pageSize;
+          });
+        }
+      }
+    } catch (e) {
+      setState(() {
+        isLoadingMore = false;
+      });
+      print('Error loading more messages: $e');
+    }
+  }
+
+  void _markMessagesAsRead() {
+    final hasUnreadMessages = messages.any(
+      (msg) => msg.senderId == widget.matchedUserId && msg.seenAt == null,
+    );
+
+    if (hasUnreadMessages &&
+        _socketService != null &&
+        _socketService!.isConnected) {
+      _socketService!.markAsRead();
+    }
+  }
+
+  void _sendMessage(String message,
+      {String type = 'text',
+      String? imageUrl,
+      String? audioUrl,
+      double? audioDuration}) {
+    if ((type == 'text' && message.trim().isEmpty) ||
+        (type == 'image' && (imageUrl == null || imageUrl.isEmpty)) ||
+        (type == 'audio' && (audioUrl == null || audioUrl.isEmpty))) {
+      return;
+    }
+
+    if (_socketService != null && _socketService!.isConnected) {
+      _socketService!.sendMessage(
+        message,
+        type: type,
+        imageUrl: imageUrl ?? '',
+        audioUrl: audioUrl ?? '',
+        audioDuration: audioDuration ?? 0,
+      );
+    }
+
+    if (type == 'text') {
+      _messageController.clear();
+    }
+  }
+
+  void _onTyping() {
+    typingTimer?.cancel();
+
+    if (_socketService != null && _socketService!.isConnected) {
+      _socketService!.userTyping();
+    }
+
+    typingTimer = Timer(const Duration(seconds: 2), () {
+      if (_socketService != null && _socketService!.isConnected) {
+        _socketService!.userStoppedTyping();
+      }
+    });
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70, // Comprimir la imagen
+      );
+
+      if (image != null) {
+        setState(() {
+          isLoading = true;
+        });
+
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final token = await authProvider.getToken();
+
+        // Obtener la extensión del archivo
+        final String extension = image.path.split('.').last.toLowerCase();
+        if (!['jpg', 'jpeg', 'png'].contains(extension)) {
+          setState(() {
+            isLoading = false;
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Solo se permiten archivos JPG, JPEG y PNG')),
             );
-          },
-          child: Align(
-            alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-            child: Container(
-              margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                color: isMe ? Colors.white : Colors.grey[800],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Image.network(
-                msg['imageUrl'],
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-        );
-      }
-    } else {
-      final timestamp = msg['timestamp'];
-      DateTime dateTime;
-      try {
-        dateTime = DateTime.parse(timestamp);
-      } catch (e) {
-        dateTime = DateTime.now();
-      }
-      final formattedTime = timeFormatter.format(dateTime);
+          }
+          return;
+        }
 
-      return GestureDetector(
-        onLongPress: () async {
-          final confirm = await showDialog<bool>(
+        // Mostrar una vista previa de la imagen seleccionada
+        if (mounted) {
+          showDialog(
             context: context,
-            builder: (_) {
+            barrierDismissible: false,
+            builder: (BuildContext dialogContext) {
               return AlertDialog(
-                title: Text(tr("delete_message")),
-                content: Text(tr("delete_message_confirm")),
+                backgroundColor: Colors.grey[900],
+                title: Text('Vista previa', style: TextStyle(color: Colors.white)),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.file(File(image.path), height: 200),
+                    SizedBox(height: 20),
+                    isLoading 
+                      ? CircularProgressIndicator() 
+                      : Text('¿Enviar esta imagen?', style: TextStyle(color: Colors.white70)),
+                  ],
+                ),
                 actions: [
                   TextButton(
-                    child: Text(tr("cancel")),
-                    onPressed: () => Navigator.pop(context, false),
+                    child: Text('Cancelar', style: TextStyle(color: Colors.red)),
+                    onPressed: () {
+                      setState(() {
+                        isLoading = false;
+                      });
+                      Navigator.of(dialogContext).pop();
+                    },
                   ),
                   TextButton(
-                    child: Text(tr("delete")),
-                    onPressed: () => Navigator.pop(context, true),
+                    child: Text('Enviar', style: TextStyle(color: Colors.blue)),
+                    onPressed: () async {
+                      Navigator.of(dialogContext).pop();
+                      
+                      try {
+                        var request = http.MultipartRequest(
+                            'POST', Uri.parse('$apiUrl/messages/upload'));
+
+                        request.headers.addAll({
+                          'Authorization': 'Bearer ${token!}',
+                        });
+
+                        // Asegurarse de que el tipo MIME sea correcto
+                        final mimeType = 'image/${extension == 'jpg' ? 'jpeg' : extension}';
+                        
+                        request.files.add(await http.MultipartFile.fromPath(
+                          'chatImage',
+                          image.path,
+                          contentType: MediaType.parse(mimeType),
+                        ));
+
+                        var response = await request.send();
+                        var responseData = await response.stream.bytesToString();
+                        var data = jsonDecode(responseData);
+
+                        setState(() {
+                          isLoading = false;
+                        });
+
+                        if (data['success'] == true) {
+                          _sendMessage('', type: 'image', imageUrl: data['url']);
+                        } else {
+                          throw Exception('Error en la respuesta del servidor: ${data['message'] ?? 'Error desconocido'}');
+                        }
+                      } catch (e) {
+                        setState(() {
+                          isLoading = false;
+                        });
+                        print('Error uploading image: $e');
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error al enviar la imagen: $e')),
+                          );
+                        }
+                      }
+                    },
                   ),
                 ],
               );
             },
           );
-          if (confirm == true && msg['_id'] != null && msg['_id'] != '') {
-            _hideMessage(msg['_id']);
-          }
-        },
-        child: Align(
-          alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-          child: Container(
-            constraints: BoxConstraints(
-              minWidth: 80,
-              maxWidth: MediaQuery.of(context).size.width * 0.8,
-            ),
-            margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-            decoration: BoxDecoration(
-              color: isMe ? Colors.white : Colors.grey[800],
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Stack(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(
-                    left: 10,
-                    right: 24,
-                    top: 10,
-                    bottom: 15,
-                  ),
-                  child: Text(
-                    msg['message'] ?? '',
-                    style: TextStyle(
-                      color: isMe ? Colors.black : Colors.white,
-                      fontSize: 19,
+        }
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      print('Error picking image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al seleccionar la imagen: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _startRecording() async {
+    try {
+      // Solicitar permiso de micrófono
+      if (await Permission.microphone.request().isGranted) {
+        final tempDir = await getTemporaryDirectory();
+        final path =
+            '${tempDir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+        // Inicia la grabación utilizando el nuevo RecordConfig
+        await _audioRecorder.start(
+          RecordConfig(
+            encoder: AudioEncoder.aacLc,
+            bitRate: 128000,
+            sampleRate: 44100,
+          ),
+          path: path,
+        );
+
+        setState(() {
+          isRecording = true;
+          recordingPath = path;
+        });
+      }
+    } catch (e) {
+      print('Error starting recording: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al iniciar la grabación: $e')),
+      );
+    }
+  }
+
+  Future<void> _stopRecording() async {
+    try {
+      if (!isRecording) return;
+
+      // Detiene la grabación y obtiene la ruta del archivo
+      final path = await _audioRecorder.stop();
+
+      setState(() {
+        isRecording = false;
+      });
+
+      if (path != null) {
+        // Mostrar una vista previa del audio grabado
+        if (mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext dialogContext) {
+              return StatefulBuilder(
+                builder: (context, setDialogState) {
+                  bool isPreviewPlaying = false;
+                  bool isPreviewLoading = true;
+                  double audioDuration = 0.0;
+                  
+                  // Obtener la duración del audio
+                  _getAudioDuration(path).then((duration) {
+                    setDialogState(() {
+                      audioDuration = duration;
+                      isPreviewLoading = false;
+                    });
+                  });
+                  
+                  return AlertDialog(
+                    backgroundColor: Colors.grey[900],
+                    title: Text('Vista previa de audio', style: TextStyle(color: Colors.white)),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        isPreviewLoading 
+                          ? CircularProgressIndicator() 
+                          : Row(
+                              children: [
+                                IconButton(
+                                  icon: Icon(
+                                    isPreviewPlaying ? Icons.pause : Icons.play_arrow,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: () async {
+                                    if (isPreviewPlaying) {
+                                      await _audioPlayer.pause();
+                                    } else {
+                                      await _audioPlayer.play(DeviceFileSource(path));
+                                    }
+                                    setDialogState(() {
+                                      isPreviewPlaying = !isPreviewPlaying;
+                                    });
+                                  },
+                                ),
+                                Text(
+                                  '${(audioDuration / 1000).toStringAsFixed(1)}s', 
+                                  style: TextStyle(color: Colors.white)
+                                ),
+                              ],
+                            ),
+                        SizedBox(height: 20),
+                        Text('¿Enviar este audio?', style: TextStyle(color: Colors.white70)),
+                      ],
                     ),
+                    actions: [
+                      TextButton(
+                        child: Text('Cancelar', style: TextStyle(color: Colors.red)),
+                        onPressed: () {
+                          _audioPlayer.stop();
+                          Navigator.of(dialogContext).pop();
+                        },
+                      ),
+                      TextButton(
+                        child: Text('Enviar', style: TextStyle(color: Colors.blue)),
+                        onPressed: () async {
+                          _audioPlayer.stop();
+                          Navigator.of(dialogContext).pop();
+                          
+                          setState(() {
+                            isLoading = true;
+                          });
+                          
+                          try {
+                            final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                            final token = await authProvider.getToken();
+
+                            final file = File(path);
+                            final fileExists = await file.exists();
+                            if (!fileExists) {
+                              setState(() {
+                                isLoading = false;
+                              });
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('El archivo de audio no existe')),
+                                );
+                              }
+                              return;
+                            }
+
+                            var request = http.MultipartRequest(
+                                'POST', Uri.parse('$apiUrl/messages/upload-audio'));
+
+                            request.headers.addAll({
+                              'Authorization': 'Bearer ${token!}',
+                            });
+
+                            // Asegurarse de que el tipo MIME sea correcto
+                            request.files.add(await http.MultipartFile.fromPath(
+                              'chatAudio',
+                              path,
+                              contentType: MediaType.parse('audio/aac'),
+                            ));
+
+                            request.fields['duration'] = audioDuration.toString();
+
+                            var response = await request.send();
+                            var responseData = await response.stream.bytesToString();
+                            var data = jsonDecode(responseData);
+
+                            setState(() {
+                              isLoading = false;
+                            });
+
+                            if (data['success'] == true) {
+                              _sendMessage('',
+                                  type: 'audio',
+                                  audioUrl: data['url'],
+                                  audioDuration: double.parse(data['duration'].toString()));
+                            } else {
+                              throw Exception('Error en la respuesta del servidor: ${data['message'] ?? 'Error desconocido'}');
+                            }
+                          } catch (e) {
+                            setState(() {
+                              isLoading = false;
+                            });
+                            print('Error uploading audio: $e');
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error al enviar el audio: $e')),
+                              );
+                            }
+                          }
+                        },
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          );
+        }
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+        isRecording = false;
+      });
+      print('Error stopping recording: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al detener la grabación: $e')),
+        );
+      }
+    }
+  }
+
+  Future<double> _getAudioDuration(String path) async {
+    try {
+      final file = File(path);
+      if (!await file.exists()) {
+        return 0.0;
+      }
+      
+      final FlutterSoundPlayer player = FlutterSoundPlayer();
+      await player.openPlayer();
+      await player.setSubscriptionDuration(const Duration(milliseconds: 100));
+
+      final duration = await player.startPlayer(fromURI: path);
+      await player.stopPlayer();
+      await player.closePlayer();
+
+      return duration?.inMilliseconds.toDouble() ?? 0.0;
+    } catch (e) {
+      print('Error getting audio duration: $e');
+      return 0.0;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Debug information for profile picture
+    if (matchedUser != null) {
+      print('Building chat screen with matched user: ${matchedUser!.username}');
+      print('Has profile picture: ${matchedUser!.profilePicture != null}');
+      if (matchedUser!.profilePicture != null) {
+        print('Profile picture URL: ${matchedUser!.profilePicture!.url}');
+        print('URL is empty: ${matchedUser!.profilePicture!.url.isEmpty}');
+      }
+    } else {
+      print('Matched user is null in build method');
+    }
+    
+    return Scaffold(
+      backgroundColor: const Color(0xFF121212),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: Colors.grey[800],
+              backgroundImage: (matchedUser?.profilePicture != null &&
+                      matchedUser!.profilePicture!.url.isNotEmpty)
+                  ? CachedNetworkImageProvider(
+                      matchedUser!.profilePicture!.url,
+                    ) as ImageProvider
+                  : null,
+              child: (matchedUser?.profilePicture == null ||
+                      matchedUser!.profilePicture!.url.isEmpty)
+                  ? const Icon(Icons.person, color: Colors.white, size: 24)
+                  : null,
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  matchedUser?.username ?? tr("loading"),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                Positioned(
-                  bottom: 4,
-                  right: 8,
-                  child: Row(
+                if (typingUserId == widget.matchedUserId)
+                  Text(
+                    tr("typing"),
+                    style: const TextStyle(
+                      color: Colors.green,
+                      fontSize: 12,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: isLoading && messages.isEmpty
+                ? const Center(child: CircularProgressIndicator())
+                : Stack(
+                    children: [
+                      ListView.builder(
+                        controller: _scrollController,
+                        reverse: true,
+                        padding: const EdgeInsets.all(10),
+                        itemCount: messages.length +
+                            (isLoadingMore ? 1 : 0) +
+                            (hasMoreMessages ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == messages.length && isLoadingMore) {
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: CircularProgressIndicator(),
+                              ),
+                            );
+                          }
+
+                          if (index == messages.length &&
+                              hasMoreMessages &&
+                              !isLoadingMore) {
+                            return Center(
+                              child: TextButton(
+                                onPressed: _loadMoreMessages,
+                                child: Text(tr("load_more_messages")),
+                              ),
+                            );
+                          }
+
+                          final message = messages[index];
+                          final isMe = message.senderId == widget.currentUserId;
+
+                          return _buildMessageBubble(message, isMe);
+                        },
+                      ),
+                      if (isLoading && messages.isNotEmpty)
+                        const Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: LinearProgressIndicator(),
+                        ),
+                    ],
+                  ),
+          ),
+          _buildInputArea(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessageBubble(Message message, bool isMe) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        mainAxisAlignment:
+            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!isMe) ...[
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: Colors.grey[800],
+              backgroundImage: (matchedUser?.profilePicture != null &&
+                      matchedUser!.profilePicture!.url.isNotEmpty)
+                  ? CachedNetworkImageProvider(
+                      matchedUser!.profilePicture!.url,
+                    ) as ImageProvider
+                  : null,
+              child: (matchedUser?.profilePicture == null ||
+                      matchedUser!.profilePicture!.url.isEmpty)
+                  ? const Icon(Icons.person, color: Colors.white, size: 16)
+                  : null,
+            ),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: isMe ? Colors.blue[700] : Colors.grey[800],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (message.type == 'text')
+                    Text(
+                      message.message,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                    )
+                  else if (message.type == 'image')
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => Scaffold(
+                              backgroundColor: Colors.black,
+                              appBar: AppBar(
+                                backgroundColor: Colors.black,
+                                iconTheme:
+                                    const IconThemeData(color: Colors.white),
+                              ),
+                              body: Center(
+                                child: InteractiveViewer(
+                                  minScale: 0.5,
+                                  maxScale: 4.0,
+                                  child: CachedNetworkImage(
+                                    imageUrl: message.imageUrl,
+                                    placeholder: (context, url) => const Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                    errorWidget: (context, url, error) =>
+                                        const Icon(
+                                      Icons.error,
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: CachedNetworkImage(
+                          imageUrl: message.imageUrl,
+                          placeholder: (context, url) => const SizedBox(
+                            height: 150,
+                            width: 200,
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                          errorWidget: (context, url, error) => const SizedBox(
+                            height: 150,
+                            width: 200,
+                            child: Icon(Icons.error, color: Colors.red),
+                          ),
+                          height: 150,
+                          width: 200,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    )
+                  else if (message.type == 'audio')
+                    AudioBubble(
+                      audioUrl: message.audioUrl,
+                      duration: message.audioDuration,
+                      isMe: isMe,
+                    ),
+                  const SizedBox(height: 4),
+                  Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        formattedTime,
+                        DateFormat('HH:mm').format(message.createdAt),
                         style: TextStyle(
+                          color: Colors.white.withOpacity(0.7),
                           fontSize: 10,
-                          color: isMe ? Colors.black : Colors.white70,
                         ),
                       ),
                       if (isMe) ...[
                         const SizedBox(width: 4),
                         Icon(
-                          Icons.done_all,
-                          size: 16,
-                          color:
-                              msg['seenAt'] != null ? Colors.blue : Colors.grey,
+                          message.seenAt != null ? Icons.done_all : Icons.done,
+                          size: 14,
+                          color: message.seenAt != null
+                              ? Colors.blue[300]
+                              : Colors.white.withOpacity(0.7),
                         ),
                       ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-  }
-
-  // Nueva función para cargar más mensajes (paginación)
-  Future<void> _loadMoreMessages() async {
-    if (_isLoadingMoreMessages || !_hasMoreMessages) return;
-
-    setState(() {
-      _currentPage++;
-    });
-
-    await _fetchConversation();
-  }
-
-  // Función modificada para obtener la conversación con paginación
-  Future<void> _fetchConversation() async {
-    try {
-      setState(() {
-        _isLoadingMoreMessages = true;
-      });
-
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final token = await authProvider.getToken();
-      if (token == null) {
-        print(tr("token_not_found_login"));
-        setState(() {
-          _isLoadingMoreMessages = false;
-        });
-        return;
-      }
-
-      // Calculamos el límite y offset para la paginación
-      final limit = _pageSize;
-      final skip = (_currentPage - 1) * _pageSize;
-
-      final url = Uri.parse(
-          'https://gymder-api-production.up.railway.app/api/messages/conversation'
-          '?user1=${widget.currentUserId}&user2=${widget.matchedUserId}'
-          '&limit=$limit&skip=$skip');
-
-      final response = await http.get(url, headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      });
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['success'] == true) {
-          final List<dynamic> msgs = data['messages'];
-
-          // Verificar si hay más mensajes para cargar
-          setState(() {
-            _hasMoreMessages = msgs.length >= _pageSize;
-
-            // Si es la primera página, reemplazamos los mensajes;
-            // si no, los agregamos al principio de la lista.
-            if (_currentPage == 1) {
-              messages = msgs.map((m) {
-                return {
-                  '_id': m['_id'],
-                  'senderId': m['sender'],
-                  'type': m['type'],
-                  'message': m['message'],
-                  'imageUrl': m['imageUrl'],
-                  'timestamp': m['createdAt'],
-                  'seenAt': m['seenAt'],
-                };
-              }).toList();
-            } else {
-              final newMessages = msgs.map((m) {
-                return {
-                  '_id': m['_id'],
-                  'senderId': m['sender'],
-                  'type': m['type'],
-                  'message': m['message'],
-                  'imageUrl': m['imageUrl'],
-                  'timestamp': m['createdAt'],
-                  'seenAt': m['seenAt'],
-                };
-              }).toList();
-
-              messages.insertAll(0, newMessages);
-            }
-
-            _isLoadingMoreMessages = false;
-          });
-
-          // Solo hacer scroll al fondo en la primera carga
-          if (_currentPage == 1) {
-            _scrollToBottom();
-          }
-        } else {
-          print(tr("error_fetching_messages") + ": ${data['message']}");
-          setState(() {
-            _isLoadingMoreMessages = false;
-          });
-        }
-      } else {
-        print(tr("error_fetching_messages") +
-            ": ${response.statusCode}\n" +
-            tr("response_body") +
-            ": ${response.body}");
-        setState(() {
-          _isLoadingMoreMessages = false;
-        });
-      }
-    } catch (e) {
-      print(tr("error_fetching_messages") + ": $e");
-      setState(() {
-        _isLoadingMoreMessages = false;
-      });
-    }
-  }
-
-  // Función para reenviar mensajes pendientes luego de reconectar
-  Future<void> _resendPendingMessages() async {
-    if (_pendingMessages.isEmpty) return;
-
-    List<Map<String, dynamic>> messagesToSend = List.from(_pendingMessages);
-    _pendingMessages.clear();
-
-    for (var msg in messagesToSend) {
-      if (msg['type'] == 'text') {
-        socket.emit('sendMessage', {
-          'senderId': widget.currentUserId,
-          'receiverId': widget.matchedUserId,
-          'type': 'text',
-          'message': msg['message'],
-        });
-      } else if (msg['type'] == 'image' && msg['imageUrl'] != null) {
-        socket.emit('sendMessage', {
-          'senderId': widget.currentUserId,
-          'receiverId': widget.matchedUserId,
-          'type': 'image',
-          'imageUrl': msg['imageUrl'],
-        });
-      }
-      // Pausa breve entre mensajes para evitar sobrecarga
-      await Future.delayed(Duration(milliseconds: 100));
-    }
-  }
-
-  // Función para conectar al socket con reconexión y manejo de estado
-  void _connectToSocket() {
-    socket = IO.io(
-      'https://gymder-api-production.up.railway.app',
-      IO.OptionBuilder()
-          .setTransports(['websocket'])
-          .enableReconnection() // Habilitar reconexión automática
-          .setReconnectionAttempts(10) // Intentos de reconexión
-          .setReconnectionDelay(1000) // Tiempo entre intentos (ms)
-          .setReconnectionDelayMax(5000) // Tiempo máximo entre intentos (ms)
-          .setRandomizationFactor(0.5) // Factor de aleatorización
-          .build(),
-    );
-    socket.connect();
-
-    socket.onConnect((_) {
-      print('Connected to socket.io server');
-      setState(() {
-        _isConnected = true;
-      });
-
-      // Al reconectar, unirse nuevamente a la sala y reenviar los mensajes pendientes
-      socket.emit('joinRoom', {
-        'userId': widget.currentUserId,
-        'matchedUserId': widget.matchedUserId,
-      });
-
-      socket.emit('markAsRead', {
-        'userId': widget.currentUserId,
-        'matchedUserId': widget.matchedUserId,
-      });
-
-      // Reenviar mensajes pendientes
-      _resendPendingMessages();
-    });
-
-    socket.onConnectError((error) {
-      print('Connection error: $error');
-      setState(() {
-        _isConnected = false;
-      });
-    });
-
-    socket.onDisconnect((_) {
-      print('Disconnected from server');
-      setState(() {
-        _isConnected = false;
-      });
-    });
-
-    // Resto de los listeners (receiveMessage, messagesMarkedAsRead, userStatus, errorMessage)
-    socket.on('receiveMessage', (data) {
-      if (data['type'] == 'image' && data['senderId'] == widget.currentUserId) {
-        final index = messages.indexWhere((m) =>
-            m['isLoading'] == true && m['senderId'] == widget.currentUserId);
-        if (index != -1) {
-          setState(() {
-            messages[index] = {
-              '_id': data['_id'] ?? '',
-              'senderId': data['senderId'],
-              'type': data['type'] ?? 'text',
-              'message': data['message'] ?? '',
-              'imageUrl': data['imageUrl'] ?? '',
-              'timestamp': data['timestamp'],
-              'seenAt': data['seenAt'],
-            };
-          });
-          _scrollToBottom();
-          return;
-        }
-      }
-      setState(() {
-        messages.add({
-          '_id': data['_id'] ?? '',
-          'senderId': data['senderId'],
-          'type': data['type'] ?? 'text',
-          'message': data['message'] ?? '',
-          'imageUrl': data['imageUrl'] ?? '',
-          'timestamp': data['timestamp'],
-          'seenAt': data['seenAt'],
-        });
-      });
-      _scrollToBottom();
-    });
-
-    socket.on('messagesMarkedAsRead', (data) {
-      print('Messages marked as read: $data');
-      setState(() {
-        for (var msg in messages) {
-          if (msg['senderId'] == widget.matchedUserId &&
-              msg['seenAt'] == null) {
-            msg['seenAt'] = DateTime.now().toIso8601String();
-          }
-        }
-      });
-    });
-
-    socket.on('userStatus', (data) {
-      if (data['userId'] == widget.matchedUserId) {
-        setState(() {
-          matchedUserOnline = data['online'];
-        });
-      }
-    });
-
-    socket.on('errorMessage', (data) => print('Server error: $data'));
-  }
-
-  // Modificada para manejar mensajes pendientes y conexión
-  void _sendMessage() {
-    final msg = _messageController.text.trim();
-    if (msg.isEmpty) return;
-
-    // Crear el objeto de mensaje
-    final messageObj = {
-      'senderId': widget.currentUserId,
-      'receiverId': widget.matchedUserId,
-      'type': 'text',
-      'message': msg,
-    };
-
-    // Añadir mensaje a la lista local inmediatamente
-    final tempId = DateTime.now().millisecondsSinceEpoch.toString();
-    setState(() {
-      messages.add({
-        '_id': tempId,
-        'senderId': widget.currentUserId,
-        'type': 'text',
-        'message': msg,
-        'imageUrl': '',
-        'timestamp': DateTime.now().toIso8601String(),
-        'seenAt': null,
-        'pending': !_isConnected, // Marcar como pendiente si no hay conexión
-      });
-    });
-
-    // Limpiar el campo de texto
-    _messageController.clear();
-
-    // Enviar el mensaje si hay conexión, o guardarlo para enviar después
-    if (_isConnected) {
-      socket.emit('sendMessage', messageObj);
-    } else {
-      // Guardar en la lista de mensajes pendientes
-      _pendingMessages.add({
-        ...messageObj,
-        '_id': tempId,
-      });
-
-      // Mostrar notificación al usuario
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(tr("message_queued_offline")),
-          duration: Duration(seconds: 2),
-          backgroundColor: Colors.orange,
-        ),
-      );
-    }
-
-    _scrollToBottom();
-  }
-
-  // Función para hacer scroll hasta el fondo de la lista de mensajes
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-  }
-
-  // Indicador de carga para la paginación (cuando se cargan más mensajes)
-  Widget _buildLoadingIndicator() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 15),
-      alignment: Alignment.center,
-      child: const CircularProgressIndicator(
-        strokeWidth: 2,
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    socket.dispose();
-    _messageController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      // AppBar con indicador de conexión y perfil del usuario
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Row(
-          children: [
-            isLoadingUser
-                ? CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Colors.grey[300],
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => UserProfileScreen(
-                            userId: widget.matchedUserId,
-                          ),
-                        ),
-                      );
-                    },
-                    child: Hero(
-                      tag: 'profile-${widget.matchedUserId}',
-                      child: CircleAvatar(
-                        radius: 18,
-                        backgroundImage: NetworkImage(
-                          matchedUser?.profilePicture?.url ??
-                              'https://res.cloudinary.com/dkghwqgbi/image/upload/v1701175862/gymder/default_profile_uqjykt.jpg',
-                        ),
-                      ),
-                    ),
-                  ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    matchedUser?.username ?? tr("loading"),
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  Row(
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _isConnected
-                              ? (matchedUserOnline ? Colors.green : Colors.grey)
-                              : Colors.orange,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        _isConnected
-                            ? (matchedUserOnline ? tr("online") : tr("offline"))
-                            : tr("reconnecting"),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
                     ],
                   ),
                 ],
               ),
             ),
-          ],
-        ),
-        actions: [
-          // Tus acciones existentes...
+          ),
+          if (isMe) const SizedBox(width: 24),
         ],
       ),
-      backgroundColor: Colors.grey[900],
-      body: Column(
+    );
+  }
+
+  Widget _buildInputArea() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      color: const Color(0xFF1E1E1E),
+      child: Row(
         children: [
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              reverse: false,
-              itemCount: messages.length +
-                  (_isLoadingMoreMessages && _currentPage > 1 ? 1 : 0),
-              itemBuilder: (context, index) {
-                // Mostrar indicador de carga al principio de la lista cuando se cargan más mensajes
-                if (_isLoadingMoreMessages && _currentPage > 1 && index == 0) {
-                  return _buildLoadingIndicator();
-                }
-
-                // Ajustar el índice si se está mostrando el indicador de carga
-                final messageIndex = _isLoadingMoreMessages && _currentPage > 1
-                    ? index - 1
-                    : index;
-
-                if (messageIndex < 0 || messageIndex >= messages.length) {
-                  return const SizedBox.shrink();
-                }
-
-                return _buildMessageItem(messages[messageIndex]);
-              },
-            ),
+          IconButton(
+            icon: const Icon(Icons.photo, color: Colors.white),
+            onPressed: _pickImage,
           ),
-          if (_showEmojiPicker)
-            SizedBox(
-              height: 250,
-              child: EmojiPicker(
-                onEmojiSelected: (category, emoji) {
-                  setState(() {
-                    _messageController.text += emoji.emoji;
-                  });
-                },
+          Expanded(
+            child: TextField(
+              controller: _messageController,
+              style: const TextStyle(color: Colors.white),
+              onChanged: (_) => _onTyping(),
+              decoration: InputDecoration(
+                hintText: tr("type_a_message"),
+                hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                filled: true,
+                fillColor: Colors.grey[800],
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide.none,
+                ),
               ),
             ),
-          SafeArea(
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.photo, color: Colors.white),
-                  onPressed: _pickImageFromGallery,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.emoji_emotions_outlined,
-                      color: Colors.white),
-                  onPressed: _toggleEmojiPicker,
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText: tr("type_a_message"),
-                      hintStyle: const TextStyle(color: Colors.white54),
-                      filled: true,
-                      fillColor: Colors.grey[800],
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 12),
-                    ),
-                    onTap: () {
-                      if (_showEmojiPicker) {
-                        setState(() => _showEmojiPicker = false);
-                      }
-                    },
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.send, color: Colors.white),
-                  onPressed: _sendMessage,
-                ),
-              ],
+          ),
+          GestureDetector(
+            onLongPress: _startRecording,
+            onLongPressEnd: (_) => _stopRecording(),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isRecording ? Colors.red : Colors.blue,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isRecording ? Icons.mic : Icons.mic_none,
+                color: Colors.white,
+              ),
             ),
-          )
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => _sendMessage(_messageController.text),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Colors.blue,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.send,
+                color: Colors.white,
+              ),
+            ),
+          ),
         ],
       ),
     );

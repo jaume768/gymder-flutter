@@ -23,6 +23,7 @@ import 'package:dio/dio.dart';
 import 'package:video_player/video_player.dart';
 import 'package:path/path.dart' as p;
 import 'package:chewie/chewie.dart';
+import 'user_profile_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   final String currentUserId;
@@ -414,22 +415,22 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           builder: (BuildContext dialogContext) {
             return AlertDialog(
               backgroundColor: Colors.grey[900],
-              title: Text('Vista previa', style: TextStyle(color: Colors.white)),
+              title: Text(tr('image_preview'), style: TextStyle(color: Colors.white)),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Image.file(File(image.path), height: 200),
                   const SizedBox(height: 20),
-                  const Text('¿Enviar esta imagen?', style: TextStyle(color: Colors.white70)),
+                  Text(tr('send_this_image'), style: const TextStyle(color: Colors.white70)),
                 ],
               ),
               actions: [
                 TextButton(
-                  child: Text('Cancelar', style: TextStyle(color: Colors.red)),
+                  child: Text(tr('cancel_action'), style: TextStyle(color: Colors.red)),
                   onPressed: () => Navigator.of(dialogContext).pop(),
                 ),
                 TextButton(
-                  child: Text('Enviar', style: TextStyle(color: Colors.blue)),
+                  child: Text(tr('send_action'), style: TextStyle(color: Colors.blue)),
                   onPressed: () async {
                     Navigator.of(dialogContext).pop();
                     try {
@@ -606,57 +607,69 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       backgroundColor: const Color(0xFF121212),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E1E1E),
-        title: Row(
-          children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: Colors.grey[800],
-              backgroundImage: (matchedUser?.profilePicture != null &&
-                      matchedUser!.profilePicture!.url.isNotEmpty)
-                  ? CachedNetworkImageProvider(
-                      matchedUser!.profilePicture!.url,
-                    ) as ImageProvider
-                  : null,
-              child: (matchedUser?.profilePicture == null ||
-                      matchedUser!.profilePicture!.url.isEmpty)
-                  ? const Icon(Icons.person, color: Colors.white, size: 24)
-                  : null,
-            ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  matchedUser?.username ?? tr("loading"),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (typingUserId == widget.matchedUserId)
-                  Text(
-                    tr("typing"),
-                    style: const TextStyle(
-                      color: Colors.green,
-                      fontSize: 12,
-                    ),
-                  )
-                else if (isOnline)
-                  Text(
-                    'Online',
-                    style: const TextStyle(
-                      color: Colors.green,
-                      fontSize: 12,
-                    ),
-                  ),
-              ],
-            ),
-          ],
-        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: GestureDetector(
+          onTap: () {
+            if (matchedUser != null) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => UserProfileScreen(userId: widget.matchedUserId),
+                ),
+              );
+            }
+          },
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: Colors.grey[800],
+                backgroundImage: (matchedUser?.profilePicture != null &&
+                        matchedUser!.profilePicture!.url.isNotEmpty)
+                    ? CachedNetworkImageProvider(
+                        matchedUser!.profilePicture!.url,
+                      ) as ImageProvider
+                    : null,
+                child: (matchedUser?.profilePicture == null ||
+                        matchedUser!.profilePicture!.url.isEmpty)
+                    ? const Icon(Icons.person, color: Colors.white, size: 24)
+                    : null,
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    matchedUser?.username ?? tr("loading"),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (typingUserId == widget.matchedUserId)
+                    Text(
+                      tr("typing"),
+                      style: const TextStyle(
+                        color: Colors.green,
+                        fontSize: 12,
+                      ),
+                    )
+                  else if (isOnline)
+                    Text(
+                      tr("online"),
+                      style: const TextStyle(
+                        color: Colors.green,
+                        fontSize: 12,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
       body: Column(

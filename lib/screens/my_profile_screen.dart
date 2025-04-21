@@ -58,7 +58,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           },
         ),
         title:
-            Text(tr("my_profile"), style: const TextStyle(color: Colors.white)),
+            Text(tr("personal_information"), style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
@@ -78,7 +78,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Foto de perfil y botón de editar
+            // Profile picture and edit button
             Stack(
               children: [
                 CircleAvatar(
@@ -109,14 +109,14 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                       child: Icon(Icons.edit,
                           color: Colors.white,
                           size: 24,
-                          semanticLabel: tr("edit_profile")),
+                          semanticLabel: tr("edit_button")),
                     ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            // Nombre de usuario
+            // Username
             Text(
               user.username ?? '',
               style: const TextStyle(
@@ -125,7 +125,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                 color: Colors.white,
               ),
             ),
-            // Biografía
+            // Biografía / Biography
             if (user.biography != null && user.biography!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
@@ -177,9 +177,9 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             // Fotografías adicionales
             if (user.photos != null && user.photos!.isNotEmpty) ...[
               const SizedBox(height: 16),
-              const Text(
-                "Fotografías:",
-                style: TextStyle(
+              Text(
+                tr("photos"),
+                style: const TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,

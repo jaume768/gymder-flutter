@@ -506,7 +506,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
               ),
               const SizedBox(height: 10),
               Text(
-                tr("match_message", args: [matchedUser.username ?? ""]),
+                tr("match_message", namedArgs: {"username": matchedUser.username ?? ""}),
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white70, fontSize: 16),
               ),

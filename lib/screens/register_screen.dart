@@ -60,6 +60,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // NUEVO: variables para altura y peso
   double? height;
   double? weight;
+  int? age; // Variable para la edad
   
   // Variable para aceptación de términos y condiciones
   bool acceptedTerms = false;
@@ -658,7 +659,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
       } else {
         print(
-            "Enviando => height: $height, weight: $weight, gymStage: $gymStage");
+            "Enviando => age: $age, height: $height, weight: $weight, gymStage: $gymStage");
         final result = await authProvider.register(
           email: email,
           password: password,
@@ -668,6 +669,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           gender: gender,
           seeking: seeking,
           relationshipGoal: relationshipGoal,
+          age: age, // Añadimos la edad
           height: height,
           weight: weight,
           gymStage: gymStage,
@@ -1269,8 +1271,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 lastDate: now,
               );
               if (pickedDate != null) {
+                // Calcular la edad a partir de la fecha de nacimiento
+                final now = DateTime.now();
+                int calculatedAge = now.year - pickedDate.year;
+                if (now.month < pickedDate.month ||
+                    (now.month == pickedDate.month && now.day < pickedDate.day)) {
+                  calculatedAge--;
+                }
+                
                 setState(() {
                   birthDate = pickedDate;
+                  age = calculatedAge;
                 });
               }
             },

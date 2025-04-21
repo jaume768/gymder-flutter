@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/material.dart';
 
 /// InputFormatter que evita que se inserten más de un salto de línea (dos líneas).
 class TwoLineTextInputFormatter extends TextInputFormatter {
@@ -99,7 +100,10 @@ class PersonalInfoForm extends StatelessWidget {
   final String gender;
   final List<String> seeking;
   final String relationshipGoal;
-  final String biography; // NUEVO: biografía
+  final String biography; // Biografía
+  final int age; // Edad
+  final int height; // Altura en cm
+  final int weight; // Peso en kg
 
   final ValueChanged<String> onFirstNameChanged;
   final ValueChanged<String> onLastNameChanged;
@@ -107,6 +111,9 @@ class PersonalInfoForm extends StatelessWidget {
   final ValueChanged<String?> onGenderChanged;
   final ValueChanged<String?> onRelationshipGoalChanged;
   final ValueChanged<String> onBiographyChanged; // Callback para biografía
+  final ValueChanged<int> onAgeChanged; // Callback para edad
+  final ValueChanged<int> onHeightChanged; // Callback para altura
+  final ValueChanged<int> onWeightChanged; // Callback para peso
 
   // CAMBIO: se pasa la opción y el bool para el filtro "Buscando"
   final Function(String option, bool isSelected) onSeekingSelectionChanged;
@@ -120,13 +127,19 @@ class PersonalInfoForm extends StatelessWidget {
     required this.gender,
     required this.seeking,
     required this.relationshipGoal,
-    required this.biography, // Se requiere la biografía
+    required this.biography,
+    required this.age, // Edad
+    required this.height, // Altura
+    required this.weight, // Peso
     required this.onFirstNameChanged,
     required this.onLastNameChanged,
     required this.onGoalChanged,
     required this.onGenderChanged,
     required this.onRelationshipGoalChanged,
-    required this.onBiographyChanged, // Callback para biografía
+    required this.onBiographyChanged,
+    required this.onAgeChanged, // Callback para edad
+    required this.onHeightChanged, // Callback para altura
+    required this.onWeightChanged, // Callback para peso
     required this.onSeekingSelectionChanged,
   }) : super(key: key);
 
@@ -162,6 +175,57 @@ class PersonalInfoForm extends StatelessWidget {
       cursorColor: Colors.white,
       maxLines: maxLines,
       inputFormatters: inputFormatters,
+    );
+  }
+
+  Widget _buildNumericField({
+    required String label,
+    required int initialValue,
+    required ValueChanged<int> onChanged,
+    required String validatorMsg,
+    int? min,
+    int? max,
+  }) {
+    return TextFormField(
+      initialValue: initialValue.toString(),
+      style: const TextStyle(color: Colors.white),
+      keyboardType: TextInputType.number,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.white70),
+        enabledBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: Colors.white54),
+          borderRadius: BorderRadius.circular(12.0),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: Colors.blueAccent),
+          borderRadius: BorderRadius.circular(12.0),
+        ),
+        errorStyle: const TextStyle(color: Colors.redAccent),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return validatorMsg;
+        }
+        final intValue = int.tryParse(value);
+        if (intValue == null) {
+          return 'Por favor, ingresa un número válido';
+        }
+        if (min != null && intValue < min) {
+          return 'El valor mínimo es $min';
+        }
+        if (max != null && intValue > max) {
+          return 'El valor máximo es $max';
+        }
+        return null;
+      },
+      onChanged: (value) {
+        final intValue = int.tryParse(value);
+        if (intValue != null) {
+          onChanged(intValue);
+        }
+      },
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
     );
   }
 
@@ -289,14 +353,46 @@ class PersonalInfoForm extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               _buildDropdownField(
-                label: 'Objetivo de Relación',
+                label: 'Objetivo de relación',
                 value: relationshipGoal.isNotEmpty ? relationshipGoal : null,
-                items: const ['Amistad', 'Relación', 'Casual', 'Otro'],
+                items: const [
+                  'Amistad',
+                  'Citas',
+                  'Relación seria',
+                  'Casual',
+                  'No estoy seguro'
+                ],
                 onChanged: onRelationshipGoalChanged,
-                validatorMsg: 'Por favor selecciona un objetivo de relación',
+                validatorMsg: 'Por favor selecciona tu objetivo de relación',
               ),
               const SizedBox(height: 16),
-              // Utilizamos el widget BiographyTextField para la biografía
+              _buildNumericField(
+                label: 'Edad',
+                initialValue: age,
+                onChanged: onAgeChanged,
+                validatorMsg: 'Por favor, ingresa tu edad',
+                min: 18,
+                max: 100,
+              ),
+              const SizedBox(height: 16),
+              _buildNumericField(
+                label: 'Altura (cm)',
+                initialValue: height,
+                onChanged: onHeightChanged,
+                validatorMsg: 'Por favor, ingresa tu altura',
+                min: 120,
+                max: 250,
+              ),
+              const SizedBox(height: 16),
+              _buildNumericField(
+                label: 'Peso (kg)',
+                initialValue: weight,
+                onChanged: onWeightChanged,
+                validatorMsg: 'Por favor, ingresa tu peso',
+                min: 30,
+                max: 250,
+              ),
+              const SizedBox(height: 16),
               BiographyTextField(
                 initialValue: biography,
                 onChanged: onBiographyChanged,

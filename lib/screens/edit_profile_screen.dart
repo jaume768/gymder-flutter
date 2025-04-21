@@ -39,6 +39,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   List<String> seeking = [];
   String relationshipGoal = '';
   String biography = '';
+  int age = 18;
+  int height = 0;
+  int weight = 0;
 
   // Valores originales para comparar cambios
   String originalUsername = '';
@@ -49,6 +52,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   List<String> originalSeeking = [];
   String originalRelationshipGoal = '';
   String originalBiography = '';
+  int originalAge = 18;
+  int originalHeight = 0;
+  int originalWeight = 0;
 
   String location = '';
   double? userLatitude;
@@ -83,6 +89,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       originalSeeking = List.from(user.seeking ?? []);
       originalRelationshipGoal = user.relationshipGoal ?? '';
       originalBiography = user.biography ?? '';
+      originalAge = user.age ?? 18;
+      originalHeight = user.height ?? 0;
+      originalWeight = user.weight ?? 0;
       // Asignamos los valores a las variables editables
       firstName = originalFirstName;
       lastName = originalLastName;
@@ -91,6 +100,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       seeking = List.from(originalSeeking);
       relationshipGoal = originalRelationshipGoal;
       biography = originalBiography;
+      age = originalAge;
+      height = originalHeight;
+      weight = originalWeight;
     }
   }
 
@@ -103,6 +115,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           gender != originalGender ||
           relationshipGoal != originalRelationshipGoal ||
           biography != originalBiography ||
+          age != originalAge ||
+          height != originalHeight ||
+          weight != originalWeight ||
           seeking.length != originalSeeking.length ||
           !seeking.every((item) => originalSeeking.contains(item)) ||
           locationUpdated);
@@ -350,6 +365,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'seeking': seeking,
         'relationshipGoal': relationshipGoal,
         'biography': biography,
+        'age': age,
+        'height': height,
+        'weight': weight,
       };
 
       if (username != authProvider.user?.username) {
@@ -526,35 +544,62 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               seeking: seeking,
               relationshipGoal: relationshipGoal,
               biography: biography,
+              age: age,
+              height: height,
+              weight: weight,
               onFirstNameChanged: (val) {
-                firstName = val;
-                _checkChanges();
+                setState(() {
+                  firstName = val;
+                  _checkChanges();
+                });
               },
               onLastNameChanged: (val) {
-                lastName = val;
-                _checkChanges();
+                setState(() {
+                  lastName = val;
+                  _checkChanges();
+                });
               },
               onGoalChanged: (val) {
-                if (val != null) {
-                  goal = val;
+                setState(() {
+                  goal = val ?? '';
                   _checkChanges();
-                }
+                });
               },
               onGenderChanged: (val) {
-                if (val != null) {
-                  gender = val;
+                setState(() {
+                  gender = val ?? '';
                   _checkChanges();
-                }
+                });
               },
               onRelationshipGoalChanged: (val) {
-                if (val != null) {
-                  relationshipGoal = val;
+                setState(() {
+                  relationshipGoal = val ?? '';
                   _checkChanges();
-                }
+                });
               },
               onBiographyChanged: (val) {
-                biography = val;
-                _checkChanges();
+                setState(() {
+                  biography = val;
+                  _checkChanges();
+                });
+              },
+              onAgeChanged: (val) {
+                setState(() {
+                  age = val;
+                  _checkChanges();
+                });
+              },
+              onHeightChanged: (val) {
+                setState(() {
+                  height = val;
+                  _checkChanges();
+                });
+              },
+              onWeightChanged: (val) {
+                setState(() {
+                  weight = val;
+                  _checkChanges();
+                });
               },
               onSeekingSelectionChanged: _handleSeekingChanged,
             ),

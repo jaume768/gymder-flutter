@@ -69,6 +69,9 @@ class User {
   final String? biography;
   final String? city;
   final String? country;
+  final int? age;
+  final int? height;
+  final int? weight;
 
   User({
     required this.id,
@@ -92,6 +95,9 @@ class User {
     this.location,
     this.city,
     this.country,
+    this.age,
+    this.height,
+    this.weight,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -133,6 +139,9 @@ class User {
           : null,
       city: json['city'],
       country: json['country'],
+      age: json['age'] != null ? (json['age'] is int ? json['age'] : int.tryParse(json['age'].toString())) : null,
+      height: json['height'] != null ? (json['height'] is int ? json['height'] : int.tryParse(json['height'].toString())) : null,
+      weight: json['weight'] != null ? (json['weight'] is int ? json['weight'] : int.tryParse(json['weight'].toString())) : null,
     );
   }
 }

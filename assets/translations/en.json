@@ -223,5 +223,21 @@
   "cannot_proceed_with_explicit": "Registration cannot proceed with explicit content. Please select different images.",
   "email_only": "Email",
   "profile_picture_required": "Profile picture is required",
-  "must_select_profile_picture": "You must select a profile picture to continue"
+  "must_select_profile_picture": "You must select a profile picture to continue",
+  "verification_code_required": "Verification code is required",
+  "verification_code_sent": "Verification code sent to your email",
+  "email_required": "Email is required",
+  "username_required": "Username is required",
+  "first_name_required": "First name is required",
+  "last_name_required": "Last name is required",
+  "height_required": "Height is required",
+  "weight_required": "Weight is required",
+  "gym_stage_required": "Gym stage is required",
+  "height_out_of_range": "Height is out of range",
+  "weight_out_of_range": "Weight is out of range",
+  "height_must_be_between_100_250": "Height must be between 100 and 250 cm",
+  "weight_must_be_between_40_200": "Weight must be between 40 and 200 kg",
+  "ok": "OK",
+  "loading": "Loading...",
+  "typing": "typing..."
 }

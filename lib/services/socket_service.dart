@@ -17,6 +17,8 @@ class SocketService {
   Function(dynamic)? _onMessagesMarkedAsReadCallback;
   Function(dynamic)? _onUserTypingCallback;
   Function(dynamic)? _onUserStoppedTypingCallback;
+  Function(dynamic)? _onUserOnlineCallback;
+  Function(dynamic)? _onUserOfflineCallback;
 
   factory SocketService(
     String serverUrl,
@@ -100,6 +102,18 @@ class SocketService {
         _onUserStoppedTypingCallback!(data);
       }
     });
+
+    // Eventos de presencia
+    socket!.on('userOnline', (data) {
+      if (_onUserOnlineCallback != null) {
+        _onUserOnlineCallback!(data);
+      }
+    });
+    socket!.on('userOffline', (data) {
+      if (_onUserOfflineCallback != null) {
+        _onUserOfflineCallback!(data);
+      }
+    });
   }
 
   void joinRoom() {
@@ -117,6 +131,8 @@ class SocketService {
     String? imageUrl,
     String? audioUrl,
     double? audioDuration,
+    String? videoUrl,
+    double? videoDuration,
   }) {
     if (socket != null && socket!.connected) {
       socket!.emit('sendMessage', {
@@ -127,6 +143,8 @@ class SocketService {
         'imageUrl': imageUrl ?? '',
         'audioUrl': audioUrl ?? '',
         'audioDuration': audioDuration ?? 0,
+        'videoUrl': videoUrl ?? '',
+        'videoDuration': videoDuration ?? 0,
       });
     }
   }
@@ -185,6 +203,16 @@ class SocketService {
 
   void onUserStoppedTyping(Function(dynamic) callback) {
     _onUserStoppedTypingCallback = callback;
+  }
+
+  /// Registra callback cuando un usuario se conecta
+  void onUserOnline(Function(dynamic) callback) {
+    _onUserOnlineCallback = callback;
+  }
+
+  /// Registra callback cuando un usuario se desconecta
+  void onUserOffline(Function(dynamic) callback) {
+    _onUserOfflineCallback = callback;
   }
 
   void disconnect() {

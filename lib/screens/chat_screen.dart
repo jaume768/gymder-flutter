@@ -19,6 +19,10 @@ import '../models/user.dart';
 import '../models/message.dart';
 import '../widgets/audio_bubble.dart';
 import '../services/socket_service.dart';
+import 'package:dio/dio.dart';
+import 'package:video_player/video_player.dart';
+import 'package:path/path.dart' as p;
+import 'package:chewie/chewie.dart';
 
 class ChatScreen extends StatefulWidget {
   final String currentUserId;
@@ -56,7 +60,21 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   int currentPage = 0;
   int pageSize = 20;
   String? typingUserId;
+  bool isOnline = false;
   String apiUrl = 'https://gymder-api-production.up.railway.app/api';
+
+  Dio _dio = Dio();
+  VideoPlayerController? _videoController;
+  double videoUploadProgress = 0.0;
+  bool isVideoUploading = false;
+
+  // Format Duration as mm:ss
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return '$minutes:$seconds';
+  }
 
   @override
   void initState() {
@@ -86,6 +104,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _socketService?.disconnect();
     typingTimer?.cancel();
     typingIndicatorTimer?.cancel();
+    _videoController?.dispose();
     super.dispose();
   }
 
@@ -130,6 +149,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           ? (data['audioDuration'] is int
               ? data['audioDuration'].toDouble()
               : data['audioDuration']) 
+          : 0.0,
+        videoUrl: data['videoUrl'] ?? '',
+        videoDuration: data['videoDuration'] != null
+          ? (data['videoDuration'] is int
+              ? data['videoDuration'].toDouble()
+              : data['videoDuration'])
           : 0.0,
         createdAt: DateTime.parse(data['timestamp']),
         seenAt: null,
@@ -181,6 +206,18 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         setState(() {
           typingUserId = null;
         });
+      }
+    });
+
+    _socketService!.onUserOnline((data) {
+      if (data['userId'] == widget.matchedUserId) {
+        setState(() { isOnline = true; });
+      }
+    });
+
+    _socketService!.onUserOffline((data) {
+      if (data['userId'] == widget.matchedUserId) {
+        setState(() { isOnline = false; });
       }
     });
 
@@ -328,10 +365,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       {String type = 'text',
       String? imageUrl,
       String? audioUrl,
-      double? audioDuration}) {
+      double? audioDuration,
+      String? videoUrl,
+      double? videoDuration}) {
     if ((type == 'text' && message.trim().isEmpty) ||
         (type == 'image' && (imageUrl == null || imageUrl.isEmpty)) ||
-        (type == 'audio' && (audioUrl == null || audioUrl.isEmpty))) {
+        (type == 'audio' && (audioUrl == null || audioUrl.isEmpty)) ||
+        (type == 'video' && (videoUrl == null || videoUrl.isEmpty))) {
       return;
     }
 
@@ -342,6 +382,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         imageUrl: imageUrl ?? '',
         audioUrl: audioUrl ?? '',
         audioDuration: audioDuration ?? 0,
+        videoUrl: videoUrl ?? '',
+        videoDuration: videoDuration ?? 0,
       );
     }
 
@@ -368,105 +410,176 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 70, // Comprimir la imagen
+        imageQuality: 70,
       );
-
-      if (image != null) {
-        setState(() {
-          isLoading = true;
-        });
-
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        final token = await authProvider.getToken();
-
-        // Obtener la extensión del archivo
-        final String extension = image.path.split('.').last.toLowerCase();
-        if (!['jpg', 'jpeg', 'png'].contains(extension)) {
-          setState(() {
-            isLoading = false;
-          });
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Solo se permiten archivos JPG, JPEG y PNG')),
+      if (image == null) return;
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext dialogContext) {
+            return AlertDialog(
+              backgroundColor: Colors.grey[900],
+              title: Text('Vista previa', style: TextStyle(color: Colors.white)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.file(File(image.path), height: 200),
+                  const SizedBox(height: 20),
+                  const Text('¿Enviar esta imagen?', style: TextStyle(color: Colors.white70)),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  child: Text('Cancelar', style: TextStyle(color: Colors.red)),
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                ),
+                TextButton(
+                  child: Text('Enviar', style: TextStyle(color: Colors.blue)),
+                  onPressed: () async {
+                    Navigator.of(dialogContext).pop();
+                    try {
+                      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                      final token = await authProvider.getToken();
+                      var request = http.MultipartRequest('POST', Uri.parse('$apiUrl/messages/upload'));
+                      request.headers.addAll({'Authorization': 'Bearer ${token!}'});
+                      final mimeType = 'image/${image.path.split('.').last.toLowerCase()}';
+                      request.files.add(await http.MultipartFile.fromPath(
+                        'chatImage',
+                        image.path,
+                        contentType: MediaType.parse(mimeType),
+                      ));
+                      var response = await request.send();
+                      var responseData = await response.stream.bytesToString();
+                      var data = jsonDecode(responseData);
+                      if (data['success'] == true) {
+                        _sendMessage('', type: 'image', imageUrl: data['url']);
+                      } else {
+                        throw Exception('Error en la respuesta del servidor: ${data['message'] ?? 'Error desconocido'}');
+                      }
+                    } catch (e) {
+                      print('Error uploading image: ${e}');
+                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al enviar la imagen: ${e}')));
+                    }
+                  },
+                ),
+              ],
             );
-          }
-          return;
-        }
+          },
+        );
+      }
+    } catch (e) {
+      print('Error picking image: ${e}');
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al seleccionar la imagen: ${e}')));
+    }
+  }
 
-        // Mostrar una vista previa de la imagen seleccionada
-        if (mounted) {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (BuildContext dialogContext) {
+  Future<void> _pickVideo() async {
+    final BuildContext rootScaffoldContext = context;
+    try {
+      final XFile? video = await _picker.pickVideo(
+        source: ImageSource.gallery,
+        maxDuration: const Duration(minutes: 2),
+      );
+      if (video == null) return;
+      final file = File(video.path);
+      _videoController = VideoPlayerController.file(file);
+      await _videoController!.initialize();
+      final double durationSec = _videoController!.value.duration.inSeconds.toDouble();
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext dialogContext) {
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
               return AlertDialog(
                 backgroundColor: Colors.grey[900],
-                title: Text('Vista previa', style: TextStyle(color: Colors.white)),
+                title: const Text('Vista previa de video', style: TextStyle(color: Colors.white)),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Image.file(File(image.path), height: 200),
-                    SizedBox(height: 20),
-                    isLoading 
-                      ? CircularProgressIndicator() 
-                      : Text('¿Enviar esta imagen?', style: TextStyle(color: Colors.white70)),
+                    AspectRatio(
+                      aspectRatio: _videoController!.value.aspectRatio,
+                      child: VideoPlayer(_videoController!),
+                    ),
+                    const SizedBox(height: 10),
+                    ValueListenableBuilder<VideoPlayerValue>(
+                      valueListenable: _videoController!,
+                      builder: (context, value, child) {
+                        final position = value.position;
+                        final duration = value.duration;
+                        return Column(
+                          children: [
+                            VideoProgressIndicator(
+                              _videoController!,
+                              allowScrubbing: true,
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(_formatDuration(position), style: const TextStyle(color: Colors.white, fontSize: 12)),
+                                Text('-${_formatDuration(duration - position)}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                              ],
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    if (isVideoUploading)
+                      LinearProgressIndicator(value: videoUploadProgress)
+                    else
+                      const Text('¿Enviar este video?', style: TextStyle(color: Colors.white70)),
                   ],
                 ),
                 actions: [
                   TextButton(
-                    child: Text('Cancelar', style: TextStyle(color: Colors.red)),
-                    onPressed: () {
-                      setState(() {
-                        isLoading = false;
-                      });
-                      Navigator.of(dialogContext).pop();
-                    },
+                    child: const Text('Cancelar', style: TextStyle(color: Colors.red)),
+                    onPressed: () => Navigator.of(dialogContext).pop(),
                   ),
                   TextButton(
-                    child: Text('Enviar', style: TextStyle(color: Colors.blue)),
+                    child: const Text('Enviar', style: TextStyle(color: Colors.blue)),
                     onPressed: () async {
-                      Navigator.of(dialogContext).pop();
-                      
+                      setState(() { isVideoUploading = true; });
+                      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                      final token = await authProvider.getToken();
+                      final fileName = p.basename(video.path);
+                      final fileExt = fileName.split('.').last.toLowerCase();
+                      // Set correct contentType for video file
+                      FormData formData = FormData.fromMap({
+                        'chatVideo': await MultipartFile.fromFile(
+                          video.path,
+                          filename: fileName,
+                          contentType: MediaType('video', fileExt),
+                        ),
+                        'duration': durationSec.toString(),
+                      });
+                      _dio.options.headers['Authorization'] = 'Bearer $token';
                       try {
-                        var request = http.MultipartRequest(
-                            'POST', Uri.parse('$apiUrl/messages/upload'));
-
-                        request.headers.addAll({
-                          'Authorization': 'Bearer ${token!}',
-                        });
-
-                        // Asegurarse de que el tipo MIME sea correcto
-                        final mimeType = 'image/${extension == 'jpg' ? 'jpeg' : extension}';
-                        
-                        request.files.add(await http.MultipartFile.fromPath(
-                          'chatImage',
-                          image.path,
-                          contentType: MediaType.parse(mimeType),
-                        ));
-
-                        var response = await request.send();
-                        var responseData = await response.stream.bytesToString();
-                        var data = jsonDecode(responseData);
-
-                        setState(() {
-                          isLoading = false;
-                        });
-
-                        if (data['success'] == true) {
-                          _sendMessage('', type: 'image', imageUrl: data['url']);
+                        final resp = await _dio.post(
+                          '$apiUrl/messages/upload-video',
+                          data: formData,
+                          onSendProgress: (count, total) {
+                            if (dialogContext.mounted) setDialogState(() { videoUploadProgress = count/total; });
+                          },
+                        );
+                        final data = resp.data;
+                        if (data['success']) {
+                          _sendMessage(
+                            '',
+                            type: 'video',
+                            videoUrl: data['url'],
+                            videoDuration: (data['duration'] is num ? (data['duration'] as num).toDouble() : double.tryParse(data['duration'].toString()) ?? 0.0),
+                          );
+                          Navigator.of(dialogContext).pop();
                         } else {
-                          throw Exception('Error en la respuesta del servidor: ${data['message'] ?? 'Error desconocido'}');
+                          throw Exception(data['message']);
                         }
                       } catch (e) {
-                        setState(() {
-                          isLoading = false;
-                        });
-                        print('Error uploading image: $e');
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error al enviar la imagen: $e')),
-                          );
-                        }
+                        if (mounted) ScaffoldMessenger.of(rootScaffoldContext).showSnackBar(SnackBar(content: Text('Error al enviar video: $e')));
+                        Navigator.of(dialogContext).pop();
+                      } finally {
+                        setState(() { isVideoUploading = false; videoUploadProgress = 0.0; });
                       }
                     },
                   ),
@@ -474,242 +587,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               );
             },
           );
-        }
-      }
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
-      print('Error picking image: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al seleccionar la imagen: $e')),
-        );
-      }
-    }
-  }
-
-  Future<void> _startRecording() async {
-    try {
-      // Solicitar permiso de micrófono
-      if (await Permission.microphone.request().isGranted) {
-        final tempDir = await getTemporaryDirectory();
-        final path =
-            '${tempDir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
-
-        // Inicia la grabación utilizando el nuevo RecordConfig
-        await _audioRecorder.start(
-          RecordConfig(
-            encoder: AudioEncoder.aacLc,
-            bitRate: 128000,
-            sampleRate: 44100,
-          ),
-          path: path,
-        );
-
-        setState(() {
-          isRecording = true;
-          recordingPath = path;
-        });
-      }
-    } catch (e) {
-      print('Error starting recording: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al iniciar la grabación: $e')),
+        },
       );
-    }
-  }
-
-  Future<void> _stopRecording() async {
-    try {
-      if (!isRecording) return;
-
-      // Detiene la grabación y obtiene la ruta del archivo
-      final path = await _audioRecorder.stop();
-
-      setState(() {
-        isRecording = false;
-      });
-
-      if (path != null) {
-        // Mostrar una vista previa del audio grabado
-        if (mounted) {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (BuildContext dialogContext) {
-              return StatefulBuilder(
-                builder: (context, setDialogState) {
-                  bool isPreviewPlaying = false;
-                  bool isPreviewLoading = true;
-                  double audioDuration = 0.0;
-                  
-                  // Obtener la duración del audio
-                  _getAudioDuration(path).then((duration) {
-                    setDialogState(() {
-                      audioDuration = duration;
-                      isPreviewLoading = false;
-                    });
-                  });
-                  
-                  return AlertDialog(
-                    backgroundColor: Colors.grey[900],
-                    title: Text('Vista previa de audio', style: TextStyle(color: Colors.white)),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        isPreviewLoading 
-                          ? CircularProgressIndicator() 
-                          : Row(
-                              children: [
-                                IconButton(
-                                  icon: Icon(
-                                    isPreviewPlaying ? Icons.pause : Icons.play_arrow,
-                                    color: Colors.white,
-                                  ),
-                                  onPressed: () async {
-                                    if (isPreviewPlaying) {
-                                      await _audioPlayer.pause();
-                                    } else {
-                                      await _audioPlayer.play(DeviceFileSource(path));
-                                    }
-                                    setDialogState(() {
-                                      isPreviewPlaying = !isPreviewPlaying;
-                                    });
-                                  },
-                                ),
-                                Text(
-                                  '${(audioDuration / 1000).toStringAsFixed(1)}s', 
-                                  style: TextStyle(color: Colors.white)
-                                ),
-                              ],
-                            ),
-                        SizedBox(height: 20),
-                        Text('¿Enviar este audio?', style: TextStyle(color: Colors.white70)),
-                      ],
-                    ),
-                    actions: [
-                      TextButton(
-                        child: Text('Cancelar', style: TextStyle(color: Colors.red)),
-                        onPressed: () {
-                          _audioPlayer.stop();
-                          Navigator.of(dialogContext).pop();
-                        },
-                      ),
-                      TextButton(
-                        child: Text('Enviar', style: TextStyle(color: Colors.blue)),
-                        onPressed: () async {
-                          _audioPlayer.stop();
-                          Navigator.of(dialogContext).pop();
-                          
-                          setState(() {
-                            isLoading = true;
-                          });
-                          
-                          try {
-                            final authProvider = Provider.of<AuthProvider>(context, listen: false);
-                            final token = await authProvider.getToken();
-
-                            final file = File(path);
-                            final fileExists = await file.exists();
-                            if (!fileExists) {
-                              setState(() {
-                                isLoading = false;
-                              });
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('El archivo de audio no existe')),
-                                );
-                              }
-                              return;
-                            }
-
-                            var request = http.MultipartRequest(
-                                'POST', Uri.parse('$apiUrl/messages/upload-audio'));
-
-                            request.headers.addAll({
-                              'Authorization': 'Bearer ${token!}',
-                            });
-
-                            // Asegurarse de que el tipo MIME sea correcto
-                            request.files.add(await http.MultipartFile.fromPath(
-                              'chatAudio',
-                              path,
-                              contentType: MediaType.parse('audio/aac'),
-                            ));
-
-                            request.fields['duration'] = audioDuration.toString();
-
-                            var response = await request.send();
-                            var responseData = await response.stream.bytesToString();
-                            var data = jsonDecode(responseData);
-
-                            setState(() {
-                              isLoading = false;
-                            });
-
-                            if (data['success'] == true) {
-                              _sendMessage('',
-                                  type: 'audio',
-                                  audioUrl: data['url'],
-                                  audioDuration: double.parse(data['duration'].toString()));
-                            } else {
-                              throw Exception('Error en la respuesta del servidor: ${data['message'] ?? 'Error desconocido'}');
-                            }
-                          } catch (e) {
-                            setState(() {
-                              isLoading = false;
-                            });
-                            print('Error uploading audio: $e');
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Error al enviar el audio: $e')),
-                              );
-                            }
-                          }
-                        },
-                      ),
-                    ],
-                  );
-                },
-              );
-            },
-          );
-        }
-      }
     } catch (e) {
-      setState(() {
-        isLoading = false;
-        isRecording = false;
-      });
-      print('Error stopping recording: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al detener la grabación: $e')),
-        );
-      }
-    }
-  }
-
-  Future<double> _getAudioDuration(String path) async {
-    try {
-      final file = File(path);
-      if (!await file.exists()) {
-        return 0.0;
-      }
-      
-      final FlutterSoundPlayer player = FlutterSoundPlayer();
-      await player.openPlayer();
-      await player.setSubscriptionDuration(const Duration(milliseconds: 100));
-
-      final duration = await player.startPlayer(fromURI: path);
-      await player.stopPlayer();
-      await player.closePlayer();
-
-      return duration?.inMilliseconds.toDouble() ?? 0.0;
-    } catch (e) {
-      print('Error getting audio duration: $e');
-      return 0.0;
+      if (mounted) ScaffoldMessenger.of(rootScaffoldContext).showSnackBar(SnackBar(content: Text('Error al seleccionar el video: $e')));
     }
   }
 
@@ -762,6 +643,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 if (typingUserId == widget.matchedUserId)
                   Text(
                     tr("typing"),
+                    style: const TextStyle(
+                      color: Colors.green,
+                      fontSize: 12,
+                    ),
+                  )
+                else if (isOnline)
+                  Text(
+                    'Online',
                     style: const TextStyle(
                       color: Colors.green,
                       fontSize: 12,
@@ -934,6 +823,41 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       audioUrl: message.audioUrl,
                       duration: message.audioDuration,
                       isMe: isMe,
+                    )
+                  else if (message.type == 'video')
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => Scaffold(
+                              backgroundColor: Colors.black,
+                              appBar: AppBar(
+                                backgroundColor: Colors.black,
+                                iconTheme:
+                                    const IconThemeData(color: Colors.white),
+                              ),
+                              body: Center(
+                                child: VideoViewer(url: message.videoUrl),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          height: 150,
+                          width: 200,
+                          color: Colors.black54,
+                          child: const Center(
+                            child: Icon(
+                              Icons.play_circle_fill,
+                              size: 64,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   const SizedBox(height: 4),
                   Row(
@@ -978,6 +902,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             icon: const Icon(Icons.photo, color: Colors.white),
             onPressed: _pickImage,
           ),
+          IconButton(
+            icon: const Icon(Icons.videocam, color: Colors.white),
+            onPressed: _pickVideo,
+          ),
           Expanded(
             child: TextField(
               controller: _messageController,
@@ -998,22 +926,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             ),
           ),
           GestureDetector(
-            onLongPress: _startRecording,
-            onLongPressEnd: (_) => _stopRecording(),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: isRecording ? Colors.red : Colors.blue,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                isRecording ? Icons.mic : Icons.mic_none,
-                color: Colors.white,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
             onTap: () => _sendMessage(_messageController.text),
             child: Container(
               padding: const EdgeInsets.all(8),
@@ -1030,5 +942,51 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         ],
       ),
     );
+  }
+}
+
+class VideoViewer extends StatefulWidget {
+  final String url;
+  const VideoViewer({Key? key, required this.url}) : super(key: key);
+  @override
+  _VideoViewerState createState() => _VideoViewerState();
+}
+
+class _VideoViewerState extends State<VideoViewer> {
+  late VideoPlayerController _controller;
+  late ChewieController _chewieController;
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return '$minutes:$seconds';
+  }
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.network(widget.url);
+    _controller.initialize().then((_) {
+      // After initialization, setup Chewie
+      _chewieController = ChewieController(
+        videoPlayerController: _controller,
+        autoPlay: true,
+        looping: false,
+        showControls: true,
+      );
+      setState(() {});
+    });
+  }
+  @override
+  void dispose() {
+    _chewieController.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+  @override
+  Widget build(BuildContext context) {
+    // Use Chewie for playback when ready
+    return (_controller.value.isInitialized && _chewieController != null)
+      ? Chewie(controller: _chewieController)
+      : const Center(child: CircularProgressIndicator());
   }
 }

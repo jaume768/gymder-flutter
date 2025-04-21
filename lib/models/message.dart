@@ -5,7 +5,9 @@ class Message {
   final String type;
   final String imageUrl;
   final String audioUrl;
+  final String videoUrl;
   final double audioDuration;
+  final double videoDuration;
   final DateTime createdAt;
   final DateTime? seenAt;
 
@@ -16,7 +18,9 @@ class Message {
     required this.type,
     required this.imageUrl,
     required this.audioUrl,
+    required this.videoUrl,
     required this.audioDuration,
+    required this.videoDuration,
     required this.createdAt,
     this.seenAt,
   });
@@ -29,7 +33,9 @@ class Message {
       type: json['type'] ?? 'text',
       imageUrl: json['imageUrl'] ?? '',
       audioUrl: json['audioUrl'] ?? '',
+      videoUrl: json['videoUrl'] ?? '',
       audioDuration: json['audioDuration']?.toDouble() ?? 0.0,
+      videoDuration: json['videoDuration']?.toDouble() ?? 0.0,
       createdAt: json['createdAt'] != null 
           ? DateTime.parse(json['createdAt']) 
           : DateTime.now(),
@@ -47,6 +53,8 @@ class Message {
     String? imageUrl,
     String? audioUrl,
     double? audioDuration,
+    String? videoUrl,
+    double? videoDuration,
     DateTime? createdAt,
     DateTime? seenAt,
   }) {
@@ -57,7 +65,9 @@ class Message {
       type: type ?? this.type,
       imageUrl: imageUrl ?? this.imageUrl,
       audioUrl: audioUrl ?? this.audioUrl,
+      videoUrl: videoUrl ?? this.videoUrl,
       audioDuration: audioDuration ?? this.audioDuration,
+      videoDuration: videoDuration ?? this.videoDuration,
       createdAt: createdAt ?? this.createdAt,
       seenAt: seenAt ?? this.seenAt,
     );

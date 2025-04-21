@@ -10,11 +10,17 @@ class MatchService {
       Map<String, String> filters) async {
     final uri = Uri.parse('$baseUrl/matches/suggested')
         .replace(queryParameters: filters);
+    print('URL de API: $uri');
+    print('Parámetros enviados: $filters');
+    
     final response = await http.get(uri, headers: {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token'
     });
-    return jsonDecode(response.body);
+    
+    final result = jsonDecode(response.body);
+    print('Respuesta API: ${result['success']} - matches: ${result['matches']?.length ?? 0}');
+    return result;
   }
 
   Future<Map<String, dynamic>> updateSeenProfiles(List<String> seenIds) async {

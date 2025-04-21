@@ -46,16 +46,29 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
       final userService = UserService(token: token);
       final result = await userService.getMatches();
       if (result['success']) {
-        setState(() {
-          myMatches = List<User>.from(
-            result['matches'].map((x) => User.fromJson(x)),
-          );
-          isLoading = false;
+        // Cargar matches y obtener últimos mensajes antes de mostrar
+        final matchesList = List<User>.from(
+          result['matches'].map((x) => User.fromJson(x)),
+        );
+        final lastMsgMap = await _fetchAllLastMessages(token, matchesList);
+        // Ordenar matches según timestamp del último mensaje (descendente)
+        matchesList.sort((a, b) {
+          final msgA = lastMsgMap[a.id];
+          final msgB = lastMsgMap[b.id];
+          if (msgA == null && msgB == null) return 0;
+          if (msgA == null) return 1;
+          if (msgB == null) return -1;
+          final dateA = DateTime.tryParse(msgA['createdAt']?.toString() ?? '');
+          final dateB = DateTime.tryParse(msgB['createdAt']?.toString() ?? '');
+          if (dateA == null && dateB == null) return 0;
+          if (dateA == null) return 1;
+          if (dateB == null) return -1;
+          return dateB.compareTo(dateA);
         });
-
-        final lastMsgMap = await _fetchAllLastMessages(token, myMatches);
         setState(() {
+          myMatches = matchesList;
           lastMessages = lastMsgMap;
+          isLoading = false;
         });
       } else {
         setState(() {
@@ -173,144 +186,120 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
                           ),
                         ),
                         Expanded(
-                          child: () {
-                            // Ordenar matches por el timestamp del último mensaje
-                            final sortedMatches = List<User>.from(myMatches);
-                            sortedMatches.sort((a, b) {
-                              final msgA = lastMessages[a.id];
-                              final msgB = lastMessages[b.id];
-
-                              if (msgA == null && msgB == null) return 0;
-                              if (msgA == null) return 1;
-                              if (msgB == null) return -1;
-
-                              final dateA = DateTime.tryParse(
-                                  msgA['createdAt']?.toString() ?? '');
-                              final dateB = DateTime.tryParse(
-                                  msgB['createdAt']?.toString() ?? '');
-
-                              if (dateA == null && dateB == null) return 0;
-                              if (dateA == null) return 1;
-                              if (dateB == null) return -1;
-
-                              return dateB.compareTo(dateA);
-                            });
-
-                            return ListView.builder(
-                              itemCount: sortedMatches.length,
-                              itemBuilder: (context, index) {
-                                final matchedUser = sortedMatches[index];
-                                return GestureDetector(
-                                  onLongPress: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (ctx) => AlertDialog(
-                                        title: Text(tr("delete_conversation")),
-                                        content: Text(tr(
-                                            "delete_conversation_message",
-                                            args: [matchedUser.username])),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.of(ctx).pop(),
-                                            child: Text(tr("cancel")),
-                                          ),
-                                          TextButton(
-                                            onPressed: () {
-                                              Navigator.of(ctx).pop();
-                                              _hideConversation(matchedUser.id);
-                                            },
-                                            child: Text(tr("delete")),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 8),
-                                    child: Card(
-                                      color: Colors.grey[850],
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                      ),
-                                      elevation: 4,
-                                      child: ListTile(
-                                        contentPadding:
-                                            const EdgeInsets.all(16),
-                                        leading: CircleAvatar(
-                                          radius: 30,
-                                          backgroundImage:
-                                              (matchedUser.profilePicture !=
-                                                          null &&
-                                                      matchedUser
-                                                          .profilePicture!
-                                                          .url
-                                                          .isNotEmpty)
-                                                  ? NetworkImage(matchedUser
-                                                      .profilePicture!.url)
-                                                  : null,
-                                          child: (matchedUser.profilePicture ==
-                                                      null ||
-                                                  matchedUser.profilePicture!
-                                                      .url.isEmpty)
-                                              ? const Icon(Icons.person,
-                                                  size: 30)
-                                              : null,
+                          child: ListView.builder(
+                            itemCount: myMatches.length,
+                            itemBuilder: (context, index) {
+                              final matchedUser = myMatches[index];
+                              return GestureDetector(
+                                onLongPress: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: Text(tr("delete_conversation")),
+                                      content: Text(tr(
+                                          "delete_conversation_message",
+                                          args: [matchedUser.username])),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(),
+                                          child: Text(tr("cancel")),
                                         ),
-                                        title: Text(
-                                          matchedUser.username,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.of(ctx).pop();
+                                            _hideConversation(matchedUser.id);
+                                          },
+                                          child: Text(tr("delete")),
                                         ),
-                                        subtitle: Text(
-                                          () {
-                                            final lastMsg =
-                                                lastMessages[matchedUser.id];
-                                            if (lastMsg != null) {
-                                              if (lastMsg['type'] == 'image') {
-                                                return "🖼️ " + tr("image");
-                                              } else {
-                                                return lastMsg['message'] ??
-                                                    tr("tap_to_chat");
-                                              }
+                                      ],
+                                    ),
+                                  );
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 8),
+                                  child: Card(
+                                    color: Colors.grey[850],
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                    elevation: 4,
+                                    child: ListTile(
+                                      contentPadding:
+                                          const EdgeInsets.all(16),
+                                      leading: CircleAvatar(
+                                        radius: 30,
+                                        backgroundImage:
+                                            (matchedUser.profilePicture !=
+                                                        null &&
+                                                    matchedUser
+                                                        .profilePicture!
+                                                        .url
+                                                        .isNotEmpty)
+                                                ? NetworkImage(matchedUser
+                                                    .profilePicture!.url)
+                                                : null,
+                                        child: (matchedUser.profilePicture ==
+                                                    null ||
+                                                matchedUser.profilePicture!
+                                                    .url.isEmpty)
+                                            ? const Icon(Icons.person,
+                                                size: 30)
+                                            : null,
+                                      ),
+                                      title: Text(
+                                        matchedUser.username,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      subtitle: Text(
+                                        () {
+                                          final lastMsg =
+                                              lastMessages[matchedUser.id];
+                                          if (lastMsg != null) {
+                                            if (lastMsg['type'] == 'image') {
+                                              return "🖼️ " + tr("image");
+                                            } else {
+                                              return lastMsg['message'] ??
+                                                  tr("tap_to_chat");
                                             }
-                                            return tr("tap_to_chat");
-                                          }(),
-                                          style: const TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 16,
-                                          ),
+                                          }
+                                          return tr("tap_to_chat");
+                                        }(),
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 16,
                                         ),
-                                        onTap: () {
-                                          final authProvider =
-                                              Provider.of<AuthProvider>(context,
-                                                  listen: false);
-                                          final currentUserId =
-                                              authProvider.user!.id;
-
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) => ChatScreen(
-                                                currentUserId: currentUserId,
-                                                matchedUserId: matchedUser.id,
-                                              ),
-                                            ),
-                                          ).then((_) {
-                                            _fetchMyMatches();
-                                          });
-                                        },
                                       ),
+                                      onTap: () {
+                                        final authProvider =
+                                            Provider.of<AuthProvider>(context,
+                                                listen: false);
+                                        final currentUserId =
+                                            authProvider.user!.id;
+
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => ChatScreen(
+                                              currentUserId: currentUserId,
+                                              matchedUserId: matchedUser.id,
+                                            ),
+                                          ),
+                                        ).then((_) {
+                                          _fetchMyMatches();
+                                        });
+                                      },
                                     ),
                                   ),
-                                );
-                              },
-                            );
-                          }(),
+                                ),
+                              );
+                            },
+                          ),
                         ),
                       ],
                     ),

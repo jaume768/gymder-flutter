@@ -97,14 +97,16 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _messageController.dispose();
     _scrollController.dispose();
     _audioPlayer.dispose();
-    _socketService?.disconnect();
-    typingTimer?.cancel();
-    typingIndicatorTimer?.cancel();
-    _videoController?.dispose();
+    _audioRecorder.dispose();
+    // Desconectar socket al salir de la pantalla
+    if (_socketService != null) {
+      _socketService!.disconnect();
+      _socketService = null;
+    }
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -160,18 +162,20 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         seenAt: null,
       );
 
-      setState(() {
-        messages.insert(0, newMessage);
-      });
+      if (mounted) {
+        setState(() {
+          messages.insert(0, newMessage);
+        });
 
-      // Marca el mensaje como leído si es del usuario emparejado
-      if (newMessage.senderId == widget.matchedUserId) {
-        _markMessagesAsRead();
+        // Marca el mensaje como leído si es del usuario emparejado
+        if (newMessage.senderId == widget.matchedUserId) {
+          _markMessagesAsRead();
+        }
       }
     });
 
     _socketService!.onMessagesMarkedAsRead((data) {
-      if (data['userId'] == widget.matchedUserId) {
+      if (data['userId'] == widget.matchedUserId && mounted) {
         setState(() {
           for (var i = 0; i < messages.length; i++) {
             if (messages[i].senderId == widget.currentUserId &&
@@ -184,39 +188,29 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     });
 
     _socketService!.onUserTyping((data) {
-      if (data['userId'] == widget.matchedUserId) {
+      if (data['userId'] == widget.matchedUserId && mounted) {
         setState(() {
-          typingUserId = data['userId'];
-        });
-
-        // Limpia el indicador de "escribiendo" después de 3 segundos
-        typingIndicatorTimer?.cancel();
-        typingIndicatorTimer = Timer(const Duration(seconds: 3), () {
-          if (mounted) {
-            setState(() {
-              typingUserId = null;
-            });
-          }
+          isTyping = true;
         });
       }
     });
 
     _socketService!.onUserStoppedTyping((data) {
-      if (data['userId'] == widget.matchedUserId) {
+      if (data['userId'] == widget.matchedUserId && mounted) {
         setState(() {
-          typingUserId = null;
+          isTyping = false;
         });
       }
     });
 
     _socketService!.onUserOnline((data) {
-      if (data['userId'] == widget.matchedUserId) {
+      if (data['userId'] == widget.matchedUserId && mounted) {
         setState(() { isOnline = true; });
       }
     });
 
     _socketService!.onUserOffline((data) {
-      if (data['userId'] == widget.matchedUserId) {
+      if (data['userId'] == widget.matchedUserId && mounted) {
         setState(() { isOnline = false; });
       }
     });

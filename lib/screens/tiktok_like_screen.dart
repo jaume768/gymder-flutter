@@ -72,6 +72,15 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
   bool _isScrollLimitReached = false;
   DateTime? _limitExpirationTime;
   int _remainingHours = 0;
+  
+  // Variables para guardar los valores de filtro actuales
+  RangeValues _currentAgeRange = const RangeValues(18, 50);
+  RangeValues _currentWeightRange = const RangeValues(50, 100);
+  RangeValues _currentHeightRange = const RangeValues(150, 200);
+  String _currentGymStage = 'Todos';
+  String _currentRelationshipType = 'Todos';
+  bool _currentUseLocation = false;
+  RangeValues _currentDistanceRange = const RangeValues(5, 50);
 
   @override
   bool get wantKeepAlive => true;
@@ -558,7 +567,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
 
     final matchService = MatchService(token: token);
     final result = await matchService.getSuggestedMatchesWithFilters({});
-
+    
     if (result['success'] == true) {
       List<dynamic> matchesJson = result['matches'];
       List<User> matches =
@@ -847,11 +856,13 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                           ),
                           child: FilterModalContent(
                             hasLocation: hasLocation,
-                            initialAgeRange: const RangeValues(18, 50),
-                            initialWeightRange: const RangeValues(50, 100),
-                            initialHeightRange: const RangeValues(150, 200),
-                            initialGymStage: 'Mantenimiento',
-                            initialRelationshipType: 'Amistad',
+                            initialAgeRange: _currentAgeRange,
+                            initialWeightRange: _currentWeightRange,
+                            initialHeightRange: _currentHeightRange,
+                            initialGymStage: _currentGymStage,
+                            initialRelationshipType: _currentRelationshipType,
+                            initialUseLocation: _currentUseLocation,
+                            initialDistanceRange: _currentDistanceRange,
                           ),
                         );
                       },
@@ -859,19 +870,49 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
 
                     if (result != null && result is Map) {
                       if (result['remove'] == true) {
+                        print('Quitando filtros');
+                        // Reiniciar los valores de filtro a los predeterminados
+                        setState(() {
+                          _currentAgeRange = const RangeValues(18, 50);
+                          _currentWeightRange = const RangeValues(50, 100);
+                          _currentHeightRange = const RangeValues(150, 200);
+                          _currentGymStage = 'Todos';
+                          _currentRelationshipType = 'Todos';
+                          _currentUseLocation = false;
+                          _currentDistanceRange = const RangeValues(5, 50);
+                        });
+                        
                         var allUsers = await _fetchAllUsersWithoutFilter();
                         if (allUsers != null) {
                           setState(() {
                             _randomUsers = allUsers;
-                            _randomUsers.shuffle();
+                            if (_randomUsers.isNotEmpty) {
+                              _randomUsers.shuffle();
+                            }
                             showRandom = true;
                           });
                         }
                       } else if (result['matches'] != null) {
                         List<User> matches = List<User>.from(result['matches']);
                         setState(() {
+                          // Guardar los valores del filtro actual
+                          print('Filtros aplicados:');
+                          print('Etapa de Gimnasio: ${result['gymStage']}');
+                          print('Tipo de Relación: ${result['relationshipType']}');
+                          print('Usuarios recibidos: ${matches.length}');
+                          
+                          _currentAgeRange = result['ageRange'];
+                          _currentWeightRange = result['weightRange'];
+                          _currentHeightRange = result['heightRange'];
+                          _currentGymStage = result['gymStage'];
+                          _currentRelationshipType = result['relationshipType'];
+                          _currentUseLocation = result['useLocation'];
+                          _currentDistanceRange = result['distanceRange'];
+                          
                           _randomUsers = matches;
-                          _randomUsers.shuffle();
+                          if (_randomUsers.isNotEmpty) {
+                            _randomUsers.shuffle();
+                          }
                           showRandom = true;
                         });
                       }
@@ -895,6 +936,8 @@ class FilterModalContent extends StatefulWidget {
   final RangeValues initialHeightRange;
   final String initialGymStage;
   final String initialRelationshipType;
+  final bool initialUseLocation;
+  final RangeValues initialDistanceRange;
 
   const FilterModalContent({
     Key? key,
@@ -904,6 +947,8 @@ class FilterModalContent extends StatefulWidget {
     required this.initialHeightRange,
     required this.initialGymStage,
     required this.initialRelationshipType,
+    this.initialUseLocation = false,
+    this.initialDistanceRange = const RangeValues(5, 50),
   }) : super(key: key);
 
   @override
@@ -928,10 +973,28 @@ class _FilterModalContentState extends State<FilterModalContent> {
     heightRange = widget.initialHeightRange;
     selectedGymStage = widget.initialGymStage;
     selectedRelationshipType = widget.initialRelationshipType;
+    useLocation = widget.initialUseLocation;
+    distanceRange = widget.initialDistanceRange;
   }
 
   @override
   Widget build(BuildContext context) {
+    // Map underlying values to localized labels
+    final gymStageMap = {
+      'Todos': tr('all'),
+      'Mantenimiento': tr('maintenance'),
+      'Volumen': tr('volume'),
+      'Definición': tr('definition'),
+    };
+    final relationshipTypeMap = {
+      'Todos': tr('all'),
+      'Amistad': tr('friendship'),
+      'Relación': tr('relationship'),
+      'Casual': tr('casual'),
+      'Otro': tr('other'),
+      'Pendiente': tr('pending'),
+    };
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: SingleChildScrollView(
@@ -992,33 +1055,65 @@ class _FilterModalContentState extends State<FilterModalContent> {
               },
             ),
             const SizedBox(height: 10),
-            _buildDropdown(
-              label: tr("gym_stage_filter"),
-              value: selectedGymStage,
-              items: const ['Todos', 'Mantenimiento', 'Volumen', 'Definición'],
-              onChanged: (String? newValue) {
-                setState(() {
-                  selectedGymStage = newValue!;
-                });
-              },
-            ),
-            const SizedBox(height: 10),
-            _buildDropdown(
-              label: tr("relationship_type_filter"),
-              value: selectedRelationshipType,
-              items: const [
-                'Todos',
-                'Amistad',
-                'Relación',
-                'Casual',
-                'Otro',
-                'Pendiente'
+            // Dropdown Gym Stage
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(tr("gym_stage_filter"), style: const TextStyle(color: Colors.white)),
+                const SizedBox(height: 5),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: DropdownButton<String>(
+                    value: selectedGymStage,
+                    dropdownColor: Colors.grey[850],
+                    style: const TextStyle(color: Colors.white),
+                    isExpanded: true,
+                    underline: const SizedBox(),
+                    items: gymStageMap.entries.map((e) => DropdownMenuItem(
+                      value: e.key,
+                      child: Text(e.value),
+                    )).toList(),
+                    onChanged: (newValue) {
+                      setState(() { selectedGymStage = newValue!; });
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
               ],
-              onChanged: (String? newValue) {
-                setState(() {
-                  selectedRelationshipType = newValue!;
-                });
-              },
+            ),
+            // Dropdown Relationship Type
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(tr("relationship_type_filter"), style: const TextStyle(color: Colors.white)),
+                const SizedBox(height: 5),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: DropdownButton<String>(
+                    value: selectedRelationshipType,
+                    dropdownColor: Colors.grey[850],
+                    style: const TextStyle(color: Colors.white),
+                    isExpanded: true,
+                    underline: const SizedBox(),
+                    items: relationshipTypeMap.entries.map((e) => DropdownMenuItem(
+                      value: e.key,
+                      child: Text(e.value),
+                    )).toList(),
+                    onChanged: (newValue) {
+                      setState(() { selectedRelationshipType = newValue!; });
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
             ),
             const SizedBox(height: 20),
             if (widget.hasLocation)
@@ -1171,43 +1266,6 @@ class _FilterModalContentState extends State<FilterModalContent> {
           activeColor: Colors.blueAccent,
           inactiveColor: Colors.grey,
           onChanged: onChanged,
-        ),
-        const SizedBox(height: 10),
-      ],
-    );
-  }
-
-  Widget _buildDropdown({
-    required String label,
-    required String value,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(color: Colors.white)),
-        const SizedBox(height: 5),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: Colors.white24,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: DropdownButton<String>(
-            value: value,
-            dropdownColor: Colors.grey[850],
-            style: const TextStyle(color: Colors.white),
-            isExpanded: true,
-            underline: const SizedBox(),
-            items: items.map<DropdownMenuItem<String>>((val) {
-              return DropdownMenuItem(
-                value: val,
-                child: Text(val),
-              );
-            }).toList(),
-            onChanged: onChanged,
-          ),
         ),
         const SizedBox(height: 10),
       ],

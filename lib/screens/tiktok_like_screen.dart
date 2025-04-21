@@ -643,13 +643,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
   Widget build(BuildContext context) {
     super.build(context);
     final auth = Provider.of<AuthProvider>(context);
-    final List<User> combinedUsers = List<User>.from(_randomUsers);
-    for (var likedUser in _likedUsers) {
-      if (!combinedUsers.any((user) => user.id == likedUser.id)) {
-        combinedUsers.add(likedUser);
-      }
-    }
-    final List<User> currentList = showRandom ? combinedUsers : _likedUsers;
+    final List<User> currentList = showRandom ? _randomUsers : _likedUsers;
 
     return Scaffold(
       backgroundColor: Colors.black,

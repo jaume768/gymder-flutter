@@ -310,6 +310,7 @@
   "random": "Aleatorio",
   "le_gustas_button": "Le gustas ({count})",
   "premium_function": "Función Premium",
+  "no_users_to_show": "No hay usuarios para mostrar",
   "premium_le_gustas_message": "Para ver los usuarios que te han dado like, necesitas ser premium. ¿Te gustaría adquirirlo?",
   "scroll_limit_message": "Has alcanzado el límite de perfiles para ver. Espera {0} horas para ver más perfiles o hazte premium para continuar.",
   "liked_users_count": "Usuarios que te han dado like: {0}",

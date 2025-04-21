@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
@@ -13,6 +14,8 @@ import '../utils/error_handler.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
 import 'package:http/http.dart' as http;
+import 'terms_conditions_screen.dart';
+import 'privacy_policy_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   final bool fromGoogle;
@@ -57,6 +60,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // NUEVO: variables para altura y peso
   double? height;
   double? weight;
+  
+  // Variable para aceptación de términos y condiciones
+  bool acceptedTerms = false;
 
   final List<File> selectedPhotos = [];
 
@@ -259,6 +265,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
           });
           return false;
         }
+        if (!acceptedTerms) {
+          setState(() {
+            errorMessage = tr("must_accept_terms");
+            fieldErrors['terms'] = tr("must_accept_terms");
+          });
+          return false;
+        }
         if (!emailRegex.hasMatch(email)) {
           setState(() {
             errorMessage = tr("enter_email_password");
@@ -406,6 +419,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           });
           return false;
         }
+        // Validación de términos y condiciones movida al paso 0
         break;
       default:
         return true;
@@ -1047,6 +1061,91 @@ class _RegisterScreenState extends State<RegisterScreen> {
             obscureText: true,
             onChanged: (value) => password = value,
           ),
+          const SizedBox(height: 30),
+          Row(
+            children: [
+              Checkbox(
+                value: acceptedTerms,
+                onChanged: (value) {
+                  setState(() {
+                    acceptedTerms = value ?? false;
+                    if (acceptedTerms) {
+                      fieldErrors.remove('terms');
+                    }
+                  });
+                },
+                fillColor: MaterialStateProperty.resolveWith<Color>(
+                  (Set<MaterialState> states) {
+                    if (states.contains(MaterialState.selected)) {
+                      return Colors.blueAccent;
+                    }
+                    return Colors.grey;
+                  },
+                ),
+              ),
+              Expanded(
+                child: Wrap(
+                  children: [
+                    Text(
+                      tr("accept_terms"),
+                      style: const TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
+                    const SizedBox(width: 5),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const TermsConditionsScreen(),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        tr("terms_conditions"),
+                        style: const TextStyle(
+                          color: Colors.blueAccent,
+                          fontSize: 14,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      tr("and"),
+                      style: const TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
+                    const SizedBox(width: 5),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const PrivacyPolicyScreen(),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        tr("privacy_policy"),
+                        style: const TextStyle(
+                          color: Colors.blueAccent,
+                          fontSize: 14,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (fieldErrors.containsKey('terms'))
+            Padding(
+              padding: const EdgeInsets.only(top: 8, left: 40),
+              child: Text(
+                fieldErrors['terms']!,
+                style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+              ),
+            ),
           if (errorMessage.isNotEmpty && _currentStep == 0)
             Padding(
               padding: const EdgeInsets.only(top: 16),
@@ -1553,70 +1652,172 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget _buildStep8() {
     return _buildStepTemplate(
       title: tr("add_photos"),
-      subtitle: tr("upload_minimum_photos"),
+      subtitle: tr("add_up_to_5_photos"),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 20),
-          Text(
-            tr("photos_selected", args: ["${selectedPhotos.length}"]),
-            style: const TextStyle(color: Colors.white),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _pickImages,
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
-            child: Text(
-              tr("select_photos"),
-              style: const TextStyle(color: Colors.black),
-            ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              GestureDetector(
+                onTap: _pickImages,
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[800],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.add_photo_alternate,
+                      size: 40, color: Colors.white),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  tr("select_photos_description"),
+                  style: const TextStyle(color: Colors.white70),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 20),
           if (selectedPhotos.isNotEmpty)
-            SizedBox(
-              height: 100,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: selectedPhotos.length,
-                itemBuilder: (context, index) {
-                  final file = selectedPhotos[index];
-                  return Stack(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                        child: Image.file(
-                          file,
-                          width: 100,
-                          height: 100,
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: List.generate(
+                selectedPhotos.length,
+                (index) => Stack(
+                  children: [
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        image: DecorationImage(
+                          image: FileImage(selectedPhotos[index]),
                           fit: BoxFit.cover,
                         ),
                       ),
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              selectedPhotos.removeAt(index);
-                            });
-                          },
-                          child: Container(
-                            decoration: const BoxDecoration(
-                              color: Colors.redAccent,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.close,
-                                color: Colors.white, size: 20),
+                    ),
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            selectedPhotos.removeAt(index);
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
                           ),
+                          child: const Icon(Icons.close,
+                              size: 16, color: Colors.white),
                         ),
-                      )
-                    ],
-                  );
-                },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (fieldErrors.containsKey('photos'))
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                fieldErrors['photos']!,
+                style: const TextStyle(color: Colors.redAccent, fontSize: 12),
               ),
             ),
           const SizedBox(height: 20),
-          if (errorMessage.isNotEmpty && _currentStep == 8)
-            Text(errorMessage, style: const TextStyle(color: Colors.redAccent)),
+          Row(
+            children: [
+              Checkbox(
+                value: acceptedTerms,
+                onChanged: (value) {
+                  setState(() {
+                    acceptedTerms = value ?? false;
+                    if (acceptedTerms) {
+                      fieldErrors.remove('terms');
+                    }
+                  });
+                },
+                fillColor: MaterialStateProperty.resolveWith<Color>(
+                  (Set<MaterialState> states) {
+                    if (states.contains(MaterialState.selected)) {
+                      return Colors.blueAccent;
+                    }
+                    return Colors.grey;
+                  },
+                ),
+              ),
+              Expanded(
+                child: Wrap(
+                  children: [
+                    Text(
+                      tr("accept_terms"),
+                      style: const TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
+                    const SizedBox(width: 5),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const TermsConditionsScreen(),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        tr("terms_conditions"),
+                        style: const TextStyle(
+                          color: Colors.blueAccent,
+                          fontSize: 14,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      tr("and"),
+                      style: const TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
+                    const SizedBox(width: 5),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const PrivacyPolicyScreen(),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        tr("privacy_policy"),
+                        style: const TextStyle(
+                          color: Colors.blueAccent,
+                          fontSize: 14,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (fieldErrors.containsKey('terms'))
+            Padding(
+              padding: const EdgeInsets.only(top: 8, left: 40),
+              child: Text(
+                fieldErrors['terms']!,
+                style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+              ),
+            ),
         ],
       ),
     );

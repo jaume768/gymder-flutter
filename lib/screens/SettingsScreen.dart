@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/user_service.dart';
 import 'login_screen.dart';
+import 'AcercaDeScreen.dart';
 
 /// PANTALLA PRINCIPAL DE AJUSTES
 class SettingsScreen extends StatelessWidget {
@@ -428,60 +429,6 @@ class PermisosAppScreen extends StatelessWidget {
   }
 }
 
-/// PANTALLA ACERCA DE
-class AcercaDeScreen extends StatelessWidget {
-  const AcercaDeScreen({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(tr("about"), style: const TextStyle(color: Colors.white)),
-        backgroundColor: Colors.black,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      backgroundColor: const Color.fromRGBO(20, 20, 20, 1.0),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(tr("app_name"),
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            Text(tr("app_version"),
-                style: const TextStyle(color: Colors.white70, fontSize: 16)),
-            const SizedBox(height: 20),
-            Text(tr("developed_by"),
-                style: const TextStyle(color: Colors.white, fontSize: 18)),
-            Text(tr("company_name"),
-                style: const TextStyle(color: Colors.white70, fontSize: 16)),
-            const SizedBox(height: 20),
-            Text(tr("contact"),
-                style: const TextStyle(color: Colors.white, fontSize: 18)),
-            Text(tr("contact_email"),
-                style: const TextStyle(color: Colors.white70, fontSize: 16)),
-            const SizedBox(height: 20),
-            Text(tr("terms_and_conditions"),
-                style: const TextStyle(
-                    color: Colors.blue,
-                    fontSize: 16,
-                    decoration: TextDecoration.underline)),
-            const SizedBox(height: 10),
-            Text(tr("privacy_policy"),
-                style: const TextStyle(
-                    color: Colors.blue,
-                    fontSize: 16,
-                    decoration: TextDecoration.underline)),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 /// PLACEHOLDER PARA PREMIUM PURCHASE
 class PremiumPurchasePage extends StatelessWidget {

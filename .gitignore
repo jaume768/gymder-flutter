@@ -12,7 +12,7 @@
 .swiftpm/
 migrate_working_dir/
 
-#/Gymder-api/
+/Gymder-api/
 
 # IntelliJ related
 *.iml

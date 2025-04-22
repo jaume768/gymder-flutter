@@ -338,11 +338,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
           return false;
         }
         final today = DateTime.now();
-        int age = today.year - birthDate!.year;
+        int computedAge = today.year - birthDate!.year;
         if (today.month < birthDate!.month ||
             (today.month == birthDate!.month && today.day < birthDate!.day)) {
-          age--;
+          computedAge--;
         }
+        setState(() {
+          age = computedAge;
+        });
         if (age < 18) {
           setState(() {
             errorMessage = tr("must_be_18");
@@ -420,7 +423,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           });
           return false;
         }
-        // Validación de términos y condiciones movida al paso 0
         break;
       default:
         return true;
@@ -596,7 +598,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           return;
         }
         final userService = UserService(token: token);
-        final updateResult = await userService.updateProfile({
+        final updateData = {
           'username': username,
           'firstName': firstName,
           'lastName': lastName,
@@ -606,9 +608,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'height': height,
           'weight': weight,
           'goal': gymStage,
-          'latitude': userLatitude,
-          'longitude': userLongitude,
-        });
+          if (age != null) 'age': age,
+          if (location.isNotEmpty)
+            'location': {
+              'type': 'Point',
+              'coordinates': [userLongitude, userLatitude],
+            },
+        };
+
+        final updateResult = await userService.updateProfile(updateData);
 
         if (!(updateResult['success'] ?? false)) {
           setState(() {
@@ -1745,90 +1753,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             ),
           const SizedBox(height: 20),
-          Row(
-            children: [
-              Checkbox(
-                value: acceptedTerms,
-                onChanged: (value) {
-                  setState(() {
-                    acceptedTerms = value ?? false;
-                    if (acceptedTerms) {
-                      fieldErrors.remove('terms');
-                    }
-                  });
-                },
-                fillColor: MaterialStateProperty.resolveWith<Color>(
-                  (Set<MaterialState> states) {
-                    if (states.contains(MaterialState.selected)) {
-                      return Colors.blueAccent;
-                    }
-                    return Colors.grey;
-                  },
-                ),
-              ),
-              Expanded(
-                child: Wrap(
-                  children: [
-                    Text(
-                      tr("accept_terms"),
-                      style: const TextStyle(color: Colors.white70, fontSize: 14),
-                    ),
-                    const SizedBox(width: 5),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const TermsConditionsScreen(),
-                          ),
-                        );
-                      },
-                      child: Text(
-                        tr("terms_conditions"),
-                        style: const TextStyle(
-                          color: Colors.blueAccent,
-                          fontSize: 14,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      tr("and"),
-                      style: const TextStyle(color: Colors.white70, fontSize: 14),
-                    ),
-                    const SizedBox(width: 5),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const PrivacyPolicyScreen(),
-                          ),
-                        );
-                      },
-                      child: Text(
-                        tr("privacy_policy"),
-                        style: const TextStyle(
-                          color: Colors.blueAccent,
-                          fontSize: 14,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (fieldErrors.containsKey('terms'))
-            Padding(
-              padding: const EdgeInsets.only(top: 8, left: 40),
-              child: Text(
-                fieldErrors['terms']!,
-                style: const TextStyle(color: Colors.redAccent, fontSize: 12),
-              ),
-            ),
         ],
       ),
     );

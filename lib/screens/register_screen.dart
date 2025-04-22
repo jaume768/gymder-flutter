@@ -29,6 +29,9 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   late PageController _pageController;
 
+  // --- NUEVO: campo para la URL de la foto de Google ---
+  String? googleProfilePictureUrl;
+
   int _currentStep = 0;
   final int _totalSteps = 11;
   String verificationCode = '';
@@ -43,7 +46,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String password = '';
   String username = '';
 
-  // NUEVO: variables para nombre y apellido
   String firstName = '';
   String lastName = '';
 
@@ -57,12 +59,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   double userLatitude = 0.0;
   double userLongitude = 0.0;
 
-  // NUEVO: variables para altura y peso
   double? height;
   double? weight;
-  int? age; // Variable para la edad
-  
-  // Variable para aceptación de términos y condiciones
+  int? age;
+
   bool acceptedTerms = false;
 
   final List<File> selectedPhotos = [];
@@ -70,7 +70,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String errorMessage = '';
   bool isLoading = false;
 
-  // Mapa para errores específicos de campos
   Map<String, String> fieldErrors = {};
 
   File? profilePictureFile;
@@ -87,12 +86,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // Método para obtener error específico de un campo
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (widget.fromGoogle && googleProfilePictureUrl == null) {
+      final user = Provider.of<AuthProvider>(context, listen: false).user;
+      if (user?.profilePicture?.url != null && user!.profilePicture!.url.isNotEmpty) {
+        setState(() {
+          googleProfilePictureUrl = user.profilePicture!.url;
+        });
+      }
+    }
+  }
+
   String? getFieldError(String fieldName) {
     return fieldErrors[fieldName];
   }
 
-  // Método para limpiar todos los errores
   void clearErrors() {
     setState(() {
       errorMessage = '';
@@ -1643,8 +1653,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             radius: 75,
             backgroundImage: profilePictureFile != null
                 ? FileImage(profilePictureFile!)
-                : const AssetImage('assets/images/default_profile.png')
-                    as ImageProvider,
+                : (widget.fromGoogle && googleProfilePictureUrl != null
+                    ? NetworkImage(googleProfilePictureUrl!) as ImageProvider
+                    : const AssetImage('assets/images/default_profile.png')
+                  ),
           ),
           const SizedBox(height: 20),
           ElevatedButton(

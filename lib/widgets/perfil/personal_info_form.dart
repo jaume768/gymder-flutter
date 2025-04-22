@@ -1,25 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
-/// InputFormatter que evita que se inserten más de un salto de línea (dos líneas).
+/// Evita más de un salto de línea
 class TwoLineTextInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    // Cuenta el número de saltos de línea en el nuevo valor.
+      TextEditingValue oldValue,
+      TextEditingValue newValue,
+      ) {
     final newlineCount = '\n'.allMatches(newValue.text).length;
-    // Permite máximo 1 salto de línea (2 líneas).
-    if (newlineCount > 1) {
-      return oldValue;
-    }
-    return newValue;
+    return (newlineCount > 1) ? oldValue : newValue;
   }
 }
 
-/// Widget para el campo de biografía que incluye un contador de caracteres.
+/// Campo de biografía con contador
 class BiographyTextField extends StatefulWidget {
   final String initialValue;
   final ValueChanged<String> onChanged;
@@ -62,18 +57,20 @@ class _BiographyTextFieldState extends State<BiographyTextField> {
         TextFormField(
           controller: _controller,
           style: const TextStyle(color: Colors.white),
-          textAlign: TextAlign.left,
           maxLines: 2,
           decoration: InputDecoration(
-            labelText: 'Biografía',
+            labelText: tr('biography_label'),
+            floatingLabelBehavior: FloatingLabelBehavior.always,
+            filled: true,
+            fillColor: Colors.white12,
             labelStyle: const TextStyle(color: Colors.white70),
             enabledBorder: OutlineInputBorder(
               borderSide: const BorderSide(color: Colors.white54),
-              borderRadius: BorderRadius.circular(12.0),
+              borderRadius: BorderRadius.circular(12),
             ),
             focusedBorder: OutlineInputBorder(
               borderSide: const BorderSide(color: Colors.blueAccent),
-              borderRadius: BorderRadius.circular(12.0),
+              borderRadius: BorderRadius.circular(12),
             ),
             errorStyle: const TextStyle(color: Colors.redAccent),
           ),
@@ -84,7 +81,7 @@ class _BiographyTextFieldState extends State<BiographyTextField> {
         ),
         const SizedBox(height: 4),
         Text(
-          '${_controller.text.length}/$maxChars caracteres',
+          tr('characters_count', namedArgs: {'count': _controller.text.length.toString(), 'max': maxChars.toString()}),
           style: const TextStyle(color: Colors.white70, fontSize: 12),
         ),
       ],
@@ -92,6 +89,7 @@ class _BiographyTextFieldState extends State<BiographyTextField> {
   }
 }
 
+/// Formulario con el resto de campos
 class PersonalInfoForm extends StatelessWidget {
   final GlobalKey<FormState> formKey;
   final String firstName;
@@ -100,23 +98,21 @@ class PersonalInfoForm extends StatelessWidget {
   final String gender;
   final List<String> seeking;
   final String relationshipGoal;
-  final String biography; // Biografía
-  final int age; // Edad
-  final int height; // Altura en cm
-  final int weight; // Peso en kg
+  final String biography;
+  final int age;
+  final int height;
+  final int weight;
 
   final ValueChanged<String> onFirstNameChanged;
   final ValueChanged<String> onLastNameChanged;
   final ValueChanged<String?> onGoalChanged;
   final ValueChanged<String?> onGenderChanged;
   final ValueChanged<String?> onRelationshipGoalChanged;
-  final ValueChanged<String> onBiographyChanged; // Callback para biografía
-  final ValueChanged<int> onAgeChanged; // Callback para edad
-  final ValueChanged<int> onHeightChanged; // Callback para altura
-  final ValueChanged<int> onWeightChanged; // Callback para peso
-
-  // CAMBIO: se pasa la opción y el bool para el filtro "Buscando"
-  final Function(String option, bool isSelected) onSeekingSelectionChanged;
+  final ValueChanged<String> onBiographyChanged;
+  final ValueChanged<int> onAgeChanged;
+  final ValueChanged<int> onHeightChanged;
+  final ValueChanged<int> onWeightChanged;
+  final Function(String, bool) onSeekingSelectionChanged;
 
   const PersonalInfoForm({
     Key? key,
@@ -128,18 +124,18 @@ class PersonalInfoForm extends StatelessWidget {
     required this.seeking,
     required this.relationshipGoal,
     required this.biography,
-    required this.age, // Edad
-    required this.height, // Altura
-    required this.weight, // Peso
+    required this.age,
+    required this.height,
+    required this.weight,
     required this.onFirstNameChanged,
     required this.onLastNameChanged,
     required this.onGoalChanged,
     required this.onGenderChanged,
     required this.onRelationshipGoalChanged,
     required this.onBiographyChanged,
-    required this.onAgeChanged, // Callback para edad
-    required this.onHeightChanged, // Callback para altura
-    required this.onWeightChanged, // Callback para peso
+    required this.onAgeChanged,
+    required this.onHeightChanged,
+    required this.onWeightChanged,
     required this.onSeekingSelectionChanged,
   }) : super(key: key);
 
@@ -149,32 +145,30 @@ class PersonalInfoForm extends StatelessWidget {
     required ValueChanged<String> onChanged,
     required String validatorMsg,
     int maxLines = 1,
-    TextAlign textAlign = TextAlign.left,
-    List<TextInputFormatter>? inputFormatters,
   }) {
     return TextFormField(
       initialValue: initialValue,
       style: const TextStyle(color: Colors.white),
-      textAlign: textAlign,
+      maxLines: maxLines,
       decoration: InputDecoration(
         labelText: label,
+        floatingLabelBehavior: FloatingLabelBehavior.always,
+        filled: true,
+        fillColor: Colors.white12,
         labelStyle: const TextStyle(color: Colors.white70),
         enabledBorder: OutlineInputBorder(
           borderSide: const BorderSide(color: Colors.white54),
-          borderRadius: BorderRadius.circular(12.0),
+          borderRadius: BorderRadius.circular(12),
         ),
         focusedBorder: OutlineInputBorder(
           borderSide: const BorderSide(color: Colors.blueAccent),
-          borderRadius: BorderRadius.circular(12.0),
+          borderRadius: BorderRadius.circular(12),
         ),
         errorStyle: const TextStyle(color: Colors.redAccent),
       ),
-      validator: (value) =>
-          (value == null || value.isEmpty) ? validatorMsg : null,
+      validator: (v) => (v == null || v.isEmpty) ? validatorMsg : null,
       onChanged: onChanged,
       cursorColor: Colors.white,
-      maxLines: maxLines,
-      inputFormatters: inputFormatters,
     );
   }
 
@@ -192,41 +186,77 @@ class PersonalInfoForm extends StatelessWidget {
       keyboardType: TextInputType.number,
       decoration: InputDecoration(
         labelText: label,
+        floatingLabelBehavior: FloatingLabelBehavior.always,
+        filled: true,
+        fillColor: Colors.white12,
         labelStyle: const TextStyle(color: Colors.white70),
         enabledBorder: OutlineInputBorder(
           borderSide: const BorderSide(color: Colors.white54),
-          borderRadius: BorderRadius.circular(12.0),
+          borderRadius: BorderRadius.circular(12),
         ),
         focusedBorder: OutlineInputBorder(
           borderSide: const BorderSide(color: Colors.blueAccent),
-          borderRadius: BorderRadius.circular(12.0),
+          borderRadius: BorderRadius.circular(12),
         ),
         errorStyle: const TextStyle(color: Colors.redAccent),
       ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return validatorMsg;
-        }
-        final intValue = int.tryParse(value);
-        if (intValue == null) {
-          return 'Por favor, ingresa un número válido';
-        }
-        if (min != null && intValue < min) {
-          return 'El valor mínimo es $min';
-        }
-        if (max != null && intValue > max) {
-          return 'El valor máximo es $max';
+      validator: (v) {
+        if (v == null || v.isEmpty) return validatorMsg;
+        final n = int.tryParse(v);
+        if (n == null) return tr('please_enter_valid_number');
+        if ((min != null && n < min) || (max != null && n > max)) {
+          return tr('value_between_range', namedArgs: {'min': min.toString(), 'max': max.toString()});
         }
         return null;
       },
-      onChanged: (value) {
-        final intValue = int.tryParse(value);
-        if (intValue != null) {
-          onChanged(intValue);
-        }
+      onChanged: (v) {
+        final n = int.tryParse(v);
+        if (n != null) onChanged(n);
       },
       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
     );
+  }
+
+  // Mapeo de valores traducidos a valores internos para los menús desplegables
+  Map<String, String> _getValueMap(String type) {
+    if (type == 'fitness') {
+      return {
+        tr('general_option'): 'General',
+        tr('definition_option'): 'Definición',
+        tr('volume_option'): 'Volumen',
+        tr('maintenance_option'): 'Mantenimiento',
+      };
+    } else if (type == 'relationship') {
+      return {
+        tr('friendship_option'): 'Amistad',
+        tr('dating_option'): 'Citas',
+        tr('serious_relationship_option'): 'Relación seria',
+        tr('casual_option'): 'Casual',
+        tr('not_sure_option'): 'No estoy seguro',
+      };
+    } else if (type == 'gender') {
+      return {
+        tr('male_option'): 'Masculino',
+        tr('female_option'): 'Femenino',
+        tr('non_binary_option'): 'No Binario',
+        tr('prefer_not_to_say_option'): 'Prefiero no decirlo',
+        tr('other_gender_option'): 'Otro',
+      };
+    }
+    return {};
+  }
+
+  // Obtener la clave traducida a partir del valor interno
+  String? _getTranslatedKey(String? value, String type) {
+    if (value == null) return null;
+    
+    final map = _getValueMap(type);
+    for (var entry in map.entries) {
+      if (entry.value == value) {
+        return entry.key;
+      }
+    }
+    return null;
   }
 
   Widget _buildDropdownField({
@@ -235,164 +265,206 @@ class PersonalInfoForm extends StatelessWidget {
     required List<String> items,
     required ValueChanged<String?> onChanged,
     required String validatorMsg,
+    required String type,
   }) {
+    // Convertir el valor interno al valor traducido para mostrar
+    final translatedValue = _getTranslatedKey(value, type);
+    
     return DropdownButtonFormField<String>(
-      value: value,
+      value: translatedValue,
       style: const TextStyle(color: Colors.white),
       dropdownColor: Colors.grey[800],
-      selectedItemBuilder: (BuildContext context) {
-        return items.map<Widget>((String item) {
-          return Text(item, style: const TextStyle(color: Colors.white));
-        }).toList();
-      },
       decoration: InputDecoration(
         labelText: label,
+        floatingLabelBehavior: FloatingLabelBehavior.always,
+        filled: true,
+        fillColor: Colors.white12,
         labelStyle: const TextStyle(color: Colors.white70),
         enabledBorder: OutlineInputBorder(
           borderSide: const BorderSide(color: Colors.white54),
-          borderRadius: BorderRadius.circular(12.0),
+          borderRadius: BorderRadius.circular(12),
         ),
         focusedBorder: OutlineInputBorder(
           borderSide: const BorderSide(color: Colors.blueAccent),
-          borderRadius: BorderRadius.circular(12.0),
+          borderRadius: BorderRadius.circular(12),
         ),
         errorStyle: const TextStyle(color: Colors.redAccent),
       ),
-      items: items.map((String option) {
-        return DropdownMenuItem<String>(
-          value: option,
-          child: Text(option, style: const TextStyle(color: Colors.white)),
-        );
-      }).toList(),
-      onChanged: onChanged,
-      validator: (value) =>
-          (value == null || value.isEmpty) ? validatorMsg : null,
+      items: items
+          .map((o) => DropdownMenuItem(value: o, child: Text(o)))
+          .toList(),
+      onChanged: (String? newValue) {
+        if (newValue != null) {
+          // Convertir el valor traducido al valor interno antes de pasarlo al callback
+          final internalValue = _getValueMap(type)[newValue];
+          onChanged(internalValue);
+        } else {
+          onChanged(null);
+        }
+      },
+      validator: (v) => (v == null || v.isEmpty) ? validatorMsg : null,
+      selectedItemBuilder: (ctx) =>
+          items.map((o) => Text(o, style: const TextStyle(color: Colors.white))).toList(),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final sectionHeaderStyle = TextStyle(
+      color: Colors.white70,
+      fontSize: 18,
+      fontWeight: FontWeight.bold,
+    );
+
     return Card(
-      color: const Color.fromRGBO(20, 20, 20, 0),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 4,
+      color: Colors.transparent,
+      elevation: 0,
       child: Padding(
-        padding: const EdgeInsets.all(4),
+        padding: const EdgeInsets.all(0),
         child: Form(
           key: formKey,
           child: Column(
             children: [
-              _buildTextField(
-                label: 'Nombre',
-                initialValue: firstName,
-                onChanged: onFirstNameChanged,
-                validatorMsg: 'Por favor ingresa tu nombre',
+              // Nombre / Apellido en fila
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildTextField(
+                      label: tr('first_name_label'),
+                      initialValue: firstName,
+                      onChanged: onFirstNameChanged,
+                      validatorMsg: tr('please_enter_first_name_error'),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildTextField(
+                      label: tr('last_name_label'),
+                      initialValue: lastName,
+                      onChanged: onLastNameChanged,
+                      validatorMsg: tr('please_enter_last_name_error'),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
-              _buildTextField(
-                label: 'Apellido',
-                initialValue: lastName,
-                onChanged: onLastNameChanged,
-                validatorMsg: 'Por favor ingresa tu apellido',
+
+              // Encabezado Objetivos
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(tr('objectives_section'), style: sectionHeaderStyle),
+              ),
+              const SizedBox(height: 8),
+              // Objetivo fitness + Objetivo de Relación
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildDropdownField(
+                      label: tr('fitness_goal_label'),
+                      value: goal.isNotEmpty ? goal : null,
+                      items: [tr('general_option'), tr('definition_option'), tr('volume_option'), tr('maintenance_option')],
+                      onChanged: onGoalChanged,
+                      validatorMsg: tr('please_select_goal_error'),
+                      type: 'fitness',
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildDropdownField(
+                      label: tr('relationship_goal_label'),
+                      value: relationshipGoal.isNotEmpty ? relationshipGoal : null,
+                      items: [
+                        tr('friendship_option'),
+                        tr('dating_option'),
+                        tr('serious_relationship_option'),
+                        tr('casual_option'),
+                        tr('not_sure_option')
+                      ],
+                      onChanged: onRelationshipGoalChanged,
+                      validatorMsg: tr('please_select_relationship_goal_error'),
+                      type: 'relationship',
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
+
+              // Género
               _buildDropdownField(
-                label: 'Objetivo',
-                value: goal.isNotEmpty ? goal : null,
-                items: const ['Definición', 'Volumen', 'Mantenimiento'],
-                onChanged: onGoalChanged,
-                validatorMsg: 'Por favor selecciona tu objetivo',
-              ),
-              const SizedBox(height: 16),
-              _buildDropdownField(
-                label: 'Género',
+                label: tr('gender_label'),
                 value: gender.isNotEmpty ? gender : null,
-                items: const [
-                  'Masculino',
-                  'Femenino',
-                  'No Binario',
-                  'Prefiero no decirlo',
-                  'Otro'
+                items: [
+                  tr('male_option'),
+                  tr('female_option'),
+                  tr('non_binary_option'),
+                  tr('prefer_not_to_say_option'),
+                  tr('other_gender_option')
                 ],
                 onChanged: onGenderChanged,
-                validatorMsg: 'Por favor selecciona tu género',
+                validatorMsg: tr('please_select_gender_error'),
+                type: 'gender',
               ),
               const SizedBox(height: 16),
-              // Sección "Buscando"
+
+              // Buscando
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Buscando:',
-                  style: TextStyle(
-                      color: Colors.white.withOpacity(0.9), fontSize: 16),
+                  tr('looking_for_label'),
+                  style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 16),
                 ),
               ),
               const SizedBox(height: 8),
               Wrap(
-                spacing: 10.0,
-                children: [
-                  'Masculino',
-                  'Femenino',
-                  'No Binario',
-                  'Prefiero no decirlo',
-                  'Otro'
-                ].map((option) {
-                  final selected = seeking.contains(option);
+                spacing: 10,
+                children: [tr('male_option'), tr('female_option'), tr('non_binary_option'), tr('prefer_not_to_say_option'), tr('other_gender_option')]
+                    .map((opt) {
+                  final sel = seeking.contains(opt);
                   return FilterChip(
-                    label: Text(option,
-                        style: TextStyle(
-                            color: selected ? Colors.black : Colors.white)),
-                    selected: selected,
-                    backgroundColor: Colors.grey[900],
+                    label: Text(opt, style: TextStyle(color: sel ? Colors.black : Colors.white)),
+                    selected: sel,
+                    backgroundColor: Colors.transparent,
                     selectedColor: Colors.blueAccent,
-                    onSelected: (bool isSelected) {
-                      onSeekingSelectionChanged(option, isSelected);
-                    },
+                    side: const BorderSide(color: Colors.white54),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    onSelected: (b) => onSeekingSelectionChanged(opt, b),
                   );
                 }).toList(),
               ),
               const SizedBox(height: 16),
-              _buildDropdownField(
-                label: 'Objetivo de relación',
-                value: relationshipGoal.isNotEmpty ? relationshipGoal : null,
-                items: const [
-                  'Amistad',
-                  'Citas',
-                  'Relación seria',
-                  'Casual',
-                  'No estoy seguro'
-                ],
-                onChanged: onRelationshipGoalChanged,
-                validatorMsg: 'Por favor selecciona tu objetivo de relación',
-              ),
-              const SizedBox(height: 16),
+
+              // Edad, Altura, Peso
               _buildNumericField(
-                label: 'Edad',
+                label: tr('age_label'),
                 initialValue: age,
                 onChanged: onAgeChanged,
-                validatorMsg: 'Por favor, ingresa tu edad',
+                validatorMsg: tr('please_enter_age_error'),
                 min: 18,
                 max: 100,
               ),
               const SizedBox(height: 16),
               _buildNumericField(
-                label: 'Altura (cm)',
+                label: tr('height_label'),
                 initialValue: height,
                 onChanged: onHeightChanged,
-                validatorMsg: 'Por favor, ingresa tu altura',
+                validatorMsg: tr('please_enter_height_error'),
                 min: 120,
                 max: 250,
               ),
               const SizedBox(height: 16),
               _buildNumericField(
-                label: 'Peso (kg)',
+                label: tr('weight_label'),
                 initialValue: weight,
                 onChanged: onWeightChanged,
-                validatorMsg: 'Por favor, ingresa tu peso',
+                validatorMsg: tr('please_enter_weight_error'),
                 min: 30,
                 max: 250,
               ),
               const SizedBox(height: 16),
+
+              // Biografía
               BiographyTextField(
                 initialValue: biography,
                 onChanged: onBiographyChanged,

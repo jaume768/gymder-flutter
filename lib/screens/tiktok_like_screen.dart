@@ -59,7 +59,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
 
   int _currentPageIndex = 0;
   int previousPageIndex = 0;
-  
+
   // Variable para guardar la posición en la lista de aleatoria
   int _savedRandomPosition = 0;
 
@@ -72,7 +72,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
   bool _isScrollLimitReached = false;
   DateTime? _limitExpirationTime;
   int _remainingHours = 0;
-  
+
   // Variables para guardar los valores de filtro actuales
   RangeValues _currentAgeRange = const RangeValues(18, 50);
   RangeValues _currentWeightRange = const RangeValues(50, 100);
@@ -95,10 +95,10 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     for (var user in _randomUsers) {
       _loadedProfileIds.add(user.id);
     }
-    
+
     // Establecer el umbral de carga inicial
     _lastFetchThreshold = (_randomUsers.length / 2).floor();
-    
+
     // No barajar la lista inicialmente, lo haremos después de verificar el límite
     previousPageIndex = 0;
 
@@ -253,7 +253,8 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
       return;
     }
 
-    print("Iniciando carga de más usuarios. Tenemos ${_randomUsers.length} usuarios actualmente");
+    print(
+        "Iniciando carga de más usuarios. Tenemos ${_randomUsers.length} usuarios actualmente");
     setState(() {
       _isFetchingMore = true;
     });
@@ -269,27 +270,29 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
       }
 
       final matchService = MatchService(token: token);
-      
+
       // Crear una lista de los IDs que ya tenemos cargados
       final loadedIds = List<String>.from(_loadedProfileIds);
-      
+
       // Primero, registrar los perfiles vistos para que no se repitan
       await matchService.updateSeenProfiles(loadedIds);
-      
+
       // Preparar los filtros para la solicitud
       final Map<String, String> filters = {
         'limit': _limit.toString(),
-        'skip': '0', // Siempre pedir desde el inicio, el backend filtrará los ya vistos
+        'skip':
+            '0', // Siempre pedir desde el inicio, el backend filtrará los ya vistos
       };
-      
+
       print("Solicitando usuarios con filtros: $filters");
       final result = await matchService.getSuggestedMatchesWithFilters(filters);
 
       if (result['success'] == true) {
         List<dynamic> matchesData = result['matches'];
         print("Recibidos ${matchesData.length} usuarios del backend");
-        
-        List<User> newUsers = matchesData.map((data) => User.fromJson(data)).toList();
+
+        List<User> newUsers =
+            matchesData.map((data) => User.fromJson(data)).toList();
 
         if (mounted) {
           setState(() {
@@ -301,17 +304,19 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
             // Añadir solo usuarios únicos
             if (uniqueNewUsers.isNotEmpty) {
               _randomUsers.addAll(uniqueNewUsers);
-              
+
               // Registrar los nuevos IDs
               for (var user in uniqueNewUsers) {
                 _loadedProfileIds.add(user.id);
               }
-              
-              print("Añadidos ${uniqueNewUsers.length} nuevos usuarios únicos. Total: ${_randomUsers.length}");
+
+              print(
+                  "Añadidos ${uniqueNewUsers.length} nuevos usuarios únicos. Total: ${_randomUsers.length}");
             } else {
-              print("No se encontraron nuevos usuarios para añadir (todos los recibidos ya estaban cargados)");
+              print(
+                  "No se encontraron nuevos usuarios para añadir (todos los recibidos ya estaban cargados)");
             }
-            
+
             _isFetchingMore = false;
           });
         }
@@ -506,7 +511,8 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
               ),
               const SizedBox(height: 10),
               Text(
-                tr("match_message", namedArgs: {"username": matchedUser.username ?? ""}),
+                tr("match_message",
+                    namedArgs: {"username": matchedUser.username ?? ""}),
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white70, fontSize: 16),
               ),
@@ -567,7 +573,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
 
     final matchService = MatchService(token: token);
     final result = await matchService.getSuggestedMatchesWithFilters({});
-    
+
     if (result['success'] == true) {
       List<dynamic> matchesJson = result['matches'];
       List<User> matches =
@@ -633,6 +639,119 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     }
   }
 
+  void _onSelectReportReason(String reasonKey) {
+    Navigator.pop(context);
+    if (reasonKey == 'other') {
+      _showCustomReasonDialog();
+    } else {
+      _showConfirmReportDialog(reasonKey);
+    }
+  }
+
+  void _showConfirmReportDialog(String reasonKey, {String? details}) {
+    final reasonText = {
+      'inappropriate_photos': tr('inappropriate_photos'),
+      'fake_profile': tr('fake_profile'),
+      'offensive_content': tr('offensive_content'),
+      'other': tr('other_reason'),
+    }[reasonKey]!;
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(tr('confirm_report_title')),
+        content: Text(
+          tr(
+            'confirm_report_message',
+            namedArgs: {'reason': reasonText},
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(tr('cancel')),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _sendReport(reasonKey, details: details);
+            },
+            child: Text(tr('confirm_report_button')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCustomReasonDialog() {
+    String customText = '';
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(tr('other_reason')),
+        content: TextField(
+          maxLines: 3,
+          onChanged: (val) => customText = val,
+          decoration: InputDecoration(hintText: tr('describe_reason')),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(tr('cancel')),
+          ),
+          TextButton(
+            onPressed: () {
+              if (customText.trim().isNotEmpty) {
+                Navigator.pop(context);
+                _showConfirmReportDialog('other', details: customText.trim());
+              }
+            },
+            child: Text(tr('send')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _sendReport(String reasonKey, {String? details}) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = await auth.getToken();
+    if (token == null) return;
+    final userService = UserService(token: token);
+
+    // La lista y el índice actuales
+    final list = showRandom ? _randomUsers : _likedUsers;
+    if (_currentPageIndex < 0 || _currentPageIndex >= list.length) return;
+    final reportedUser = list[_currentPageIndex];
+
+    final result = await userService.reportUser(
+      reportedUser.id,
+      reason: reasonKey,
+      details: details,
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(result['message'])),
+    );
+
+    if (result['success'] == true) {
+      setState(() {
+        // 1) Eliminamos al usuario reportado
+        list.removeAt(_currentPageIndex);
+
+        // 2) Ajustamos el índice si estamos al final
+        if (_currentPageIndex >= list.length && list.isNotEmpty) {
+          _currentPageIndex = list.length - 1;
+        }
+      });
+
+      // 3) Saltamos a la página actual (ahora el siguiente perfil)
+      if (list.isNotEmpty) {
+        _verticalPageController.jumpToPage(_currentPageIndex);
+      }
+    }
+  }
+
   void _showReportModal() {
     showModalBottomSheet(
       context: context,
@@ -648,35 +767,46 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  'Reportar usuario',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  tr('report_user_title'),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
               Divider(color: Colors.white54),
               ListTile(
                 leading: Icon(Icons.photo, color: Colors.blueAccent),
-                title: Text('Fotos inapropiadas', style: TextStyle(color: Colors.white)),
-                onTap: () => Navigator.pop(context),
-              ),
-              ListTile(
-                leading: Icon(Icons.report, color: Colors.blueAccent),
-                title: Text('Acoso', style: TextStyle(color: Colors.white)),
-                onTap: () => Navigator.pop(context),
+                title: Text(
+                  tr('inappropriate_photos'),
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () => _onSelectReportReason('inappropriate_photos'),
               ),
               ListTile(
                 leading: Icon(Icons.person_off, color: Colors.blueAccent),
-                title: Text('Perfil falso', style: TextStyle(color: Colors.white)),
-                onTap: () => Navigator.pop(context),
+                title: Text(
+                  tr('fake_profile'),
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () => _onSelectReportReason('fake_profile'),
               ),
               ListTile(
                 leading: Icon(Icons.text_snippet, color: Colors.blueAccent),
-                title: Text('Contenido ofensivo', style: TextStyle(color: Colors.white)),
-                onTap: () => Navigator.pop(context),
+                title: Text(
+                  tr('offensive_content'),
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () => _onSelectReportReason('offensive_content'),
               ),
               ListTile(
                 leading: Icon(Icons.more_horiz, color: Colors.blueAccent),
-                title: Text('Otro motivo', style: TextStyle(color: Colors.white)),
-                onTap: () => Navigator.pop(context),
+                title: Text(
+                  tr('other_reason'),
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () => _onSelectReportReason('other'),
               ),
               SizedBox(height: 16),
               TextButton(
@@ -688,7 +818,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                   ),
                 ),
                 onPressed: () => Navigator.pop(context),
-                child: Text(tr("cancel")),
+                child: Text(tr('cancel')),
               ),
               SizedBox(height: 16),
             ],
@@ -733,10 +863,12 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                             _verticalPageController.page?.round() ?? 0;
 
                         // Si el límite de scroll está alcanzado y el usuario intenta hacer scroll hacia abajo
-                        if (_isScrollLimitReached && currentPage > previousPageIndex) {
+                        if (_isScrollLimitReached &&
+                            currentPage > previousPageIndex) {
                           // Bloquear el scroll volviendo a la página anterior
                           WidgetsBinding.instance.addPostFrameCallback((_) {
-                            _verticalPageController.jumpToPage(previousPageIndex);
+                            _verticalPageController
+                                .jumpToPage(previousPageIndex);
                           });
 
                           // Mostrar el diálogo de límite alcanzado
@@ -781,7 +913,8 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                         // Ya estamos manejando la actualización del contador en el NotificationListener,
                         // así que aquí solo verificamos si necesitamos cargar más usuarios
                         if (pageIndex >= _randomUsers.length - 5) {
-                          print("Alcanzado umbral de carga: $pageIndex >= ${_randomUsers.length - 5}");
+                          print(
+                              "Alcanzado umbral de carga: $pageIndex >= ${_randomUsers.length - 5}");
                           _fetchMoreUsers();
                         }
                       },
@@ -824,11 +957,12 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                             setState(() {
                               showRandom = true;
                             });
-                            
+
                             // Restaurar la posición guardada de la lista aleatoria
                             WidgetsBinding.instance.addPostFrameCallback((_) {
                               if (_savedRandomPosition < _randomUsers.length) {
-                                _verticalPageController.jumpToPage(_savedRandomPosition);
+                                _verticalPageController
+                                    .jumpToPage(_savedRandomPosition);
                                 _currentPageIndex = _savedRandomPosition;
                                 previousPageIndex = _savedRandomPosition;
                               }
@@ -864,18 +998,18 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                             if (showRandom) {
                               _savedRandomPosition = _currentPageIndex;
                             }
-                            
+
                             setState(() {
                               showRandom = false;
                             });
-                            
+
                             // Restaurar al inicio de la lista "Le gustas"
                             WidgetsBinding.instance.addPostFrameCallback((_) {
                               _verticalPageController.jumpToPage(0);
                               _currentPageIndex = 0;
                               previousPageIndex = 0;
                             });
-                            
+
                             if (_likedUsers.isEmpty) {
                               _fetchLikedUsers();
                             }
@@ -944,7 +1078,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                           _currentUseLocation = false;
                           _currentDistanceRange = const RangeValues(5, 50);
                         });
-                        
+
                         var allUsers = await _fetchAllUsersWithoutFilter();
                         if (allUsers != null) {
                           setState(() {
@@ -961,9 +1095,10 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                           // Guardar los valores del filtro actual
                           print('Filtros aplicados:');
                           print('Etapa de Gimnasio: ${result['gymStage']}');
-                          print('Tipo de Relación: ${result['relationshipType']}');
+                          print(
+                              'Tipo de Relación: ${result['relationshipType']}');
                           print('Usuarios recibidos: ${matches.length}');
-                          
+
                           _currentAgeRange = result['ageRange'];
                           _currentWeightRange = result['weightRange'];
                           _currentHeightRange = result['heightRange'];
@@ -971,7 +1106,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                           _currentRelationshipType = result['relationshipType'];
                           _currentUseLocation = result['useLocation'];
                           _currentDistanceRange = result['distanceRange'];
-                          
+
                           _randomUsers = matches;
                           if (_randomUsers.isNotEmpty) {
                             _randomUsers.shuffle();
@@ -1122,7 +1257,8 @@ class _FilterModalContentState extends State<FilterModalContent> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(tr("gym_stage_filter"), style: const TextStyle(color: Colors.white)),
+                Text(tr("gym_stage_filter"),
+                    style: const TextStyle(color: Colors.white)),
                 const SizedBox(height: 5),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -1136,12 +1272,16 @@ class _FilterModalContentState extends State<FilterModalContent> {
                     style: const TextStyle(color: Colors.white),
                     isExpanded: true,
                     underline: const SizedBox(),
-                    items: gymStageMap.entries.map((e) => DropdownMenuItem(
-                      value: e.key,
-                      child: Text(e.value),
-                    )).toList(),
+                    items: gymStageMap.entries
+                        .map((e) => DropdownMenuItem(
+                              value: e.key,
+                              child: Text(e.value),
+                            ))
+                        .toList(),
                     onChanged: (newValue) {
-                      setState(() { selectedGymStage = newValue!; });
+                      setState(() {
+                        selectedGymStage = newValue!;
+                      });
                     },
                   ),
                 ),
@@ -1152,7 +1292,8 @@ class _FilterModalContentState extends State<FilterModalContent> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(tr("relationship_type_filter"), style: const TextStyle(color: Colors.white)),
+                Text(tr("relationship_type_filter"),
+                    style: const TextStyle(color: Colors.white)),
                 const SizedBox(height: 5),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -1166,12 +1307,16 @@ class _FilterModalContentState extends State<FilterModalContent> {
                     style: const TextStyle(color: Colors.white),
                     isExpanded: true,
                     underline: const SizedBox(),
-                    items: relationshipTypeMap.entries.map((e) => DropdownMenuItem(
-                      value: e.key,
-                      child: Text(e.value),
-                    )).toList(),
+                    items: relationshipTypeMap.entries
+                        .map((e) => DropdownMenuItem(
+                              value: e.key,
+                              child: Text(e.value),
+                            ))
+                        .toList(),
                     onChanged: (newValue) {
-                      setState(() { selectedRelationshipType = newValue!; });
+                      setState(() {
+                        selectedRelationshipType = newValue!;
+                      });
                     },
                   ),
                 ),

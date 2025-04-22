@@ -9,7 +9,6 @@ import 'SettingsScreen.dart';
 import 'edit_profile_screen.dart';
 import 'home_screen.dart';
 import 'photo_gallery_screen.dart';
-import 'login_screen.dart';
 
 class MyProfileScreen extends StatefulWidget {
   const MyProfileScreen({Key? key}) : super(key: key);
@@ -25,15 +24,39 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     Provider.of<AuthProvider>(context, listen: false).refreshUser();
   }
 
-  Widget _buildInfoTile({
-    required IconData icon,
+  Widget _buildInfoBox({
     required String title,
     required String content,
   }) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.white70),
-      title: Text(title, style: const TextStyle(color: Colors.white70)),
-      subtitle: Text(content, style: const TextStyle(color: Colors.white)),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.white),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      width: double.infinity,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            content,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 16,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -46,77 +69,91 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
-            );
-          },
-        ),
-        title:
-            Text(tr("personal_information"), style: const TextStyle(color: Colors.white)),
-        backgroundColor: Colors.black,
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
+
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
             onPressed: () {
-              Navigator.push(
+              Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
               );
             },
-          )
-        ],
-      ),
-      backgroundColor: const Color.fromRGBO(20, 20, 20, 0.0),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+          ),
+          title: Text(
+            tr("personal_information"),
+            style: const TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.black,
+          iconTheme: const IconThemeData(color: Colors.white),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              },
+            )
+          ],
+        ),
+        backgroundColor: const Color.fromRGBO(20, 20, 20, 0.0),
+        body: Column(
           children: [
-            // Profile picture and edit button
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: 70,
-                  backgroundColor: Colors.white,
-                  backgroundImage: user.profilePicture != null
-                      ? CachedNetworkImageProvider(user.profilePicture!.url)
-                      : const AssetImage('assets/images/default_profile.png')
-                          as ImageProvider,
-                ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const EditProfileScreen()),
-                      );
-                    },
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.black54,
-                        shape: BoxShape.circle,
-                      ),
-                      padding: const EdgeInsets.all(8),
-                      child: Icon(Icons.edit,
-                          color: Colors.white,
-                          size: 24,
-                          semanticLabel: tr("edit_button")),
-                    ),
-                  ),
-                ),
-              ],
-            ),
             const SizedBox(height: 16),
-            // Username
+
+            // ─── Foto de perfil + icono de editar ─────────────────
+            Center(
+              child: SizedBox(
+                width: 140,
+                height: 140,
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 70,
+                      backgroundColor: Colors.white,
+                      backgroundImage: user.profilePicture != null
+                          ? CachedNetworkImageProvider(user.profilePicture!.url)
+                          : const AssetImage('assets/images/default_profile.png')
+                      as ImageProvider,
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const EditProfileScreen()),
+                          );
+                        },
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            color: Colors.black54,
+                            shape: BoxShape.circle,
+                          ),
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(
+                            Icons.edit,
+                            color: Colors.white,
+                            size: 24,
+                            semanticLabel: tr("edit_button"),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+            // ─── Nombre de usuario ────────────────────────────────
             Text(
               user.username ?? '',
               style: const TextStyle(
@@ -125,7 +162,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                 color: Colors.white,
               ),
             ),
-            // Biografía / Biography
+
+            // ─── Biografía ─────────────────────────────────────────
             if (user.biography != null && user.biography!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
@@ -135,95 +173,122 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                   textAlign: TextAlign.center,
                 ),
               ),
+
             const SizedBox(height: 16),
-            Card(
-              color: const Color.fromRGBO(38, 38, 38, 1.0),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              child: Column(
+
+            // ─── Pestañas FOTOS / SOBRE MI ────────────────────────
+            TabBar(
+              indicatorColor: Colors.white,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              tabs: const [
+                Tab(text: 'FOTOS'),
+                Tab(text: 'SOBRE MI'),
+              ],
+            ),
+
+            // ─── Contenido de cada pestaña ────────────────────────
+            Expanded(
+              child: TabBarView(
                 children: [
-                  _buildInfoTile(
-                    icon: Icons.flag,
-                    title: tr("objective"),
-                    content: user.goal ?? tr("not_specified"),
+                  // ──────────── PESTAÑA FOTOS ───────────────────────
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: user.photos != null && user.photos!.isNotEmpty
+                        ? GridView.builder(
+                      gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 4,
+                        mainAxisSpacing: 4,
+                      ),
+                      itemCount: user.photos!.length,
+                      itemBuilder: (context, index) {
+                        final photo = user.photos![index];
+                        return GestureDetector(
+                          onTap: () {
+                            final urls =
+                            user.photos!.map((p) => p.url).toList();
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PhotoGalleryScreen(
+                                  imageUrls: urls,
+                                  initialIndex: index,
+                                ),
+                              ),
+                            );
+                          },
+                          child: CachedNetworkImage(
+                            imageUrl: photo.url,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) =>
+                                Container(color: Colors.grey[800]),
+                            errorWidget: (context, url, error) =>
+                            const Icon(Icons.error,
+                                color: Colors.white),
+                          ),
+                        );
+                      },
+                    )
+                        : Center(
+                      child: Text(
+                        'No hay fotos',
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                    ),
                   ),
-                  const Divider(
-                      color: Colors.white24, indent: 16, endIndent: 16),
-                  _buildInfoTile(
-                    icon: Icons.wc,
-                    title: tr("gender_display"),
-                    content: user.gender ?? tr("not_specified"),
-                  ),
-                  const Divider(
-                      color: Colors.white24, indent: 16, endIndent: 16),
-                  _buildInfoTile(
-                    icon: Icons.favorite,
-                    title: tr("relationship_goal"),
-                    content: user.relationshipGoal ?? tr("not_specified"),
-                  ),
-                  const Divider(
-                      color: Colors.white24, indent: 16, endIndent: 16),
-                  _buildInfoTile(
-                    icon: Icons.location_on,
-                    title: tr("location"),
-                    content: (user.city != null && user.city!.isNotEmpty) ||
-                            (user.country != null && user.country!.isNotEmpty)
-                        ? '${user.city ?? ''}, ${user.country ?? ''}'
-                        : tr("location_not_defined"),
+
+                  // ──────────── PESTAÑA SOBRE MI ────────────────────
+                  SingleChildScrollView(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Fila: Género | Objetivo
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildInfoBox(
+                                title: 'Genero',
+                                content:
+                                user.gender ?? tr("not_specified"),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _buildInfoBox(
+                                title: 'Objetivo',
+                                content: user.goal ?? tr("not_specified"),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Caja ancho completo
+                        _buildInfoBox(
+                          title: 'Que estas buscando?',
+                          content:
+                          user.relationshipGoal ?? tr("not_specified"),
+                        ),
+
+                        // Caja ancho completo
+                        _buildInfoBox(
+                          title: 'Ubicacion',
+                          content: (user.city != null &&
+                              user.city!.isNotEmpty) ||
+                              (user.country != null &&
+                                  user.country!.isNotEmpty)
+                              ? '${user.city}, ${user.country}'
+                              : tr("location_not_defined"),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-            // Fotografías adicionales
-            if (user.photos != null && user.photos!.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Text(
-                tr("photos"),
-                style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              // Si deseas usar traducción para "Fotografías:" reemplázalo por:
-              // Text(tr("photographs"), style: ... )
-              const SizedBox(height: 8),
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 4,
-                  mainAxisSpacing: 4,
-                ),
-                itemCount: user.photos!.length,
-                itemBuilder: (context, index) {
-                  final photo = user.photos![index];
-                  return GestureDetector(
-                    onTap: () {
-                      final urls = user.photos!.map((p) => p.url).toList();
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PhotoGalleryScreen(
-                            imageUrls: urls,
-                            initialIndex: index,
-                          ),
-                        ),
-                      );
-                    },
-                    child: CachedNetworkImage(
-                      imageUrl: photo.url,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) =>
-                          Container(color: Colors.grey[800]),
-                      errorWidget: (context, url, error) =>
-                          const Icon(Icons.error, color: Colors.white),
-                    ),
-                  );
-                },
-              ),
-            ],
           ],
         ),
       ),

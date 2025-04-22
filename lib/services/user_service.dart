@@ -443,6 +443,28 @@ class UserService {
     }
   }
 
+  Future<Map<String, dynamic>> reportUser(
+      String reportedUserId, {
+        required String reason,
+        String? details,
+      }) async {
+    final url = Uri.parse('$baseUrl/users/report/$reportedUserId');
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'reason': reason, 'details': details}),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return {'success': true, 'message': data['message']};
+    } else {
+      return {'success': false, 'message': data['message'] ?? 'Error al reportar'};
+    }
+  }
+
   // Método para validar imágenes sin subir (verificar contenido explícito)
   Future<Map<String, dynamic>> validateImages(List<File> photos) async {
     if (photos.isEmpty) {

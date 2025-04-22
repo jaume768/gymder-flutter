@@ -78,8 +78,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (user != null) {
       username = user.username ?? '';
       originalUsername = user.username ?? '';
-      if ((user.city != null && user.city!.isNotEmpty) ||
-          (user.country != null && user.country!.isNotEmpty)) {
+      if ((user.city?.isNotEmpty ?? false) || (user.country?.isNotEmpty ?? false)) {
         location = '${user.city ?? ''}, ${user.country ?? ''}';
       }
       originalFirstName = user.firstName ?? '';
@@ -92,7 +91,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       originalAge = user.age ?? 18;
       originalHeight = user.height ?? 0;
       originalWeight = user.weight ?? 0;
-      // Asignamos los valores a las variables editables
+
+      // Inicializar variables editables
       firstName = originalFirstName;
       lastName = originalLastName;
       goal = originalGoal;
@@ -147,11 +147,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         position.longitude,
       );
       if (placemarks.isNotEmpty) {
-        Placemark placemark = placemarks.first;
-        String ciudad = placemark.locality ?? '';
-        String pais = placemark.country ?? '';
+        final p = placemarks.first;
         setState(() {
-          location = '$ciudad, $pais';
+          location = '${p.locality ?? ''}, ${p.country ?? ''}';
           userLatitude = position.latitude;
           userLongitude = position.longitude;
           isLoadingLocation = false;
@@ -175,9 +173,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void _handleSeekingChanged(String option, bool isSelected) {
     setState(() {
       if (isSelected) {
-        if (!seeking.contains(option)) {
-          seeking.add(option);
-        }
+        seeking.add(option);
       } else {
         seeking.remove(option);
       }
@@ -186,15 +182,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _pickProfileImage() async {
-    final pickedFile = await _picker.pickImage(
+    final picked = await _picker.pickImage(
       source: ImageSource.gallery,
       maxWidth: 800,
       maxHeight: 800,
     );
-    if (pickedFile != null) {
-      setState(() {
-        _imageFile = File(pickedFile.path);
-      });
+    if (picked != null) {
+      setState(() => _imageFile = File(picked.path));
       await _uploadProfilePicture();
     }
   }
@@ -205,8 +199,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       isUploading = true;
       errorMessage = '';
     });
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final token = await authProvider.getToken();
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = await auth.getToken();
     if (token == null) {
       setState(() {
         isUploading = false;
@@ -215,27 +209,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       return;
     }
     try {
-      final userService = UserService(token: token);
-      final result = await userService.uploadProfilePicture(_imageFile!);
-      if (result['success']) {
-        await authProvider.refreshUser();
+      final svc = UserService(token: token);
+      final res = await svc.uploadProfilePicture(_imageFile!);
+      if (res['success']) {
+        await auth.refreshUser();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(tr("profile_updated_successfully")),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12.0),
-            ),
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
-        setState(() {
-          _imageFile = null;
-        });
+        setState(() => _imageFile = null);
       } else {
         setState(() {
           errorMessage =
-              result['message'] ?? tr("error_uploading_profile_picture");
+              res['message'] ?? tr("error_uploading_profile_picture");
         });
       }
     } catch (e) {
@@ -243,27 +234,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         errorMessage = tr("error_uploading_profile_picture") + ": $e";
       });
     } finally {
-      setState(() {
-        isUploading = false;
-      });
+      setState(() => isUploading = false);
     }
   }
 
   Future<void> _pickAdditionalImages() async {
-    final pickedFiles = await _picker.pickMultiImage(
-      maxWidth: 10800,
-      maxHeight: 10800,
-    );
-    if (pickedFiles != null) {
-      if (pickedFiles.length > 5) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(tr("max_5_photos"))),
-        );
+    final picked = await _picker.pickMultiImage(maxWidth: 10800, maxHeight: 10800);
+    if (picked != null) {
+      if (picked.length > 5) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(tr("max_5_photos"))));
         return;
       }
-      setState(() {
-        _additionalImages = pickedFiles.map((f) => File(f.path)).toList();
-      });
+      setState(() =>
+      _additionalImages = picked.map((f) => File(f.path)).toList());
     }
   }
 
@@ -273,8 +257,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       isUploading = true;
       errorMessage = '';
     });
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final token = await authProvider.getToken();
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = await auth.getToken();
     if (token == null) {
       setState(() {
         isUploading = false;
@@ -283,21 +267,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       return;
     }
     try {
-      final userService = UserService(token: token);
-      final result = await userService.uploadPhotos(_additionalImages);
-      if (result['success']) {
-        await authProvider.refreshUser();
+      final svc = UserService(token: token);
+      final res = await svc.uploadPhotos(_additionalImages);
+      if (res['success']) {
+        await auth.refreshUser();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(tr("additional_photos_uploaded_successfully"))),
+          SnackBar(content: Text(tr("additional_photos_uploaded_successfully"))),
         );
-        setState(() {
-          _additionalImages = [];
-        });
+        setState(() => _additionalImages = []);
       } else {
         setState(() {
           errorMessage =
-              result['message'] ?? tr("error_uploading_additional_photos");
+              res['message'] ?? tr("error_uploading_additional_photos");
         });
       }
     } catch (e) {
@@ -305,26 +286,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         errorMessage = tr("error_uploading_additional_photos") + ": $e";
       });
     } finally {
-      setState(() {
-        isUploading = false;
-      });
+      setState(() => isUploading = false);
     }
   }
 
-  Future<void> _updatePhotoOrder(List<Photo> newPhotoList) async {
-    if (newPhotoList.isEmpty) return;
+  Future<void> _updatePhotoOrder(List<Photo> newList) async {
+    if (newList.isEmpty) return;
     try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final token = await authProvider.getToken();
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final token = await auth.getToken();
       if (token == null) return;
-      final userService = UserService(token: token);
-      final photoIds = newPhotoList.map((p) => p.id).toList();
-      final result = await userService.updatePhotoOrder(photoIds);
-      if (result['success'] == true) {
-        await authProvider.refreshUser();
+      final svc = UserService(token: token);
+      final ids = newList.map((p) => p.id).toList();
+      final res = await svc.updatePhotoOrder(ids);
+      if (res['success'] == true) {
+        await auth.refreshUser();
       } else {
         setState(() {
-          errorMessage = result['message'] ?? tr("error_updating_photo_order");
+          errorMessage = res['message'] ?? tr("error_updating_photo_order");
         });
       }
     } catch (e) {
@@ -336,9 +315,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _saveProfile() async {
     if (!_usernameFormKey.currentState!.validate() ||
-        !_personalInfoFormKey.currentState!.validate()) {
-      return;
-    }
+        !_personalInfoFormKey.currentState!.validate()) return;
     _usernameFormKey.currentState!.save();
     _personalInfoFormKey.currentState!.save();
 
@@ -348,16 +325,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     });
 
     try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final token = await authProvider.getToken();
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final token = await auth.getToken();
       if (token == null) {
         setState(() {
           errorMessage = tr("token_not_found_login");
         });
         return;
       }
-      final userService = UserService(token: token);
-      Map<String, dynamic> profileData = {
+      final svc = UserService(token: token);
+
+      // Si cambió username
+      if (username != auth.user?.username) {
+        final usrRes = await svc.updateUsername(username);
+        if (!usrRes['success']) {
+          setState(() {
+            errorMessage = usrRes['message'] ?? tr("enter_username");
+          });
+          return;
+        }
+      }
+
+      // Datos de perfil
+      final profileData = {
         'firstName': firstName,
         'lastName': lastName,
         'goal': goal,
@@ -369,28 +359,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'height': height,
         'weight': weight,
       };
-
-      if (username != authProvider.user?.username) {
-        final usernameResponse = await userService.updateUsername(username);
-        if (!usernameResponse['success']) {
-          setState(() {
-            errorMessage = usernameResponse['message'] ?? tr("enter_username");
-          });
-          return;
-        }
-      }
-
-      final result = await userService.updateProfile(profileData);
-      if (result['success']) {
-        await authProvider.refreshUser();
+      final res = await svc.updateProfile(profileData);
+      if (res['success']) {
+        await auth.refreshUser();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(tr("profile_updated_successfully")),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12.0),
-            ),
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
         setState(() {
@@ -402,7 +380,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         );
       } else {
         setState(() {
-          errorMessage = result['message'] ?? tr("error_updating_profile");
+          errorMessage = res['message'] ?? tr("error_updating_profile");
         });
       }
     } catch (e) {
@@ -410,9 +388,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         errorMessage = tr("error_updating_profile") + ": $e";
       });
     } finally {
-      setState(() {
-        isUploading = false;
-      });
+      setState(() => isUploading = false);
     }
   }
 
@@ -421,8 +397,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       isUploading = true;
       errorMessage = '';
     });
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final token = await authProvider.getToken();
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = await auth.getToken();
     if (token == null) {
       setState(() {
         isUploading = false;
@@ -431,16 +407,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       return;
     }
     try {
-      final userService = UserService(token: token);
-      final result = await userService.deletePhoto(publicId);
-      if (result['success']) {
-        await authProvider.refreshUser();
+      final svc = UserService(token: token);
+      final res = await svc.deletePhoto(publicId);
+      if (res['success']) {
+        await auth.refreshUser();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(tr("photo_deleted_successfully"))),
         );
       } else {
         setState(() {
-          errorMessage = result['message'] ?? tr("error_deleting_photo");
+          errorMessage = res['message'] ?? tr("error_deleting_photo");
         });
       }
     } catch (e) {
@@ -448,16 +424,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         errorMessage = tr("error_deleting_photo") + ": $e";
       });
     } finally {
-      setState(() {
-        isUploading = false;
-      });
+      setState(() => isUploading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final user = authProvider.user;
+    final auth = Provider.of<AuthProvider>(context);
+    final user = auth.user;
     if (user == null) {
       Future.microtask(() {
         Navigator.pushReplacement(
@@ -467,7 +441,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       });
       return const Scaffold(body: SizedBox());
     }
-    final showSaveButton = hasChanges || _photoOrderChanged;
+
+    final showSave = hasChanges || _photoOrderChanged;
+    final sectionHeaderStyle = TextStyle(
+      color: Colors.white70,
+      fontSize: 18,
+      fontWeight: FontWeight.bold,
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: Text(tr("edit_profile"),
@@ -475,66 +456,75 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      backgroundColor: const Color.fromRGBO(20, 20, 20, 0.0),
-      floatingActionButton: showSaveButton
+      backgroundColor: const Color.fromRGBO(20, 20, 20, 0),
+      floatingActionButton: showSave
           ? FloatingActionButton.extended(
-              onPressed: isUploading ? null : _saveProfile,
-              backgroundColor: Colors.blueAccent,
-              icon: isUploading
-                  ? const SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Icon(Icons.save, color: Colors.white),
-              label: Text(
-                isUploading ? tr("saving") : tr("save_changes"),
-                style: const TextStyle(color: Colors.white),
-              ),
-            )
+        onPressed: isUploading ? null : _saveProfile,
+        backgroundColor: Colors.blueAccent,
+        icon: isUploading
+            ? const SizedBox(
+          height: 24,
+          width: 24,
+          child: CircularProgressIndicator(
+            color: Colors.white,
+            strokeWidth: 2,
+          ),
+        )
+            : const Icon(Icons.save, color: Colors.white),
+        label: Text(
+          isUploading ? tr("saving") : tr("save_changes"),
+          style: const TextStyle(color: Colors.white),
+        ),
+      )
           : null,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // FOTO DE PERFIL (igual)
             ProfilePictureWidget(
               user: user,
               imageFile: _imageFile,
               onPickImage: _pickProfileImage,
             ),
-            const SizedBox(height: 30),
+
+            const SizedBox(height: 16),
+            // --- Información Básica ---
+            Text(tr("basic_information"), style: sectionHeaderStyle),
+            const SizedBox(height: 8),
             Form(
               key: _usernameFormKey,
               child: TextFormField(
                 initialValue: username,
                 decoration: InputDecoration(
                   labelText: tr("username"),
+                  floatingLabelBehavior: FloatingLabelBehavior.always,
+                  filled: true,
+                  fillColor: Colors.white12,
                   labelStyle: const TextStyle(color: Colors.white70),
                   enabledBorder: OutlineInputBorder(
                     borderSide: const BorderSide(color: Colors.white54),
-                    borderRadius: BorderRadius.circular(12.0),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderSide: const BorderSide(color: Colors.blueAccent),
-                    borderRadius: BorderRadius.circular(12.0),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   errorStyle: const TextStyle(color: Colors.redAccent),
                 ),
                 style: const TextStyle(color: Colors.white),
-                onChanged: (val) {
-                  username = val;
+                onChanged: (v) {
+                  username = v;
                   _checkChanges();
                 },
-                validator: (value) => (value == null || value.isEmpty)
-                    ? tr("enter_username")
-                    : null,
+                validator: (v) =>
+                (v == null || v.isEmpty) ? tr("enter_username") : null,
               ),
             ),
-            const SizedBox(height: 30),
+
+            const SizedBox(height: 24),
+            // --- Resto de info personal ---
             PersonalInfoForm(
               formKey: _personalInfoFormKey,
               firstName: firstName,
@@ -547,125 +537,143 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               age: age,
               height: height,
               weight: weight,
-              onFirstNameChanged: (val) {
+              onFirstNameChanged: (v) {
                 setState(() {
-                  firstName = val;
+                  firstName = v;
                   _checkChanges();
                 });
               },
-              onLastNameChanged: (val) {
+              onLastNameChanged: (v) {
                 setState(() {
-                  lastName = val;
+                  lastName = v;
                   _checkChanges();
                 });
               },
-              onGoalChanged: (val) {
+              onGoalChanged: (v) {
                 setState(() {
-                  goal = val ?? '';
+                  goal = v ?? '';
                   _checkChanges();
                 });
               },
-              onGenderChanged: (val) {
+              onGenderChanged: (v) {
                 setState(() {
-                  gender = val ?? '';
+                  gender = v ?? '';
                   _checkChanges();
                 });
               },
-              onRelationshipGoalChanged: (val) {
+              onRelationshipGoalChanged: (v) {
                 setState(() {
-                  relationshipGoal = val ?? '';
+                  relationshipGoal = v ?? '';
                   _checkChanges();
                 });
               },
-              onBiographyChanged: (val) {
+              onBiographyChanged: (v) {
                 setState(() {
-                  biography = val;
+                  biography = v;
                   _checkChanges();
                 });
               },
-              onAgeChanged: (val) {
+              onAgeChanged: (v) {
                 setState(() {
-                  age = val;
+                  age = v;
                   _checkChanges();
                 });
               },
-              onHeightChanged: (val) {
+              onHeightChanged: (v) {
                 setState(() {
-                  height = val;
+                  height = v;
                   _checkChanges();
                 });
               },
-              onWeightChanged: (val) {
+              onWeightChanged: (v) {
                 setState(() {
-                  weight = val;
+                  weight = v;
                   _checkChanges();
                 });
               },
               onSeekingSelectionChanged: _handleSeekingChanged,
             ),
-            const SizedBox(height: 16),
-            Card(
-              color: Colors.white24,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16.0),
-              ),
-              child: ListTile(
-                leading: const Icon(Icons.location_on,
-                    color: Colors.white, size: 30),
-                title: isLoadingLocation
-                    ? const Center(
-                        child: SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        ),
-                      )
-                    : Text(
-                        location.isNotEmpty
-                            ? location
-                            : tr("location_not_defined"),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                trailing: IconButton(
+
+            const SizedBox(height: 24),
+            // --- Biografía y Ubicación ---
+            Text(tr("biography_location"), style: sectionHeaderStyle),
+            const SizedBox(height: 8),
+            // (La Biografía ya la gestiona BiographyTextField dentro del PersonalInfoForm)
+            // Sólo colocamos el campo Ubicación aquí:
+            TextFormField(
+              readOnly: true,
+              initialValue: location.isNotEmpty
+                  ? location
+                  : tr("location_not_defined"),
+              decoration: InputDecoration(
+                labelText: tr("location"),
+                floatingLabelBehavior: FloatingLabelBehavior.always,
+                filled: true,
+                fillColor: Colors.white12,
+                labelStyle: const TextStyle(color: Colors.white70),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: Colors.white54),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: Colors.blueAccent),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                suffixIcon: isLoadingLocation
+                    ? Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: SizedBox(
+                    height: 16,
+                    width: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor:
+                      AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                )
+                    : IconButton(
                   icon: const Icon(Icons.refresh, color: Colors.white),
                   onPressed: _obtenerUbicacion,
                 ),
+                errorStyle: const TextStyle(color: Colors.redAccent),
               ),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 30),
+
+            const SizedBox(height: 24),
+            // --- Fotos ---
+            Text(tr("photos"), style: sectionHeaderStyle),
+            const SizedBox(height: 8),
             AdditionalPhotosWidget(
               user: user,
               additionalImages: _additionalImages,
               isUploading: isUploading,
               onPickAdditionalImages: _pickAdditionalImages,
               onUploadAdditionalPhotos: _uploadAdditionalPhotos,
-              onRemoveSelectedImage: (index) {
-                setState(() {
-                  _additionalImages.removeAt(index);
-                });
+              onRemoveSelectedImage: (i) {
+                setState(() => _additionalImages.removeAt(i));
               },
               onDeletePhoto: _deletePhoto,
-              onReorderDone: (List<Photo> newPhotoList) {
-                _reorderedPhotos = newPhotoList;
+              onReorderDone: (newList) {
+                _reorderedPhotos = newList;
                 _photoOrderChanged = true;
                 setState(() {});
               },
             ),
+
             if (errorMessage.isNotEmpty) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Text(
                 errorMessage,
-                style: const TextStyle(color: Colors.redAccent, fontSize: 14),
+                style: const TextStyle(color: Colors.redAccent),
                 textAlign: TextAlign.center,
               ),
             ],
+
             const SizedBox(height: 20),
           ],
         ),

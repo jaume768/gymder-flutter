@@ -423,8 +423,11 @@ class PremiumPurchasePage extends StatelessWidget {
       ),
       backgroundColor: Colors.black,
       body: Center(
-        child: Text(tr("premium_screen_text"),
-            style: const TextStyle(color: Colors.white)),
+        child: Text(
+          tr("premium_screen_text"),
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.white),
+        ),
       ),
     );
   }

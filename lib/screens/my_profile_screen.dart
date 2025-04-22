@@ -176,14 +176,14 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
 
             const SizedBox(height: 16),
 
-            // ─── Pestañas FOTOS / SOBRE MI ────────────────────────
+            // ─── Pestañas SOBRE MI / FOTOS ──────────────────────
             TabBar(
               indicatorColor: Colors.white,
               labelColor: Colors.white,
               unselectedLabelColor: Colors.white70,
-              tabs: const [
-                Tab(text: 'FOTOS'),
-                Tab(text: 'SOBRE MI'),
+              tabs: [
+                Tab(text: tr('about_me')),
+                Tab(text: tr('photos_profile')),
               ],
             ),
 
@@ -191,11 +191,70 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             Expanded(
               child: TabBarView(
                 children: [
-                  // ──────────── PESTAÑA FOTOS ───────────────────────
+                  // ────────── PESTAÑA SOBRE MI ─────────────────
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Fila: Género | Objetivo
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildInfoBox(
+                                title: tr('gender_display'),
+                                content: user.gender ?? tr("not_specified"),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _buildInfoBox(
+                                title: tr('goal_title'),
+                                content: user.goal ?? tr("not_specified"),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 1),
+
+                        // Caja ancho completo
+                        _buildInfoBox(
+                          title: tr('what_are_you_looking_for'),
+                          content:
+                          user.relationshipGoal ?? tr("not_specified"),
+                        ),
+
+                        // Caja ancho completo
+                        _buildInfoBox(
+                          title: tr('location'),
+                          content: (user.city != null &&
+                              user.city!.isNotEmpty) ||
+                              (user.country != null &&
+                                  user.country!.isNotEmpty)
+                              ? '${user.city}, ${user.country}'
+                              : tr("location_not_defined"),
+                        ),
+
+                        // Básicos
+                        const SizedBox(height: 0),
+                        _buildInfoBox(
+                          title: tr("basic_lifts_profile"),
+                          content:
+                          "${tr('squat')}: ${user.squatWeight != null ? '${user.squatWeight} kg' : tr('not_defined')}\n"
+                              "${tr('bench_press')}: ${user.benchPressWeight != null ? '${user.benchPressWeight} kg' : tr('not_defined')}\n"
+                              "${tr('deadlift')}: ${user.deadliftWeight != null ? '${user.deadliftWeight} kg' : tr('not_defined')}",
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ────────── PESTAÑA FOTOS ─────────────────
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: user.photos != null && user.photos!.isNotEmpty
                         ? GridView.builder(
+                      physics: const NeverScrollableScrollPhysics(),
+                      shrinkWrap: true,
                       gridDelegate:
                       const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
@@ -233,57 +292,9 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                     )
                         : Center(
                       child: Text(
-                        'No hay fotos',
+                        tr('no_photos'),
                         style: const TextStyle(color: Colors.white70),
                       ),
-                    ),
-                  ),
-
-                  // ──────────── PESTAÑA SOBRE MI ────────────────────
-                  SingleChildScrollView(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Fila: Género | Objetivo
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildInfoBox(
-                                title: 'Genero',
-                                content:
-                                user.gender ?? tr("not_specified"),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _buildInfoBox(
-                                title: 'Objetivo',
-                                content: user.goal ?? tr("not_specified"),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Caja ancho completo
-                        _buildInfoBox(
-                          title: 'Que estas buscando?',
-                          content:
-                          user.relationshipGoal ?? tr("not_specified"),
-                        ),
-
-                        // Caja ancho completo
-                        _buildInfoBox(
-                          title: 'Ubicacion',
-                          content: (user.city != null &&
-                              user.city!.isNotEmpty) ||
-                              (user.country != null &&
-                                  user.country!.isNotEmpty)
-                              ? '${user.city}, ${user.country}'
-                              : tr("location_not_defined"),
-                        ),
-                      ],
                     ),
                   ),
                 ],

@@ -651,67 +651,213 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
   void _showConfirmReportDialog(String reasonKey, {String? details}) {
     final reasonText = {
       'inappropriate_photos': tr('inappropriate_photos'),
-      'fake_profile': tr('fake_profile'),
-      'offensive_content': tr('offensive_content'),
-      'other': tr('other_reason'),
+      'fake_profile':        tr('fake_profile'),
+      'offensive_content':   tr('offensive_content'),
+      'other':               tr('other_reason'),
     }[reasonKey]!;
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(tr('confirm_report_title')),
-        content: Text(
-          tr(
-            'confirm_report_message',
-            namedArgs: {'reason': reasonText},
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(tr('cancel')),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _sendReport(reasonKey, details: details);
-            },
-            child: Text(tr('confirm_report_button')),
-          ),
-        ],
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black54,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      builder: (_) {
+        return Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                tr('confirm_report_title'),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                tr('confirm_report_message',
+                    namedArgs: {'reason': reasonText}),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70, fontSize: 16),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.white38),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        tr('cancel'),
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        await _sendReport(reasonKey, details: details);
+                      },
+                      child: Text(
+                        tr('confirm_report_button'),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
   void _showCustomReasonDialog() {
     String customText = '';
-    showDialog(
+
+    showModalBottomSheet(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(tr('other_reason')),
-        content: TextField(
-          maxLines: 3,
-          onChanged: (val) => customText = val,
-          decoration: InputDecoration(hintText: tr('describe_reason')),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(tr('cancel')),
-          ),
-          TextButton(
-            onPressed: () {
-              if (customText.trim().isNotEmpty) {
-                Navigator.pop(context);
-                _showConfirmReportDialog('other', details: customText.trim());
-              }
-            },
-            child: Text(tr('send')),
-          ),
-        ],
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black54,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      builder: (rootContext) {
+        return StatefulBuilder(
+          builder: (sheetContext, setModalState) {
+            return Container(
+              padding: EdgeInsets.only(
+                  left: 24, right: 24, bottom: MediaQuery.of(context).viewInsets.bottom + 24, top: 16
+              ),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    tr('other_reason'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white12,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: TextField(
+                      maxLines: 4,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: tr('describe_reason'),
+                        hintStyle: const TextStyle(color: Colors.white38),
+                        border: InputBorder.none,
+                      ),
+                      onChanged: (val) {
+                        // <- Aquí llamamos al setState local
+                        setModalState(() {
+                          customText = val;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.white38),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          onPressed: () => Navigator.of(sheetContext).pop(),
+                          child: Text(
+                            tr('cancel'),
+                            style: const TextStyle(color: Colors.white70),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blueAccent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          // ahora el onPressed depende del estado actualizado
+                          onPressed: customText.trim().isEmpty
+                              ? null
+                              : () {
+                            // primero cerramos este modal
+                            Navigator.of(sheetContext).pop();
+                            // después, mostramos el de confirmación
+                            _showConfirmReportDialog(
+                              'other',
+                              details: customText.trim(),
+                            );
+                          },
+                          child: Text(
+                            tr('send'),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
+
 
   Future<void> _sendReport(String reasonKey, {String? details}) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);

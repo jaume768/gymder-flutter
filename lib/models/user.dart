@@ -70,6 +70,9 @@ class User {
   final String? city;
   final String? country;
   final int? age;
+  final int? squatWeight;
+  final int? benchPressWeight;
+  final int? deadliftWeight;
   final int? height;
   final int? weight;
 
@@ -88,6 +91,9 @@ class User {
     this.seeking,
     this.relationshipGoal,
     this.likes,
+    this.squatWeight,
+    this.benchPressWeight,
+    this.deadliftWeight,
     this.matches,
     this.blockedUsers,
     this.photos,
@@ -124,6 +130,9 @@ class User {
       firstName: json['firstName'],
       lastName: json['lastName'],
       gender: json['gender'],
+      squatWeight: json['squatWeight'] as int?,
+      benchPressWeight: json['benchPressWeight'] as int?,
+      deadliftWeight: json['deadliftWeight'] as int?,
       seeking: json['seeking'] != null ? List<String>.from(json['seeking']) : [],
       relationshipGoal: json['relationshipGoal'],
       likes: json['likes'] != null ? List<String>.from(json['likes']) : [],

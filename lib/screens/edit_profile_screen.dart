@@ -48,6 +48,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   String originalFirstName = '';
   String originalLastName = '';
   String originalGoal = '';
+  int? squatWeight;
+  int? benchPressWeight;
+  int? deadliftWeight;
+
+  int? originalSquatWeight;
+  int? originalBenchPressWeight;
+  int? originalDeadliftWeight;
   String originalGender = '';
   List<String> originalSeeking = [];
   String originalRelationshipGoal = '';
@@ -91,6 +98,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       originalAge = user.age ?? 18;
       originalHeight = user.height ?? 0;
       originalWeight = user.weight ?? 0;
+      originalHeight = user.height ?? 0;
+      originalWeight = user.weight ?? 0;
+
+      // básicos
+      originalSquatWeight = user.squatWeight;
+      originalBenchPressWeight = user.benchPressWeight;
+      originalDeadliftWeight = user.deadliftWeight;
+
+      squatWeight = originalSquatWeight;
+      benchPressWeight = originalBenchPressWeight;
+      deadliftWeight = originalDeadliftWeight;
 
       // Inicializar variables editables
       firstName = originalFirstName;
@@ -120,7 +138,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           weight != originalWeight ||
           seeking.length != originalSeeking.length ||
           !seeking.every((item) => originalSeeking.contains(item)) ||
-          locationUpdated);
+          locationUpdated) ||
+          squatWeight != originalSquatWeight ||
+          benchPressWeight != originalBenchPressWeight ||
+          deadliftWeight != originalDeadliftWeight;
     });
   }
 
@@ -358,6 +379,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'age': age,
         'height': height,
         'weight': weight,
+        'squatWeight': squatWeight,
+        'benchPressWeight': benchPressWeight,
+        'deadliftWeight': deadliftWeight,
       };
       final res = await svc.updateProfile(profileData);
       if (res['success']) {
@@ -642,6 +666,85 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   color: Colors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 24),
+            // --- Básicos: sentadilla, press banca, peso muerto ---
+            Text(tr("basic_lifts"), style: sectionHeaderStyle),
+            const SizedBox(height: 8),
+
+            TextFormField(
+              initialValue: squatWeight?.toString() ?? '',
+              style: const TextStyle(color: Colors.white),
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: tr("squat_kg"),
+                floatingLabelBehavior: FloatingLabelBehavior.always,
+                filled: true, fillColor: Colors.white12,
+                labelStyle: const TextStyle(color: Colors.white70),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: Colors.white54),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: Colors.blueAccent),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onChanged: (v) {
+                squatWeight = int.tryParse(v);
+                _checkChanges();
+              },
+            ),
+            const SizedBox(height: 16),
+
+            TextFormField(
+              initialValue: benchPressWeight?.toString() ?? '',
+              style: const TextStyle(color: Colors.white),
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: tr("bench_press_kg"),
+                floatingLabelBehavior: FloatingLabelBehavior.always,
+                filled: true, fillColor: Colors.white12,
+                labelStyle: const TextStyle(color: Colors.white70),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: Colors.white54),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: Colors.blueAccent),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onChanged: (v) {
+                benchPressWeight = int.tryParse(v);
+                _checkChanges();
+              },
+            ),
+            const SizedBox(height: 16),
+
+            TextFormField(
+              initialValue: deadliftWeight?.toString() ?? '',
+              style: const TextStyle(color: Colors.white),
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: tr("deadlift_kg"),
+                floatingLabelBehavior: FloatingLabelBehavior.always,
+                filled: true, fillColor: Colors.white12,
+                labelStyle: const TextStyle(color: Colors.white70),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: Colors.white54),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: Colors.blueAccent),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onChanged: (v) {
+                deadliftWeight = int.tryParse(v);
+                _checkChanges();
+              },
             ),
 
             const SizedBox(height: 24),

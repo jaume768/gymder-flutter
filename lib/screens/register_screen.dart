@@ -33,7 +33,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? googleProfilePictureUrl;
 
   int _currentStep = 0;
-  final int _totalSteps = 11;
+  final int _totalSteps = 12;
+  double? squatWeight;
+  double? benchPressWeight;
+  double? deadliftWeight;
   String verificationCode = '';
   final int emailVerificationStepIndex = 1;
   final RegExp emailRegex = RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$");
@@ -279,7 +282,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         if (!acceptedTerms) {
           setState(() {
             errorMessage = tr("must_accept_terms");
-            fieldErrors['terms'] = tr("must_accept_terms");
           });
           return false;
         }
@@ -424,8 +426,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
         break;
       case 9:
-        return true;
+        break;
       case 10:
+        break;
+      case 11:
+        // Validación para las fotos adicionales
         if (selectedPhotos.length < 2) {
           setState(() {
             errorMessage = tr("upload_minimum_photos");
@@ -618,6 +623,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'height': height,
           'weight': weight,
           'goal': gymStage,
+          if (squatWeight != null) 'squatWeight': squatWeight,
+          if (benchPressWeight != null) 'benchPressWeight': benchPressWeight,
+          if (deadliftWeight != null) 'deadliftWeight': deadliftWeight,
           if (age != null) 'age': age,
           if (location.isNotEmpty)
             'location': {
@@ -690,6 +698,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           age: age, // Añadimos la edad
           height: height,
           weight: weight,
+          squatWeight: squatWeight,
+          benchPressWeight: benchPressWeight,
+          deadliftWeight: deadliftWeight,
           gymStage: gymStage,
           latitude: location.isEmpty ? null : userLatitude,
           longitude: location.isEmpty ? null : userLongitude,
@@ -992,6 +1003,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   _buildStep5(),
                   _buildStep6(),
                   _buildStep7(),
+                  _buildStep8Lifts(),
                   _buildStepProfilePicture(),
                   _buildStep8(),
                 ],
@@ -1636,6 +1648,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
               padding: const EdgeInsets.only(top: 16),
               child: Text(errorMessage,
                   style: const TextStyle(color: Colors.redAccent)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStep8Lifts() {
+    return _buildStepTemplate(
+      title: tr("basic_lifts"), // “¿Cuánto levantas en básicos?”
+      subtitle: tr("enter_basic_lifts_weights"),
+      child: Column(
+        children: [
+          TextFormField(
+            style: const TextStyle(color: Colors.white),
+            decoration: _inputDecoration(tr("squat_kg"), fieldName: 'squatWeight'),
+            keyboardType: TextInputType.number,
+            onChanged: (v) => squatWeight = double.tryParse(v),
+          ),
+          const SizedBox(height: 20),
+          TextFormField(
+            style: const TextStyle(color: Colors.white),
+            decoration: _inputDecoration(tr("bench_press_kg"), fieldName: 'benchPressWeight'),
+            keyboardType: TextInputType.number,
+            onChanged: (v) => benchPressWeight = double.tryParse(v),
+          ),
+          const SizedBox(height: 20),
+          TextFormField(
+            style: const TextStyle(color: Colors.white),
+            decoration: _inputDecoration(tr("deadlift_kg"), fieldName: 'deadliftWeight'),
+            keyboardType: TextInputType.number,
+            onChanged: (v) => deadliftWeight = double.tryParse(v),
+          ),
+          if (errorMessage.isNotEmpty && _currentStep == 8)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Text(errorMessage, style: const TextStyle(color: Colors.redAccent)),
             ),
         ],
       ),

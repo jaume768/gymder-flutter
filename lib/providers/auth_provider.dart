@@ -90,6 +90,9 @@ class AuthProvider with ChangeNotifier {
     double? height,
     double? weight,
     String? gymStage,
+    double? squatWeight,
+    double? benchPressWeight,
+    double? deadliftWeight,
     double? latitude,
     double? longitude,
   }) async {
@@ -109,6 +112,9 @@ class AuthProvider with ChangeNotifier {
         height: height,
         weight: weight,
         gymStage: gymStage,
+        squatWeight: squatWeight,
+        benchPressWeight: benchPressWeight,
+        deadliftWeight: deadliftWeight,
         latitude: latitude,
         longitude: longitude,
       );

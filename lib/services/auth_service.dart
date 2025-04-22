@@ -26,6 +26,9 @@ class AuthService {
     String? gymStage,
     double? latitude,
     double? longitude,
+    double? squatWeight,
+    double? benchPressWeight,
+    double? deadliftWeight,
   }) async {
     final url = Uri.parse('$baseUrl/register');
 
@@ -42,6 +45,9 @@ class AuthService {
       'height': height,
       'weight': weight,
       'goal': gymStage,
+      'squatWeight': squatWeight,
+      'benchPressWeight': benchPressWeight,
+      'deadliftWeight': deadliftWeight,
     };
 
     if (latitude != null && longitude != null) {

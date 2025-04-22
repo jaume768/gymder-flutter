@@ -633,6 +633,71 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     }
   }
 
+  void _showReportModal() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.black,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'Reportar usuario',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+              ),
+              Divider(color: Colors.white54),
+              ListTile(
+                leading: Icon(Icons.photo, color: Colors.blueAccent),
+                title: Text('Fotos inapropiadas', style: TextStyle(color: Colors.white)),
+                onTap: () => Navigator.pop(context),
+              ),
+              ListTile(
+                leading: Icon(Icons.report, color: Colors.blueAccent),
+                title: Text('Acoso', style: TextStyle(color: Colors.white)),
+                onTap: () => Navigator.pop(context),
+              ),
+              ListTile(
+                leading: Icon(Icons.person_off, color: Colors.blueAccent),
+                title: Text('Perfil falso', style: TextStyle(color: Colors.white)),
+                onTap: () => Navigator.pop(context),
+              ),
+              ListTile(
+                leading: Icon(Icons.text_snippet, color: Colors.blueAccent),
+                title: Text('Contenido ofensivo', style: TextStyle(color: Colors.white)),
+                onTap: () => Navigator.pop(context),
+              ),
+              ListTile(
+                leading: Icon(Icons.more_horiz, color: Colors.blueAccent),
+                title: Text('Otro motivo', style: TextStyle(color: Colors.white)),
+                onTap: () => Navigator.pop(context),
+              ),
+              SizedBox(height: 16),
+              TextButton(
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: Text(tr("cancel")),
+              ),
+              SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _verticalPageController.dispose();
@@ -734,10 +799,14 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
           ),
           Positioned(
             top: MediaQuery.of(context).padding.top + 10,
-            left: 60,
+            left: 0,
             right: 0,
             child: Row(
               children: [
+                IconButton(
+                  onPressed: _showReportModal,
+                  icon: Icon(Icons.warning, color: Colors.white),
+                ),
                 Expanded(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,

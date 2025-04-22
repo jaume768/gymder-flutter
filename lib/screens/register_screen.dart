@@ -356,7 +356,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         setState(() {
           age = computedAge;
         });
-        if (age < 18) {
+        if (computedAge < 18) {
           setState(() {
             errorMessage = tr("must_be_18");
             fieldErrors['birthDate'] = tr("must_be_18");

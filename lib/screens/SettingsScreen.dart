@@ -10,12 +10,21 @@ import '../services/user_service.dart';
 import 'login_screen.dart';
 import 'AcercaDeScreen.dart';
 
+/// Estilo común para todos los botones "Cancelar", "Modificar", "Actualizar", etc.
+final ButtonStyle kAppButtonStyle = TextButton.styleFrom(
+  backgroundColor: Colors.white,
+  foregroundColor: Colors.black,
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(28),
+  ),
+  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+);
+
 /// PANTALLA PRINCIPAL DE AJUSTES
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({Key? key}) : super(key: key);
 
   void _optionSelected(BuildContext context, String option) {
-    // Usamos las claves localizadas sin const para evitar errores de compilación.
     if (option == tr("notifications")) {
       Navigator.push(
         context,
@@ -58,15 +67,17 @@ class SettingsScreen extends StatelessWidget {
   Future<void> _confirmLogout(BuildContext context) async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (_) => AlertDialog(
         title: Text(tr("logout_confirm_title")),
         content: Text(tr("logout_confirm_content")),
         actions: [
           TextButton(
+            style: kAppButtonStyle,
             onPressed: () => Navigator.pop(context, false),
             child: Text(tr("cancel")),
           ),
           TextButton(
+            style: kAppButtonStyle,
             onPressed: () => Navigator.pop(context, true),
             child: Text(tr("confirm")),
           ),
@@ -85,7 +96,6 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Definimos la lista de opciones en tiempo de ejecución (no const)
     final List<Map<String, dynamic>> options = [
       {"title": tr("notifications"), "icon": Icons.notifications},
       {"title": tr("languages"), "icon": Icons.language},
@@ -98,16 +108,14 @@ class SettingsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title:
-            Text(tr("settings"), style: const TextStyle(color: Colors.white)),
+        title: Text(tr("settings"), style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       backgroundColor: const Color.fromRGBO(20, 20, 20, 1.0),
       body: ListView.separated(
         itemCount: options.length,
-        separatorBuilder: (context, index) =>
-            const Divider(color: Colors.white24),
+        separatorBuilder: (_, __) => const Divider(color: Colors.white24),
         itemBuilder: (context, index) {
           final option = options[index];
           return ListTile(
@@ -127,17 +135,13 @@ class SettingsScreen extends StatelessWidget {
 /// PANTALLA DE NOTIFICACIONES
 class NotificacionesScreen extends StatefulWidget {
   const NotificacionesScreen({Key? key}) : super(key: key);
-
   @override
   _NotificacionesScreenState createState() => _NotificacionesScreenState();
 }
-
 class _NotificacionesScreenState extends State<NotificacionesScreen> {
   bool notificarMatches = true;
   bool notificarMensajes = true;
   bool notificarLikes = true;
-  bool agruparNotificaciones = false;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -154,34 +158,22 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
             title: Text(tr("notify_new_matches"),
                 style: const TextStyle(color: Colors.white)),
             value: notificarMatches,
-            onChanged: (val) {
-              setState(() => notificarMatches = val);
-              // Lógica para guardar configuración.
-            },
+            activeColor: Colors.blueAccent,
+            onChanged: (v) => setState(() => notificarMatches = v),
           ),
           SwitchListTile(
             title: Text(tr("notify_messages"),
                 style: const TextStyle(color: Colors.white)),
             value: notificarMensajes,
-            onChanged: (val) {
-              setState(() => notificarMensajes = val);
-            },
+            activeColor: Colors.blueAccent,
+            onChanged: (v) => setState(() => notificarMensajes = v),
           ),
           SwitchListTile(
             title: Text(tr("notify_likes"),
                 style: const TextStyle(color: Colors.white)),
             value: notificarLikes,
-            onChanged: (val) {
-              setState(() => notificarLikes = val);
-            },
-          ),
-          SwitchListTile(
-            title: Text(tr("group_notifications"),
-                style: const TextStyle(color: Colors.white)),
-            value: agruparNotificaciones,
-            onChanged: (val) {
-              setState(() => agruparNotificaciones = val);
-            },
+            activeColor: Colors.blueAccent,
+            onChanged: (v) => setState(() => notificarLikes = v),
           ),
         ],
       ),
@@ -192,29 +184,24 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
 /// PANTALLA DE IDIOMAS
 class IdiomasScreen extends StatefulWidget {
   const IdiomasScreen({Key? key}) : super(key: key);
-
   @override
   _IdiomasScreenState createState() => _IdiomasScreenState();
 }
-
 class _IdiomasScreenState extends State<IdiomasScreen> {
   late String idiomaSeleccionado;
   final List<String> idiomas = ["Español", "English"];
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final currentLocale = context.locale;
-    idiomaSeleccionado =
-        currentLocale.languageCode == 'en' ? 'English' : 'Español';
+    final current = context.locale.languageCode;
+    idiomaSeleccionado = current == 'en' ? 'English' : 'Español';
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title:
-            Text(tr("languages"), style: const TextStyle(color: Colors.white)),
+        title: Text(tr("languages"),
+            style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -222,14 +209,13 @@ class _IdiomasScreenState extends State<IdiomasScreen> {
       body: ListView(
         children: idiomas.map((idioma) {
           return RadioListTile(
-            title:
-                Text(idioma.tr(), style: const TextStyle(color: Colors.white)),
+            title: Text(idioma.tr(),
+                style: const TextStyle(color: Colors.white)),
             value: idioma,
             groupValue: idiomaSeleccionado,
+            activeColor: Colors.blueAccent,
             onChanged: (String? value) {
-              setState(() {
-                idiomaSeleccionado = value!;
-              });
+              setState(() => idiomaSeleccionado = value!);
               context.setLocale(Locale(value == "Español" ? 'es' : 'en'));
               Navigator.pushReplacement(
                 context,
@@ -246,11 +232,9 @@ class _IdiomasScreenState extends State<IdiomasScreen> {
 /// PANTALLA DE SEGURIDAD
 class SeguridadScreen extends StatefulWidget {
   const SeguridadScreen({Key? key}) : super(key: key);
-
   @override
   _SeguridadScreenState createState() => _SeguridadScreenState();
 }
-
 class _SeguridadScreenState extends State<SeguridadScreen> {
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
@@ -260,19 +244,15 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
 
   Future<void> _changePassword() async {
     if (_newPasswordController.text != _confirmPasswordController.text) {
-      setState(() {
-        updateMessage = tr("passwords_do_not_match");
-      });
+      setState(() => updateMessage = tr("passwords_do_not_match"));
       return;
     }
-
     setState(() {
       isUpdating = true;
       updateMessage = '';
     });
-
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final token = await authProvider.getToken();
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = await auth.getToken();
     if (token == null) {
       setState(() {
         isUpdating = false;
@@ -280,16 +260,14 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
       });
       return;
     }
-
     final userService = UserService(token: token);
     final result = await userService.changePassword(
       _currentPasswordController.text,
       _newPasswordController.text,
     );
-
     setState(() {
       isUpdating = false;
-      updateMessage = result['message'];
+      updateMessage = result['message'] ?? '';
     });
   }
 
@@ -297,8 +275,8 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title:
-            Text(tr("security"), style: const TextStyle(color: Colors.white)),
+        title: Text(tr("security"),
+            style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -307,13 +285,11 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Text(
-              tr("change_password"),
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold),
-            ),
+            Text(tr("change_password"),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
             TextField(
               controller: _currentPasswordController,
@@ -358,9 +334,14 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
+              style: kAppButtonStyle,
               onPressed: isUpdating ? null : _changePassword,
               child: isUpdating
-                  ? const CircularProgressIndicator()
+                  ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
                   : Text(tr("update_password")),
             ),
             const SizedBox(height: 10),
@@ -383,7 +364,7 @@ class PermisosAppScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, String>> permisos = [
+    final permisos = [
       {
         "title": tr("location"),
         "description": tr("location_permission_description")
@@ -408,8 +389,7 @@ class PermisosAppScreen extends StatelessWidget {
       backgroundColor: const Color.fromRGBO(20, 20, 20, 1.0),
       body: ListView.separated(
         itemCount: permisos.length,
-        separatorBuilder: (context, index) =>
-            const Divider(color: Colors.white24),
+        separatorBuilder: (_, __) => const Divider(color: Colors.white24),
         itemBuilder: (context, index) {
           final permiso = permisos[index];
           return ListTile(
@@ -419,6 +399,7 @@ class PermisosAppScreen extends StatelessWidget {
             subtitle: Text(permiso["description"]!,
                 style: const TextStyle(color: Colors.white70)),
             trailing: ElevatedButton(
+              style: kAppButtonStyle,
               onPressed: _openAppSettings,
               child: Text(tr("modify")),
             ),
@@ -429,11 +410,9 @@ class PermisosAppScreen extends StatelessWidget {
   }
 }
 
-
 /// PLACEHOLDER PARA PREMIUM PURCHASE
 class PremiumPurchasePage extends StatelessWidget {
   const PremiumPurchasePage({Key? key}) : super(key: key);
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(

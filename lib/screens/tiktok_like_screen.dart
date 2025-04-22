@@ -1189,6 +1189,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
                       style: const TextStyle(color: Colors.white),
                     ),
                     value: useLocation,
+                    activeColor: Colors.blueAccent,
                     onChanged: (val) {
                       setState(() {
                         useLocation = val;

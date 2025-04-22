@@ -1,9 +1,20 @@
+// lib/screens/suscripciones_pagos_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../providers/auth_provider.dart';
 import '../services/user_service.dart';
 import 'premium_purchase_page.dart';
+
+/// Estilo común para los botones de esta pantalla
+final ButtonStyle kAppButtonStyle = TextButton.styleFrom(
+  backgroundColor: Colors.white,
+  foregroundColor: Colors.black,
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(28),
+  ),
+  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+);
 
 class SuscripcionesPagosScreen extends StatefulWidget {
   const SuscripcionesPagosScreen({Key? key}) : super(key: key);
@@ -22,6 +33,7 @@ class _SuscripcionesPagosScreenState extends State<SuscripcionesPagosScreen> {
       isLoading = true;
       errorMessage = '';
     });
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final token = await authProvider.getToken();
     if (token == null) {
@@ -31,21 +43,25 @@ class _SuscripcionesPagosScreenState extends State<SuscripcionesPagosScreen> {
       });
       return;
     }
+
     final userService = UserService(token: token);
     final result = await userService.cancelPremium();
+
     if (result['success'] == true) {
-      // Actualizamos el usuario en el provider para reflejar el cambio
       await authProvider.refreshUser();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result['message'] ?? tr("subscription_cancelled")),
+          content:
+          Text(result['message'] ?? tr("subscription_cancelled")),
         ),
       );
     } else {
       setState(() {
-        errorMessage = result['message'] ?? tr("error_cancelling_subscription");
+        errorMessage =
+            result['message'] ?? tr("error_cancelling_subscription");
       });
     }
+
     setState(() {
       isLoading = false;
     });
@@ -59,16 +75,19 @@ class _SuscripcionesPagosScreenState extends State<SuscripcionesPagosScreen> {
         content: Text(tr("confirm_cancel_subscription_message")),
         actions: [
           TextButton(
+            style: kAppButtonStyle,
             onPressed: () => Navigator.of(context).pop(false),
             child: Text(tr("no")),
           ),
           TextButton(
+            style: kAppButtonStyle,
             onPressed: () => Navigator.of(context).pop(true),
             child: Text(tr("yes")),
           ),
         ],
       ),
     );
+
     if (result == true) {
       _cancelSubscription();
     }
@@ -78,11 +97,11 @@ class _SuscripcionesPagosScreenState extends State<SuscripcionesPagosScreen> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.user;
-    bool esPremium = user?.isPremium ?? false;
+    final bool esPremium = user?.isPremium ?? false;
     String fechaExpiracion = '';
     if (esPremium && user?.premiumExpiration != null) {
       fechaExpiracion =
-          user!.premiumExpiration!.toLocal().toString().split(' ')[0];
+      user!.premiumExpiration!.toLocal().toString().split(' ')[0];
     }
 
     return Scaffold(
@@ -107,27 +126,38 @@ class _SuscripcionesPagosScreenState extends State<SuscripcionesPagosScreen> {
                   esPremium ? tr("premium_user") : tr("standard_user"),
                   style: const TextStyle(color: Colors.white),
                 ),
+                subtitle: esPremium && fechaExpiracion.isNotEmpty
+                    ? Text(
+                  "${tr("expires_on")}: $fechaExpiracion",
+                  style: const TextStyle(color: Colors.white70),
+                )
+                    : null,
               ),
             ),
             const SizedBox(height: 20),
             if (!esPremium)
               ElevatedButton(
+                style: kAppButtonStyle,
                 onPressed: () {
-                  // Navega a la pantalla de compra premium
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const PremiumPurchasePage(),
-                    ),
+                        builder: (_) => const PremiumPurchasePage()),
                   );
                 },
                 child: Text(tr("become_premium")),
               ),
             if (esPremium)
               ElevatedButton(
-                onPressed: isLoading ? null : _confirmCancelSubscription,
+                style: kAppButtonStyle,
+                onPressed:
+                isLoading ? null : _confirmCancelSubscription,
                 child: isLoading
-                    ? const CircularProgressIndicator()
+                    ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
                     : Text(tr("cancel_subscription")),
               ),
             if (errorMessage.isNotEmpty)

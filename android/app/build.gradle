@@ -1,7 +1,9 @@
 plugins {
     id "com.android.application"
     id "kotlin-android"
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    // Firebase Google Services plugin (debe ir **después** de com.android.application)
+    id "com.google.gms.google-services"
+    // Flutter Gradle Plugin
     id "dev.flutter.flutter-gradle-plugin"
 }
 
@@ -14,13 +16,14 @@ android {
         applicationId = "com.gymswipe.app"
         minSdk = 24
         targetSdk = 34
-        versionCode 25
+        versionCode 27
         versionName "1.0.0"
     }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+        coreLibraryDesugaringEnabled true
     }
 
     signingConfigs {
@@ -43,6 +46,11 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+}
+
+dependencies {
+    // Desugaring para librerías core de Java 8
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.1.5'
 }
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {

@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:app/screens/single_user_view.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -91,6 +95,8 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     super.initState();
     _verticalPageController = PageController(keepPage: true);
 
+    _setupFCM();
+
     // Inicializar lista de usuarios y registrar sus IDs
     _randomUsers = List.from(widget.users);
     for (var user in _randomUsers) {
@@ -111,6 +117,56 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
         if (_randomUsers.length > 1) {
           _preloadImagesForUser(_randomUsers[1]);
         }
+      }
+    });
+  }
+
+  Future<void> _setupFCM() async {
+    final messaging = FirebaseMessaging.instance;
+
+    // 1) Pedir permiso
+    final settings = await messaging.requestPermission(
+      alert: true, badge: true, sound: true,
+    );
+    if (settings.authorizationStatus != AuthorizationStatus.authorized) {
+      print('Permiso de notificaciones denegado');
+      return;
+    }
+
+    // 2) Obtener el token FCM y enviarlo al backend
+    final fcmToken = await messaging.getToken();
+    if (fcmToken != null) {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final token = await auth.getToken();
+      if (token != null) {
+        await http.post(
+          Uri.parse('https://gymder-api-production.up.railway.app/api/users/fcm-token'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token'
+          },
+          body: jsonEncode({ 'token': fcmToken }),
+        );
+      }
+    }
+
+    // 3) Escuchar notificaciones en foreground
+    FirebaseMessaging.onMessage.listen((RemoteMessage msg) {
+      print('¡Notificación recibida en foreground!: ${msg.notification?.title}');
+      // Si usas flutter_local_notifications, muéstrala aquí
+    });
+
+    // 4) Manejar when the user taps on a notification
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage msg) {
+      // Por ejemplo, navegar al chat de quien te dio like...
+      final data = msg.data;
+      if (data['type'] == 'new_like') {
+        Navigator.push(context,
+          MaterialPageRoute(builder: (_) => ChatScreen(
+            currentUserId: data['toUserId'],
+            matchedUserId: data['fromUserId'],
+          )),
+        );
       }
     });
   }

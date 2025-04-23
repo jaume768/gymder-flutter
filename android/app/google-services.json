@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "966150210735",
+    "project_id": "gymswipe-c8c17",
+    "storage_bucket": "gymswipe-c8c17.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:966150210735:android:65203e47a416fde86ac05a",
+        "android_client_info": {
+          "package_name": "com.gymswipe.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAXBjktOJkH8mWePNyLRRkjwFSA7G97XNQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

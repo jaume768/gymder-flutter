@@ -192,80 +192,109 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
               child: TabBarView(
                 children: [
                   // ────────── PESTAÑA SOBRE MI ─────────────────
-                  ListView(
+                  Padding(
                     padding: const EdgeInsets.all(16.0),
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildInfoBox(
-                              title: tr('gender_display'),
-                              content: user.gender ?? tr("not_specified"),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Fila: Género | Objetivo
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildInfoBox(
+                                title: tr('gender_display'),
+                                content: user.gender ?? tr("not_specified"),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildInfoBox(
-                              title: tr('goal_title'),
-                              content: user.goal ?? tr("not_specified"),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _buildInfoBox(
+                                title: tr('goal_title'),
+                                content: user.goal ?? tr("not_specified"),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _buildInfoBox(
-                        title: tr('what_are_you_looking_for'),
-                        content: user.relationshipGoal ?? tr("not_specified"),
-                      ),
-                      _buildInfoBox(
-                        title: tr('location'),
-                        content: (user.city != null && user.city!.isNotEmpty) ||
-                            (user.country != null && user.country!.isNotEmpty)
-                            ? '${user.city}, ${user.country}'
-                            : tr("location_not_defined"),
-                      ),
-                      _buildInfoBox(
-                        title: tr("basic_lifts_profile"),
-                        content:
-                        "${tr('squat')}: ${user.squatWeight != null ? '${user.squatWeight} kg' : tr('not_defined')}\n"
-                            "${tr('bench_press')}: ${user.benchPressWeight != null ? '${user.benchPressWeight} kg' : tr('not_defined')}\n"
-                            "${tr('deadlift')}: ${user.deadliftWeight != null ? '${user.deadliftWeight} kg' : tr('not_defined')}",
-                      ),
-                    ],
+                          ],
+                        ),
+                        const SizedBox(height: 1),
+
+                        // Caja ancho completo
+                        _buildInfoBox(
+                          title: tr('what_are_you_looking_for'),
+                          content:
+                          user.relationshipGoal ?? tr("not_specified"),
+                        ),
+
+                        // Caja ancho completo
+                        _buildInfoBox(
+                          title: tr('location'),
+                          content: (user.city != null &&
+                              user.city!.isNotEmpty) ||
+                              (user.country != null &&
+                                  user.country!.isNotEmpty)
+                              ? '${user.city}, ${user.country}'
+                              : tr("location_not_defined"),
+                        ),
+
+                        // Básicos
+                        const SizedBox(height: 0),
+                        _buildInfoBox(
+                          title: tr("basic_lifts_profile"),
+                          content:
+                          "${tr('squat')}: ${user.squatWeight != null ? '${user.squatWeight} kg' : tr('not_defined')}\n"
+                              "${tr('bench_press')}: ${user.benchPressWeight != null ? '${user.benchPressWeight} kg' : tr('not_defined')}\n"
+                              "${tr('deadlift')}: ${user.deadliftWeight != null ? '${user.deadliftWeight} kg' : tr('not_defined')}",
+                        ),
+                      ],
+                    ),
                   ),
 
                   // ────────── PESTAÑA FOTOS ─────────────────
                   Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: GridView.builder(
-                      physics: const BouncingScrollPhysics(),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    child: user.photos != null && user.photos!.isNotEmpty
+                        ? GridView.builder(
+                      physics: const NeverScrollableScrollPhysics(),
+                      shrinkWrap: true,
+                      gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
                         crossAxisSpacing: 4,
                         mainAxisSpacing: 4,
                       ),
-                      itemCount: user.photos?.length ?? 0,
+                      itemCount: user.photos!.length,
                       itemBuilder: (context, index) {
                         final photo = user.photos![index];
-                        final urls = user.photos!.map((p) => p.url).toList();
                         return GestureDetector(
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => PhotoGalleryScreen(
-                                imageUrls: urls,
-                                initialIndex: index,
+                          onTap: () {
+                            final urls =
+                            user.photos!.map((p) => p.url).toList();
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PhotoGalleryScreen(
+                                  imageUrls: urls,
+                                  initialIndex: index,
+                                ),
                               ),
-                            ),
-                          ),
+                            );
+                          },
                           child: CachedNetworkImage(
                             imageUrl: photo.url,
                             fit: BoxFit.cover,
-                            placeholder: (c, u) => Container(color: Colors.grey[800]),
-                            errorWidget: (c, u, e) => const Icon(Icons.error, color: Colors.white),
+                            placeholder: (context, url) =>
+                                Container(color: Colors.grey[800]),
+                            errorWidget: (context, url, error) =>
+                            const Icon(Icons.error,
+                                color: Colors.white),
                           ),
                         );
                       },
+                    )
+                        : Center(
+                      child: Text(
+                        tr('no_photos'),
+                        style: const TextStyle(color: Colors.white70),
+                      ),
                     ),
                   ),
                 ],

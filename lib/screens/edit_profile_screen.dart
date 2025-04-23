@@ -139,8 +139,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           seeking.length != originalSeeking.length ||
           !seeking.every((item) => originalSeeking.contains(item)) ||
           locationUpdated) ||
-          _imageFile != null ||
-          _photoOrderChanged;
           squatWeight != originalSquatWeight ||
           benchPressWeight != originalBenchPressWeight ||
           deadliftWeight != originalDeadliftWeight;
@@ -203,7 +201,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     });
     _checkChanges();
   }
-  
+
   Future<void> _pickProfileImage() async {
     final picked = await _picker.pickImage(
       source: ImageSource.gallery,
@@ -211,10 +209,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       maxHeight: 800,
     );
     if (picked != null) {
-      setState(() {
-        _imageFile = File(picked.path);
-      });
-      _checkChanges();                       // marca que hay cambios
+      setState(() => _imageFile = File(picked.path));
+      await _uploadProfilePicture();
     }
   }
 
@@ -359,20 +355,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         return;
       }
       final svc = UserService(token: token);
-
-      if (_imageFile != null) {
-        final picRes = await svc.uploadProfilePicture(_imageFile!);
-        if (picRes['success'] != true) {
-          setState(() {
-            errorMessage = picRes['message'] ?? tr("error_uploading_profile_picture");
-            isUploading = false;
-          });
-          return;
-        }
-        // refresca usuario con la nueva URL y limpia el flag
-        await auth.refreshUser();
-        _imageFile = null;
-      }
 
       // Si cambió username
       if (username != auth.user?.username) {

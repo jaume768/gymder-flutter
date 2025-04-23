@@ -1262,7 +1262,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                       }
                     }
                   },
-                  icon: const Icon(Icons.settings, color: Colors.white),
+                  icon: const Icon(Icons.tune, color: Colors.white),
                 ),
               ],
             ),

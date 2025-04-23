@@ -84,10 +84,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(tr("block_user"),
-            style: const TextStyle(color: Colors.white)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title:
+            Text(tr("block_user"), style: const TextStyle(color: Colors.white)),
         content: Text(tr("block_user_confirm"),
             style: const TextStyle(color: Colors.white70)),
         actions: [
@@ -165,7 +164,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(tr("user_profile"), style: const TextStyle(color: Colors.white)),
+        title: Text(tr("user_profile"),
+            style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
@@ -179,13 +179,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : errorMessage.isNotEmpty
-          ? Center(
-        child: Text(
-          errorMessage,
-          style: const TextStyle(color: Colors.redAccent),
-        ),
-      )
-          : _buildProfileContent(),
+              ? Center(
+                  child: Text(
+                    errorMessage,
+                    style: const TextStyle(color: Colors.redAccent),
+                  ),
+                )
+              : _buildProfileContent(),
     );
   }
 
@@ -211,7 +211,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               backgroundImage: user!.profilePicture != null
                   ? CachedNetworkImageProvider(user!.profilePicture!.url)
                   : const AssetImage('assets/images/default_profile.png')
-              as ImageProvider,
+                      as ImageProvider,
             ),
           ),
 
@@ -254,102 +254,79 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             child: TabBarView(
               children: [
                 // ────────── PESTAÑA SOBRE MI ─────────────────
-                SingleChildScrollView(
+                ListView(
                   padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Fila: Género | Objetivo
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildInfoBox(
-                              title: tr('gender_display'),
-                              content: user!.gender ?? tr("not_specified"),
-                            ),
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildInfoBox(
+                            title: tr('gender_display'),
+                            content: user!.gender ?? tr("not_specified"),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildInfoBox(
-                              title: tr('goal_title'),
-                              content: user!.goal ?? tr("not_specified"),
-                            ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildInfoBox(
+                            title: tr('goal_title'),
+                            content: user!.goal ?? tr("not_specified"),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Caja ancho completo
-                      _buildInfoBox(
-                        title: tr('what_are_you_looking_for'),
-                        content: user!.relationshipGoal ?? tr("not_specified"),
-                      ),
-
-                      // Ubicación
-                      _buildInfoBox(
-                        title: tr('location'),
-                        content: (user!.city?.isNotEmpty ?? false)
-                            ? '${user!.city}, ${user!.country}'
-                            : tr("location_not_defined"),
-                      ),
-
-                      // Básicos
-                      _buildInfoBox(
-                        title: tr("basic_lifts_profile"),
-                        content: basicsContent,
-                      ),
-                    ],
-                  ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildInfoBox(
+                      title: tr('what_are_you_looking_for'),
+                      content: user!.relationshipGoal ?? tr("not_specified"),
+                    ),
+                    _buildInfoBox(
+                      title: tr('location'),
+                      content: (user!.city?.isNotEmpty ?? false)
+                          ? '${user!.city}, ${user!.country}'
+                          : tr("location_not_defined"),
+                    ),
+                    _buildInfoBox(
+                      title: tr("basic_lifts_profile"),
+                      content: basicsContent,
+                    ),
+                  ],
                 ),
 
                 // ────────── PESTAÑA FOTOS ─────────────────
                 Padding(
                   padding: const EdgeInsets.all(8.0),
-                  child: user!.photos != null && user!.photos!.isNotEmpty
-                      ? GridView.builder(
-                    physics: const NeverScrollableScrollPhysics(),
-                    shrinkWrap: true,
+                  child: GridView.builder(
+                    physics: const BouncingScrollPhysics(),
                     gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
+                        const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 3,
                       crossAxisSpacing: 4,
                       mainAxisSpacing: 4,
                     ),
-                    itemCount: user!.photos!.length,
+                    itemCount: user!.photos?.length ?? 0,
                     itemBuilder: (context, index) {
                       final photo = user!.photos![index];
+                      final urls = user!.photos!.map((p) => p.url).toList();
                       return GestureDetector(
-                        onTap: () {
-                          final urls = user!.photos!
-                              .map((p) => p.url)
-                              .toList();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => PhotoGalleryScreen(
-                                imageUrls: urls,
-                                initialIndex: index,
-                              ),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PhotoGalleryScreen(
+                              imageUrls: urls,
+                              initialIndex: index,
                             ),
-                          );
-                        },
+                          ),
+                        ),
                         child: CachedNetworkImage(
                           imageUrl: photo.url,
                           fit: BoxFit.cover,
-                          placeholder: (ctx, url) =>
+                          placeholder: (c, u) =>
                               Container(color: Colors.grey[800]),
-                          errorWidget: (ctx, url, err) =>
-                          const Icon(Icons.error,
-                              color: Colors.white),
+                          errorWidget: (c, u, e) =>
+                              const Icon(Icons.error, color: Colors.white),
                         ),
                       );
                     },
-                  )
-                      : Center(
-                    child: Text(
-                      tr('no_photos'),
-                      style: const TextStyle(color: Colors.white70),
-                    ),
                   ),
                 ),
               ],

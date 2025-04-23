@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:http/http.dart' as http;
 import 'package:mime/mime.dart'; // Importa el paquete mime
 import 'package:http_parser/http_parser.dart'; // Para MediaType
@@ -86,8 +87,11 @@ class UserService {
   }
 
   Future<Map<String, dynamic>> changePassword(
-      String currentPassword, String newPassword) async {
-    final url = Uri.parse('$baseUrl/change-password');
+      String currentPassword,
+      String newPassword,
+      ) async {
+    // Apunta a /api/users/change-password
+    final url = Uri.parse('$baseUrl/users/change-password');
     final response = await http.patch(
       url,
       headers: {
@@ -100,12 +104,15 @@ class UserService {
       }),
     );
 
+    final data = jsonDecode(response.body);
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
       return {'success': true, 'message': data['message']};
     } else {
-      final data = jsonDecode(response.body);
-      return {'success': false, 'message': data['message']};
+      return {
+        'success': false,
+        // el backend devuelve siempre un 'message'
+        'message': data['message'] ?? tr('error_changing_password'),
+      };
     }
   }
 

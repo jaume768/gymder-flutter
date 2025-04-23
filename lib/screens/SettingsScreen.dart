@@ -240,43 +240,67 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool isUpdating = false;
+  bool updateSuccess = false;
   String updateMessage = '';
 
   Future<void> _changePassword() async {
+    // Validación local
     if (_newPasswordController.text != _confirmPasswordController.text) {
-      setState(() => updateMessage = tr("passwords_do_not_match"));
+      setState(() {
+        updateSuccess = false;
+        updateMessage = tr("passwords_do_not_match");
+      });
       return;
     }
+
     setState(() {
       isUpdating = true;
       updateMessage = '';
     });
+
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final token = await auth.getToken();
     if (token == null) {
       setState(() {
         isUpdating = false;
+        updateSuccess = false;
         updateMessage = tr("token_not_found_login");
       });
       return;
     }
+
     final userService = UserService(token: token);
     final result = await userService.changePassword(
       _currentPasswordController.text,
       _newPasswordController.text,
     );
+
     setState(() {
       isUpdating = false;
+      updateSuccess = result['success'] == true;
       updateMessage = result['message'] ?? '';
+      if (updateSuccess) {
+        // Limpia los campos si se cambió bien
+        _currentPasswordController.clear();
+        _newPasswordController.clear();
+        _confirmPasswordController.clear();
+      }
     });
+  }
+
+  @override
+  void dispose() {
+    _currentPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(tr("security"),
-            style: const TextStyle(color: Colors.white)),
+        title: Text(tr("security"), style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -287,10 +311,10 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
           children: [
             Text(tr("change_password"),
                 style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold)),
+                    color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
+
+            // Contraseña actual
             TextField(
               controller: _currentPasswordController,
               obscureText: true,
@@ -305,6 +329,8 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
               ),
             ),
             const SizedBox(height: 10),
+
+            // Nueva contraseña
             TextField(
               controller: _newPasswordController,
               obscureText: true,
@@ -319,6 +345,8 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
               ),
             ),
             const SizedBox(height: 10),
+
+            // Confirmar nueva contraseña
             TextField(
               controller: _confirmPasswordController,
               obscureText: true,
@@ -333,8 +361,15 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
               ),
             ),
             const SizedBox(height: 20),
+
+            // Botón de actualizar
             ElevatedButton(
-              style: kAppButtonStyle,
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+              ),
               onPressed: isUpdating ? null : _changePassword,
               child: isUpdating
                   ? const SizedBox(
@@ -344,9 +379,18 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
               )
                   : Text(tr("update_password")),
             ),
+
             const SizedBox(height: 10),
+
+            // Mensaje de resultado
             if (updateMessage.isNotEmpty)
-              Text(updateMessage, style: const TextStyle(color: Colors.green)),
+              Text(
+                updateMessage,
+                style: TextStyle(
+                  color: updateSuccess ? Colors.green : Colors.redAccent,
+                ),
+                textAlign: TextAlign.center,
+              ),
           ],
         ),
       ),

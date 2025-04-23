@@ -1,4 +1,5 @@
 import 'package:app/screens/single_user_view.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
@@ -103,22 +104,28 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     previousPageIndex = 0;
 
     // Inicializar completamente la pantalla
-    _initializeScreen();
+    _initializeScreen().then((_) {
+      // Preload página 0 y 1
+      if (_randomUsers.isNotEmpty) {
+        _preloadImagesForUser(_randomUsers[0]);
+        if (_randomUsers.length > 1) {
+          _preloadImagesForUser(_randomUsers[1]);
+        }
+      }
+    });
   }
 
   // Método para la inicialización completa de la pantalla
   Future<void> _initializeScreen() async {
-    // Primero verificar si hay un límite de scroll activo
     await _checkScrollLimitStatus();
 
-    // Cargar usuarios que le dieron like
     await _fetchLikedUsers();
 
-    // Si no hay límite de scroll, barajar la lista
-    if (!_isScrollLimitReached) {
-      setState(() {
-        _randomUsers.shuffle();
-      });
+    if (!_isScrollLimitReached && _randomUsers.length > 1) {
+      final first = _randomUsers.removeAt(0);
+      _randomUsers.shuffle();
+      _randomUsers.insert(0, first);
+      setState(() {});
     }
   }
 
@@ -151,6 +158,18 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
       print('Error al verificar estado de límite de scroll: $e');
     }
   }
+
+  void _preloadImagesForUser(User user) {
+    if (user.photos == null) return;
+    for (var photo in user.photos!) {
+      // Con CachedNetworkImageProvider
+      precacheImage(
+        CachedNetworkImageProvider(photo.url),
+        context,
+      );
+    }
+  }
+
 
   Future<void> _fetchLikedUsers() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -1055,6 +1074,15 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                             _savedRandomPosition = pageIndex;
                           }
                         });
+
+                        final nextIndex = pageIndex + 1;
+                        if (nextIndex < _randomUsers.length) {
+                          _preloadImagesForUser(_randomUsers[nextIndex]);
+                        }
+                        // Si llegas cerca del final, sigue fetchMoreUsers…
+                        if (pageIndex >= _randomUsers.length - 5) {
+                          _fetchMoreUsers();
+                        }
 
                         // Ya estamos manejando la actualización del contador en el NotificationListener,
                         // así que aquí solo verificamos si necesitamos cargar más usuarios

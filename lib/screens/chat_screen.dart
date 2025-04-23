@@ -141,6 +141,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     });
 
     _socketService!.onReceiveMessage((data) {
+      if (data['senderId'] == widget.currentUserId) return; // ignora tu propio mensaje
       final newMessage = Message(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         senderId: data['senderId'],
@@ -148,30 +149,17 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         type: data['type'] ?? 'text',
         imageUrl: data['imageUrl'] ?? '',
         audioUrl: data['audioUrl'] ?? '',
-        audioDuration: data['audioDuration'] != null
-          ? (data['audioDuration'] is int
-              ? data['audioDuration'].toDouble()
-              : data['audioDuration']) 
-          : 0.0,
+        audioDuration: (data['audioDuration'] ?? 0).toDouble(),
         videoUrl: data['videoUrl'] ?? '',
-        videoDuration: data['videoDuration'] != null
-          ? (data['videoDuration'] is int
-              ? data['videoDuration'].toDouble()
-              : data['videoDuration'])
-          : 0.0,
+        videoDuration: (data['videoDuration'] ?? 0).toDouble(),
         createdAt: DateTime.parse(data['timestamp']),
         seenAt: null,
       );
-
-      if (mounted) {
-        setState(() {
-          messages.insert(0, newMessage);
-        });
-
-        // Marca el mensaje como leído si es del usuario emparejado
-        if (newMessage.senderId == widget.matchedUserId) {
-          _markMessagesAsRead();
-        }
+      setState(() {
+        messages.insert(0, newMessage);
+      });
+      if (newMessage.senderId == widget.matchedUserId) {
+        _markMessagesAsRead();
       }
     });
 
@@ -206,13 +194,17 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
     _socketService!.onUserOnline((data) {
       if (data['userId'] == widget.matchedUserId && mounted) {
-        setState(() { isOnline = true; });
+        setState(() {
+          isOnline = true;
+        });
       }
     });
 
     _socketService!.onUserOffline((data) {
       if (data['userId'] == widget.matchedUserId && mounted) {
-        setState(() { isOnline = false; });
+        setState(() {
+          isOnline = false;
+        });
       }
     });
 
@@ -238,7 +230,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         print('API Response: ${response.body}');
-        
+
         if (data['user'] != null) {
           setState(() {
             matchedUser = User.fromJson(data['user']);
@@ -356,19 +348,32 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _sendMessage(String message,
-      {String type = 'text',
-      String? imageUrl,
-      String? audioUrl,
-      double? audioDuration,
-      String? videoUrl,
-      double? videoDuration}) {
-    if ((type == 'text' && message.trim().isEmpty) ||
-        (type == 'image' && (imageUrl == null || imageUrl.isEmpty)) ||
-        (type == 'audio' && (audioUrl == null || audioUrl.isEmpty)) ||
-        (type == 'video' && (videoUrl == null || videoUrl.isEmpty))) {
-      return;
-    }
+  void _sendMessage(String message, {
+    String type = 'text',
+    String? imageUrl,
+    String? audioUrl,
+    double? audioDuration,
+    String? videoUrl,
+    double? videoDuration,
+  }) {
+    // validaciones...
+    final localMsg = Message(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      senderId: widget.currentUserId,
+      message: message,
+      type: type,
+      imageUrl: imageUrl ?? '',
+      audioUrl: audioUrl ?? '',
+      audioDuration: audioDuration ?? 0,
+      videoUrl: videoUrl ?? '',
+      videoDuration: videoDuration ?? 0,
+      createdAt: DateTime.now(),
+      seenAt: null,
+    );
+
+    setState(() {
+      messages.insert(0, localMsg);
+    });
 
     if (_socketService != null && _socketService!.isConnected) {
       _socketService!.sendMessage(
@@ -415,30 +420,38 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           builder: (BuildContext dialogContext) {
             return AlertDialog(
               backgroundColor: Colors.grey[900],
-              title: Text(tr('image_preview'), style: TextStyle(color: Colors.white)),
+              title: Text(tr('image_preview'),
+                  style: TextStyle(color: Colors.white)),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Image.file(File(image.path), height: 200),
                   const SizedBox(height: 20),
-                  Text(tr('send_this_image'), style: const TextStyle(color: Colors.white70)),
+                  Text(tr('send_this_image'),
+                      style: const TextStyle(color: Colors.white70)),
                 ],
               ),
               actions: [
                 TextButton(
-                  child: Text(tr('cancel_action'), style: TextStyle(color: Colors.red)),
+                  child: Text(tr('cancel_action'),
+                      style: TextStyle(color: Colors.red)),
                   onPressed: () => Navigator.of(dialogContext).pop(),
                 ),
                 TextButton(
-                  child: Text(tr('send_action'), style: TextStyle(color: Colors.blue)),
+                  child: Text(tr('send_action'),
+                      style: TextStyle(color: Colors.blue)),
                   onPressed: () async {
                     Navigator.of(dialogContext).pop();
                     try {
-                      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                      final authProvider =
+                          Provider.of<AuthProvider>(context, listen: false);
                       final token = await authProvider.getToken();
-                      var request = http.MultipartRequest('POST', Uri.parse('$apiUrl/messages/upload'));
-                      request.headers.addAll({'Authorization': 'Bearer ${token!}'});
-                      final mimeType = 'image/${image.path.split('.').last.toLowerCase()}';
+                      var request = http.MultipartRequest(
+                          'POST', Uri.parse('$apiUrl/messages/upload'));
+                      request.headers
+                          .addAll({'Authorization': 'Bearer ${token!}'});
+                      final mimeType =
+                          'image/${image.path.split('.').last.toLowerCase()}';
                       request.files.add(await http.MultipartFile.fromPath(
                         'chatImage',
                         image.path,
@@ -450,11 +463,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       if (data['success'] == true) {
                         _sendMessage('', type: 'image', imageUrl: data['url']);
                       } else {
-                        throw Exception('Error en la respuesta del servidor: ${data['message'] ?? 'Error desconocido'}');
+                        throw Exception(
+                            'Error en la respuesta del servidor: ${data['message'] ?? 'Error desconocido'}');
                       }
                     } catch (e) {
                       print('Error uploading image: ${e}');
-                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al enviar la imagen: ${e}')));
+                      if (mounted)
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text('Error al enviar la imagen: ${e}')));
                     }
                   },
                 ),
@@ -465,7 +481,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       }
     } catch (e) {
       print('Error picking image: ${e}');
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al seleccionar la imagen: ${e}')));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error al seleccionar la imagen: ${e}')));
     }
   }
 
@@ -480,7 +498,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       final file = File(video.path);
       _videoController = VideoPlayerController.file(file);
       await _videoController!.initialize();
-      final double durationSec = _videoController!.value.duration.inSeconds.toDouble();
+      final double durationSec =
+          _videoController!.value.duration.inSeconds.toDouble();
       await showDialog(
         context: context,
         barrierDismissible: false,
@@ -489,7 +508,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             builder: (context, setDialogState) {
               return AlertDialog(
                 backgroundColor: Colors.grey[900],
-                title: const Text('Vista previa de video', style: TextStyle(color: Colors.white)),
+                title: const Text('Vista previa de video',
+                    style: TextStyle(color: Colors.white)),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -512,8 +532,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(_formatDuration(position), style: const TextStyle(color: Colors.white, fontSize: 12)),
-                                Text('-${_formatDuration(duration - position)}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                                Text(_formatDuration(position),
+                                    style: const TextStyle(
+                                        color: Colors.white, fontSize: 12)),
+                                Text('-${_formatDuration(duration - position)}',
+                                    style: const TextStyle(
+                                        color: Colors.white70, fontSize: 12)),
                               ],
                             ),
                           ],
@@ -524,19 +548,25 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                     if (isVideoUploading)
                       LinearProgressIndicator(value: videoUploadProgress)
                     else
-                      const Text('¿Enviar este video?', style: TextStyle(color: Colors.white70)),
+                      const Text('¿Enviar este video?',
+                          style: TextStyle(color: Colors.white70)),
                   ],
                 ),
                 actions: [
                   TextButton(
-                    child: const Text('Cancelar', style: TextStyle(color: Colors.red)),
+                    child: const Text('Cancelar',
+                        style: TextStyle(color: Colors.red)),
                     onPressed: () => Navigator.of(dialogContext).pop(),
                   ),
                   TextButton(
-                    child: const Text('Enviar', style: TextStyle(color: Colors.blue)),
+                    child: const Text('Enviar',
+                        style: TextStyle(color: Colors.blue)),
                     onPressed: () async {
-                      setState(() { isVideoUploading = true; });
-                      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                      setState(() {
+                        isVideoUploading = true;
+                      });
+                      final authProvider =
+                          Provider.of<AuthProvider>(context, listen: false);
                       final token = await authProvider.getToken();
                       final fileName = p.basename(video.path);
                       final fileExt = fileName.split('.').last.toLowerCase();
@@ -555,7 +585,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                           '$apiUrl/messages/upload-video',
                           data: formData,
                           onSendProgress: (count, total) {
-                            if (dialogContext.mounted) setDialogState(() { videoUploadProgress = count/total; });
+                            if (dialogContext.mounted)
+                              setDialogState(() {
+                                videoUploadProgress = count / total;
+                              });
                           },
                         );
                         final data = resp.data;
@@ -564,17 +597,27 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                             '',
                             type: 'video',
                             videoUrl: data['url'],
-                            videoDuration: (data['duration'] is num ? (data['duration'] as num).toDouble() : double.tryParse(data['duration'].toString()) ?? 0.0),
+                            videoDuration: (data['duration'] is num
+                                ? (data['duration'] as num).toDouble()
+                                : double.tryParse(
+                                        data['duration'].toString()) ??
+                                    0.0),
                           );
                           Navigator.of(dialogContext).pop();
                         } else {
                           throw Exception(data['message']);
                         }
                       } catch (e) {
-                        if (mounted) ScaffoldMessenger.of(rootScaffoldContext).showSnackBar(SnackBar(content: Text('Error al enviar video: $e')));
+                        if (mounted)
+                          ScaffoldMessenger.of(rootScaffoldContext)
+                              .showSnackBar(SnackBar(
+                                  content: Text('Error al enviar video: $e')));
                         Navigator.of(dialogContext).pop();
                       } finally {
-                        setState(() { isVideoUploading = false; videoUploadProgress = 0.0; });
+                        setState(() {
+                          isVideoUploading = false;
+                          videoUploadProgress = 0.0;
+                        });
                       }
                     },
                   ),
@@ -585,7 +628,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         },
       );
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(rootScaffoldContext).showSnackBar(SnackBar(content: Text('Error al seleccionar el video: $e')));
+      if (mounted)
+        ScaffoldMessenger.of(rootScaffoldContext).showSnackBar(
+            SnackBar(content: Text('Error al seleccionar el video: $e')));
     }
   }
 
@@ -602,7 +647,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     } else {
       print('Matched user is null in build method');
     }
-    
+
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
       appBar: AppBar(
@@ -617,7 +662,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => UserProfileScreen(userId: widget.matchedUserId),
+                  builder: (_) =>
+                      UserProfileScreen(userId: widget.matchedUserId),
                 ),
               );
             }
@@ -960,40 +1006,50 @@ class VideoViewer extends StatefulWidget {
 }
 
 class _VideoViewerState extends State<VideoViewer> {
-  late VideoPlayerController _controller;
-  late ChewieController _chewieController;
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return '$minutes:$seconds';
-  }
+  late VideoPlayerController _videoPlayerController;
+  ChewieController? _chewieController;
+
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.network(widget.url);
-    _controller.initialize().then((_) {
-      // After initialization, setup Chewie
+    _videoPlayerController = VideoPlayerController.network(widget.url);
+    _initializePlayer();
+  }
+
+  Future<void> _initializePlayer() async {
+    try {
+      // 1) Inicializa el video player
+      await _videoPlayerController.initialize();
+      // 2) Crea el ChewieController
       _chewieController = ChewieController(
-        videoPlayerController: _controller,
+        videoPlayerController: _videoPlayerController,
+        aspectRatio: _videoPlayerController.value.aspectRatio,
+        autoInitialize: true, // <–– very important!
         autoPlay: true,
         looping: false,
         showControls: true,
+        allowFullScreen: true,
+        allowPlaybackSpeedChanging: false,
       );
-      setState(() {});
-    });
+      setState(() {}); // fuerza rebuild
+    } catch (e) {
+      print('Error al inicializar el video: $e');
+    }
   }
+
   @override
   void dispose() {
-    _chewieController.dispose();
-    _controller.dispose();
+    _chewieController?.dispose();
+    _videoPlayerController.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
-    // Use Chewie for playback when ready
-    return (_controller.value.isInitialized && _chewieController != null)
-      ? Chewie(controller: _chewieController)
-      : const Center(child: CircularProgressIndicator());
+    if (_chewieController == null ||
+        !_videoPlayerController.value.isInitialized) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return Chewie(controller: _chewieController!);
   }
 }

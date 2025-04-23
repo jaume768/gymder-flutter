@@ -230,6 +230,7 @@
   "continue_browsing": "Continuar explorando",
   "edit_button": "Editar",
   "photos": "Fotos",
+  "error_changing_password": "Error al cambiar contraseña",
   "personal_information": "Mi perfil",
   "error_fetching_messages": "Error al obtener mensajes",
   "response_body": "Respuesta",

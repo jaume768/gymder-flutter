@@ -70,6 +70,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   bool locationUpdated = false;
 
   bool hasChanges = false;
+  late final TextEditingController _locationController;
   File? _imageFile;
   List<File> _additionalImages = [];
   final ImagePicker _picker = ImagePicker();
@@ -82,12 +83,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void initState() {
     super.initState();
     final user = Provider.of<AuthProvider>(context, listen: false).user;
+    _locationController = TextEditingController(
+      text: location.isNotEmpty ? location : '',
+    );
     if (user != null) {
       username = user.username ?? '';
       originalUsername = user.username ?? '';
-      if ((user.city?.isNotEmpty ?? false) || (user.country?.isNotEmpty ?? false)) {
+      if ((user.city?.isNotEmpty ?? false) ||
+          (user.country?.isNotEmpty ?? false)) {
         location = '${user.city ?? ''}, ${user.country ?? ''}';
       }
+      final loc = (user.city?.isNotEmpty == true || user.country?.isNotEmpty == true)
+          ? '${user.city}, ${user.country}'
+          : '';
+      _locationController.text = loc;
       originalFirstName = user.firstName ?? '';
       originalLastName = user.lastName ?? '';
       originalGoal = user.goal ?? '';
@@ -124,21 +133,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  @override
+  void dispose() {
+    _locationController.dispose();
+    super.dispose();
+  }
+
   void _checkChanges() {
     setState(() {
       hasChanges = (username != originalUsername ||
-          firstName != originalFirstName ||
-          lastName != originalLastName ||
-          goal != originalGoal ||
-          gender != originalGender ||
-          relationshipGoal != originalRelationshipGoal ||
-          biography != originalBiography ||
-          age != originalAge ||
-          height != originalHeight ||
-          weight != originalWeight ||
-          seeking.length != originalSeeking.length ||
-          !seeking.every((item) => originalSeeking.contains(item)) ||
-          locationUpdated) ||
+              firstName != originalFirstName ||
+              lastName != originalLastName ||
+              goal != originalGoal ||
+              gender != originalGender ||
+              relationshipGoal != originalRelationshipGoal ||
+              biography != originalBiography ||
+              age != originalAge ||
+              height != originalHeight ||
+              weight != originalWeight ||
+              seeking.length != originalSeeking.length ||
+              !seeking.every((item) => originalSeeking.contains(item)) ||
+              locationUpdated) ||
           squatWeight != originalSquatWeight ||
           benchPressWeight != originalBenchPressWeight ||
           deadliftWeight != originalDeadliftWeight;
@@ -169,12 +184,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
       if (placemarks.isNotEmpty) {
         final p = placemarks.first;
+        final nuevaUbic = '${p.locality ?? ''}, ${p.country ?? ''}';
         setState(() {
-          location = '${p.locality ?? ''}, ${p.country ?? ''}';
+          location = nuevaUbic;
           userLatitude = position.latitude;
           userLongitude = position.longitude;
-          isLoadingLocation = false;
           locationUpdated = true;
+          isLoadingLocation = false;
+          isLoadingLocation = false;
+          _locationController.text = nuevaUbic;
         });
         _checkChanges();
       } else {
@@ -240,7 +258,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
             shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
         setState(() => _imageFile = null);
@@ -260,15 +278,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _pickAdditionalImages() async {
-    final picked = await _picker.pickMultiImage(maxWidth: 10800, maxHeight: 10800);
+    final picked =
+        await _picker.pickMultiImage(maxWidth: 10800, maxHeight: 10800);
     if (picked != null) {
       if (picked.length > 5) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(tr("max_5_photos"))));
         return;
       }
-      setState(() =>
-      _additionalImages = picked.map((f) => File(f.path)).toList());
+      setState(
+          () => _additionalImages = picked.map((f) => File(f.path)).toList());
     }
   }
 
@@ -293,7 +312,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (res['success']) {
         await auth.refreshUser();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(tr("additional_photos_uploaded_successfully"))),
+          SnackBar(
+              content: Text(tr("additional_photos_uploaded_successfully"))),
         );
         setState(() => _additionalImages = []);
       } else {
@@ -382,6 +402,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'squatWeight': squatWeight,
         'benchPressWeight': benchPressWeight,
         'deadliftWeight': deadliftWeight,
+        if (locationUpdated && userLatitude != null && userLongitude != null)
+          'location': {
+            'type': 'Point',
+            'coordinates': [userLongitude, userLatitude],
+          },
       };
       final res = await svc.updateProfile(profileData);
       if (res['success']) {
@@ -392,7 +417,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
             shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
         setState(() {
@@ -483,30 +508,30 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       backgroundColor: const Color.fromRGBO(20, 20, 20, 0),
       floatingActionButton: showSave
           ? FloatingActionButton.extended(
-        onPressed: isUploading ? null : _saveProfile,
-        backgroundColor: Colors.blueAccent,
-        icon: isUploading
-            ? const SizedBox(
-          height: 24,
-          width: 24,
-          child: CircularProgressIndicator(
-            color: Colors.white,
-            strokeWidth: 2,
-          ),
-        )
-            : const Icon(Icons.save, color: Colors.white),
-        label: Text(
-          isUploading ? tr("saving") : tr("save_changes"),
-          style: const TextStyle(color: Colors.white),
-        ),
-      )
+              onPressed: isUploading ? null : _saveProfile,
+              backgroundColor: Colors.blueAccent,
+              icon: isUploading
+                  ? const SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Icon(Icons.save, color: Colors.white),
+              label: Text(
+                isUploading ? tr("saving") : tr("save_changes"),
+                style: const TextStyle(color: Colors.white),
+              ),
+            )
           : null,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // FOTO DE PERFIL (igual)
+            // FOTO DE PERFIL
             ProfilePictureWidget(
               user: user,
               imageFile: _imageFile,
@@ -543,7 +568,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   _checkChanges();
                 },
                 validator: (v) =>
-                (v == null || v.isEmpty) ? tr("enter_username") : null,
+                    (v == null || v.isEmpty) ? tr("enter_username") : null,
               ),
             ),
 
@@ -622,13 +647,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             // --- Biografía y Ubicación ---
             Text(tr("biography_location"), style: sectionHeaderStyle),
             const SizedBox(height: 8),
-            // (La Biografía ya la gestiona BiographyTextField dentro del PersonalInfoForm)
-            // Sólo colocamos el campo Ubicación aquí:
             TextFormField(
+              controller: _locationController,
               readOnly: true,
-              initialValue: location.isNotEmpty
-                  ? location
-                  : tr("location_not_defined"),
               decoration: InputDecoration(
                 labelText: tr("location"),
                 floatingLabelBehavior: FloatingLabelBehavior.always,
@@ -645,34 +666,34 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
                 suffixIcon: isLoadingLocation
                     ? Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: SizedBox(
-                    height: 16,
-                    width: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor:
-                      AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  ),
-                )
+                        padding: const EdgeInsets.all(12.0),
+                        child: SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                      )
                     : IconButton(
-                  icon: const Icon(Icons.refresh, color: Colors.white),
-                  onPressed: _obtenerUbicacion,
-                ),
+                        icon: const Icon(Icons.refresh, color: Colors.white),
+                        onPressed: _obtenerUbicacion,
+                      ),
                 errorStyle: const TextStyle(color: Colors.redAccent),
               ),
               style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold),
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
 
             const SizedBox(height: 24),
             // --- Básicos: sentadilla, press banca, peso muerto ---
             Text(tr("basic_lifts"), style: sectionHeaderStyle),
             const SizedBox(height: 8),
-
             TextFormField(
               initialValue: squatWeight?.toString() ?? '',
               style: const TextStyle(color: Colors.white),
@@ -680,7 +701,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               decoration: InputDecoration(
                 labelText: tr("squat_kg"),
                 floatingLabelBehavior: FloatingLabelBehavior.always,
-                filled: true, fillColor: Colors.white12,
+                filled: true,
+                fillColor: Colors.white12,
                 labelStyle: const TextStyle(color: Colors.white70),
                 enabledBorder: OutlineInputBorder(
                   borderSide: const BorderSide(color: Colors.white54),
@@ -697,7 +719,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               },
             ),
             const SizedBox(height: 16),
-
             TextFormField(
               initialValue: benchPressWeight?.toString() ?? '',
               style: const TextStyle(color: Colors.white),
@@ -705,7 +726,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               decoration: InputDecoration(
                 labelText: tr("bench_press_kg"),
                 floatingLabelBehavior: FloatingLabelBehavior.always,
-                filled: true, fillColor: Colors.white12,
+                filled: true,
+                fillColor: Colors.white12,
                 labelStyle: const TextStyle(color: Colors.white70),
                 enabledBorder: OutlineInputBorder(
                   borderSide: const BorderSide(color: Colors.white54),
@@ -722,7 +744,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               },
             ),
             const SizedBox(height: 16),
-
             TextFormField(
               initialValue: deadliftWeight?.toString() ?? '',
               style: const TextStyle(color: Colors.white),
@@ -730,7 +751,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               decoration: InputDecoration(
                 labelText: tr("deadlift_kg"),
                 floatingLabelBehavior: FloatingLabelBehavior.always,
-                filled: true, fillColor: Colors.white12,
+                filled: true,
+                fillColor: Colors.white12,
                 labelStyle: const TextStyle(color: Colors.white70),
                 enabledBorder: OutlineInputBorder(
                   borderSide: const BorderSide(color: Colors.white54),

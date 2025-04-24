@@ -11,7 +11,7 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Lista de idiomas soportados
-    final locales = const [
+    const locales = [
       Locale('es'),
       Locale('en'),
     ];
@@ -31,6 +31,18 @@ class WelcomeScreen extends StatelessWidget {
           ),
           Container(color: Colors.black38),
 
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  height: 55,
+                ),
+              ),
+            ),
+          ),
           // dropdown de idioma en la esquina superior derecha
           SafeArea(
             child: Align(
@@ -104,15 +116,33 @@ class WelcomeScreen extends StatelessWidget {
           Column(
             children: [
               const Spacer(),
-              Center(
-                child: Text(
-                  tr('banner_text').toUpperCase(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: Center(
+                  child: Text(
+                    tr('GymSwipe'), // asegúrate de tener esta clave en tus archivos .json
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 25,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: Center(
+                  child: Text(
+                    tr('banner_text'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),

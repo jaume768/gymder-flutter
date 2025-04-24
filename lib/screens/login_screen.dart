@@ -110,7 +110,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 40),
                 // Título
                 Text(
-                  "login".tr(),
+                  "login_title".tr(),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 32,

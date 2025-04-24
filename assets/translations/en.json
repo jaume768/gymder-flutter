@@ -51,6 +51,7 @@
   "no_blocked_users": "You have no blocked users",
   "unblock": "Unblock",
   "login": "Log In",
+  "login_title": "GymSwipe Login",
   "email_or_username": "Email or Username",
   "password": "Password",
   "login_with_google": "Log in with Google",

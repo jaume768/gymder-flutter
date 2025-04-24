@@ -60,9 +60,11 @@ class _AdditionalPhotosWidgetState extends State<AdditionalPhotosWidget> {
     const double itemSize = 100.0;
     final int totalSlots = maxAdditionalPhotos;
 
+    // 1️⃣ Usar photoList en lugar de widget.user.photos:
+    final photos = photoList;
+
     // Construir una lista combinada de items (fotos y placeholders)
     final List<Widget> items = List.generate(totalSlots, (index) {
-      final photos = widget.user.photos ?? [];
       if (index < photos.length) {
         final photo = photos[index];
         return Container(
@@ -142,9 +144,9 @@ class _AdditionalPhotosWidgetState extends State<AdditionalPhotosWidget> {
             runSpacing: 5,
             onReorder: (int oldIndex, int newIndex) {
               // Permitir reordenar solo si se trata de una foto (no placeholder)
-              if (oldIndex < photoList.length) {
-                if (newIndex > photoList.length) {
-                  newIndex = photoList.length;
+              if (oldIndex < photos.length) {
+                if (newIndex > photos.length) {
+                  newIndex = photos.length;
                 }
                 setState(() {
                   final movedPhoto = photoList.removeAt(oldIndex);

@@ -42,19 +42,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   int age = 18;
   int height = 0;
   int weight = 0;
+  int? squatWeight;
+  int? benchPressWeight;
+  int? deadliftWeight;
 
   // Valores originales para comparar cambios
   String originalUsername = '';
   String originalFirstName = '';
   String originalLastName = '';
   String originalGoal = '';
-  int? squatWeight;
-  int? benchPressWeight;
-  int? deadliftWeight;
-
-  int? originalSquatWeight;
-  int? originalBenchPressWeight;
-  int? originalDeadliftWeight;
   String originalGender = '';
   List<String> originalSeeking = [];
   String originalRelationshipGoal = '';
@@ -62,6 +58,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   int originalAge = 18;
   int originalHeight = 0;
   int originalWeight = 0;
+  int? originalSquatWeight;
+  int? originalBenchPressWeight;
+  int? originalDeadliftWeight;
 
   String location = '';
   double? userLatitude;
@@ -83,20 +82,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void initState() {
     super.initState();
     final user = Provider.of<AuthProvider>(context, listen: false).user;
-    _locationController = TextEditingController(
-      text: location.isNotEmpty ? location : '',
-    );
+    _locationController = TextEditingController(text: location);
     if (user != null) {
-      username = user.username ?? '';
-      originalUsername = user.username ?? '';
-      if ((user.city?.isNotEmpty ?? false) ||
-          (user.country?.isNotEmpty ?? false)) {
-        location = '${user.city ?? ''}, ${user.country ?? ''}';
-      }
-      final loc = (user.city?.isNotEmpty == true || user.country?.isNotEmpty == true)
-          ? '${user.city}, ${user.country}'
-          : '';
-      _locationController.text = loc;
+      // --- inicializar todos los campos desde user ---
+      username = originalUsername = user.username ?? '';
       originalFirstName = user.firstName ?? '';
       originalLastName = user.lastName ?? '';
       originalGoal = user.goal ?? '';
@@ -107,19 +96,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       originalAge = user.age ?? 18;
       originalHeight = user.height ?? 0;
       originalWeight = user.weight ?? 0;
-      originalHeight = user.height ?? 0;
-      originalWeight = user.weight ?? 0;
-
-      // básicos
       originalSquatWeight = user.squatWeight;
       originalBenchPressWeight = user.benchPressWeight;
       originalDeadliftWeight = user.deadliftWeight;
 
-      squatWeight = originalSquatWeight;
-      benchPressWeight = originalBenchPressWeight;
-      deadliftWeight = originalDeadliftWeight;
-
-      // Inicializar variables editables
       firstName = originalFirstName;
       lastName = originalLastName;
       goal = originalGoal;
@@ -130,6 +110,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       age = originalAge;
       height = originalHeight;
       weight = originalWeight;
+      squatWeight = originalSquatWeight;
+      benchPressWeight = originalBenchPressWeight;
+      deadliftWeight = originalDeadliftWeight;
+
+      if ((user.city?.isNotEmpty ?? false) ||
+          (user.country?.isNotEmpty ?? false)) {
+        location = '${user.city}, ${user.country}';
+        _locationController.text = location;
+      }
     }
   }
 
@@ -142,21 +131,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void _checkChanges() {
     setState(() {
       hasChanges = (username != originalUsername ||
-              firstName != originalFirstName ||
-              lastName != originalLastName ||
-              goal != originalGoal ||
-              gender != originalGender ||
-              relationshipGoal != originalRelationshipGoal ||
-              biography != originalBiography ||
-              age != originalAge ||
-              height != originalHeight ||
-              weight != originalWeight ||
-              seeking.length != originalSeeking.length ||
-              !seeking.every((item) => originalSeeking.contains(item)) ||
-              locationUpdated) ||
+          firstName != originalFirstName ||
+          lastName != originalLastName ||
+          goal != originalGoal ||
+          gender != originalGender ||
+          relationshipGoal != originalRelationshipGoal ||
+          biography != originalBiography ||
+          age != originalAge ||
+          height != originalHeight ||
+          weight != originalWeight ||
           squatWeight != originalSquatWeight ||
           benchPressWeight != originalBenchPressWeight ||
-          deadliftWeight != originalDeadliftWeight;
+          deadliftWeight != originalDeadliftWeight ||
+          seeking.length != originalSeeking.length ||
+          !seeking.every(originalSeeking.contains) ||
+          locationUpdated);
     });
   }
 
@@ -166,33 +155,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       errorMessage = '';
     });
     try {
-      LocationPermission permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
+      final perm = await Geolocator.requestPermission();
+      if (perm == LocationPermission.denied ||
+          perm == LocationPermission.deniedForever) {
         setState(() {
           errorMessage = tr("location_permission_denied");
           isLoadingLocation = false;
         });
         return;
       }
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-      );
+      final pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+      final placemarks =
+          await placemarkFromCoordinates(pos.latitude, pos.longitude);
       if (placemarks.isNotEmpty) {
         final p = placemarks.first;
-        final nuevaUbic = '${p.locality ?? ''}, ${p.country ?? ''}';
+        final nueva = '${p.locality ?? ''}, ${p.country ?? ''}';
         setState(() {
-          location = nuevaUbic;
-          userLatitude = position.latitude;
-          userLongitude = position.longitude;
+          location = nueva;
+          _locationController.text = nueva;
+          userLatitude = pos.latitude;
+          userLongitude = pos.longitude;
           locationUpdated = true;
           isLoadingLocation = false;
-          isLoadingLocation = false;
-          _locationController.text = nuevaUbic;
         });
         _checkChanges();
       } else {
@@ -203,7 +188,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
     } catch (e) {
       setState(() {
-        errorMessage = tr("error_getting_location") + ": $e";
+        errorMessage = '${tr("error_getting_location")}: $e';
         isLoadingLocation = false;
       });
     }
@@ -211,21 +196,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   void _handleSeekingChanged(String option, bool isSelected) {
     setState(() {
-      if (isSelected) {
+      if (isSelected)
         seeking.add(option);
-      } else {
+      else
         seeking.remove(option);
-      }
     });
     _checkChanges();
   }
 
   Future<void> _pickProfileImage() async {
     final picked = await _picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 800,
-      maxHeight: 800,
-    );
+        source: ImageSource.gallery, maxWidth: 800, maxHeight: 800);
     if (picked != null) {
       setState(() => _imageFile = File(picked.path));
       await _uploadProfilePicture();
@@ -252,26 +233,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final res = await svc.uploadProfilePicture(_imageFile!);
       if (res['success']) {
         await auth.refreshUser();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(tr("profile_updated_successfully")),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr("profile_updated_successfully")),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
         setState(() => _imageFile = null);
       } else {
-        setState(() {
-          errorMessage =
-              res['message'] ?? tr("error_uploading_profile_picture");
-        });
+        setState(() => errorMessage =
+            res['message'] ?? tr("error_uploading_profile_picture"));
       }
     } catch (e) {
-      setState(() {
-        errorMessage = tr("error_uploading_profile_picture") + ": $e";
-      });
+      setState(
+          () => errorMessage = '${tr("error_uploading_profile_picture")}: $e');
     } finally {
       setState(() => isUploading = false);
     }
@@ -279,7 +255,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _pickAdditionalImages() async {
     final picked =
-        await _picker.pickMultiImage(maxWidth: 10800, maxHeight: 10800);
+        await _picker.pickMultiImage(maxWidth: 1080, maxHeight: 1080);
     if (picked != null) {
       if (picked.length > 5) {
         ScaffoldMessenger.of(context)
@@ -317,15 +293,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         );
         setState(() => _additionalImages = []);
       } else {
-        setState(() {
-          errorMessage =
-              res['message'] ?? tr("error_uploading_additional_photos");
-        });
+        setState(() => errorMessage =
+            res['message'] ?? tr("error_uploading_additional_photos"));
       }
     } catch (e) {
-      setState(() {
-        errorMessage = tr("error_uploading_additional_photos") + ": $e";
-      });
+      setState(() =>
+          errorMessage = '${tr("error_uploading_additional_photos")}: $e');
     } finally {
       setState(() => isUploading = false);
     }
@@ -333,30 +306,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _updatePhotoOrder(List<Photo> newList) async {
     if (newList.isEmpty) return;
-    try {
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-      final token = await auth.getToken();
-      if (token == null) return;
-      final svc = UserService(token: token);
-      final ids = newList.map((p) => p.id).toList();
-      final res = await svc.updatePhotoOrder(ids);
-      if (res['success'] == true) {
-        await auth.refreshUser();
-      } else {
-        setState(() {
-          errorMessage = res['message'] ?? tr("error_updating_photo_order");
-        });
-      }
-    } catch (e) {
-      setState(() {
-        errorMessage = tr("error_updating_photo_order") + ": $e";
-      });
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = await auth.getToken();
+    if (token == null) return;
+    final svc = UserService(token: token);
+    final ids = newList.map((p) => p.id).toList();
+    final res = await svc.updatePhotoOrder(ids);
+    if (res['success'] == true) {
+      await auth.refreshUser();
+    } else {
+      setState(() =>
+          errorMessage = res['message'] ?? tr("error_updating_photo_order"));
     }
   }
 
   Future<void> _saveProfile() async {
     if (!_usernameFormKey.currentState!.validate() ||
         !_personalInfoFormKey.currentState!.validate()) return;
+
     _usernameFormKey.currentState!.save();
     _personalInfoFormKey.currentState!.save();
 
@@ -369,25 +336,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final auth = Provider.of<AuthProvider>(context, listen: false);
       final token = await auth.getToken();
       if (token == null) {
-        setState(() {
-          errorMessage = tr("token_not_found_login");
-        });
+        setState(() => errorMessage = tr("token_not_found_login"));
         return;
       }
       final svc = UserService(token: token);
 
-      // Si cambió username
+      // 1) Username si cambió
       if (username != auth.user?.username) {
         final usrRes = await svc.updateUsername(username);
         if (!usrRes['success']) {
-          setState(() {
-            errorMessage = usrRes['message'] ?? tr("enter_username");
-          });
+          setState(
+              () => errorMessage = usrRes['message'] ?? tr("enter_username"));
           return;
         }
       }
 
-      // Datos de perfil
+      // 2) Perfil general
       final profileData = {
         'firstName': firstName,
         'lastName': lastName,
@@ -409,33 +373,36 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           },
       };
       final res = await svc.updateProfile(profileData);
-      if (res['success']) {
-        await auth.refreshUser();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(tr("profile_updated_successfully")),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
-        setState(() {
-          hasChanges = false;
-        });
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const MyProfileScreen()),
-        );
-      } else {
-        setState(() {
-          errorMessage = res['message'] ?? tr("error_updating_profile");
-        });
+      if (!res['success']) {
+        setState(() =>
+            errorMessage = res['message'] ?? tr("error_updating_profile"));
+        return;
       }
+
+      // 3) Si reordenó fotos, persistir también ese cambio
+      if (_photoOrderChanged) {
+        await _updatePhotoOrder(_reorderedPhotos);
+        _photoOrderChanged = false;
+      }
+
+      // 4) Refrescar y cerrar
+      await auth.refreshUser();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(tr("profile_updated_successfully")),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      setState(() => hasChanges = false);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const MyProfileScreen()),
+      );
     } catch (e) {
-      setState(() {
-        errorMessage = tr("error_updating_profile") + ": $e";
-      });
+      setState(() => errorMessage = '${tr("error_updating_profile")}: $e');
     } finally {
       setState(() => isUploading = false);
     }
@@ -455,26 +422,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       });
       return;
     }
-    try {
-      final svc = UserService(token: token);
-      final res = await svc.deletePhoto(publicId);
-      if (res['success']) {
-        await auth.refreshUser();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(tr("photo_deleted_successfully"))),
-        );
-      } else {
-        setState(() {
-          errorMessage = res['message'] ?? tr("error_deleting_photo");
-        });
-      }
-    } catch (e) {
-      setState(() {
-        errorMessage = tr("error_deleting_photo") + ": $e";
-      });
-    } finally {
-      setState(() => isUploading = false);
+    final svc = UserService(token: token);
+    final res = await svc.deletePhoto(publicId);
+    if (res['success'] == true) {
+      await auth.refreshUser();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(tr("photo_deleted_successfully"))),
+      );
+    } else {
+      setState(
+          () => errorMessage = res['message'] ?? tr("error_deleting_photo"));
     }
+    setState(() => isUploading = false);
   }
 
   @override
@@ -484,9 +443,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (user == null) {
       Future.microtask(() {
         Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-        );
+            context, MaterialPageRoute(builder: (_) => const LoginScreen()));
       });
       return const Scaffold(body: SizedBox());
     }
@@ -515,15 +472,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       height: 24,
                       width: 24,
                       child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
+                          color: Colors.white, strokeWidth: 2),
                     )
                   : const Icon(Icons.save, color: Colors.white),
-              label: Text(
-                isUploading ? tr("saving") : tr("save_changes"),
-                style: const TextStyle(color: Colors.white),
-              ),
+              label: Text(isUploading ? tr("saving") : tr("save_changes"),
+                  style: const TextStyle(color: Colors.white)),
             )
           : null,
       body: SingleChildScrollView(
@@ -531,15 +484,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // FOTO DE PERFIL
             ProfilePictureWidget(
-              user: user,
-              imageFile: _imageFile,
-              onPickImage: _pickProfileImage,
-            ),
-
+                user: user,
+                imageFile: _imageFile,
+                onPickImage: _pickProfileImage),
             const SizedBox(height: 16),
-            // --- Información Básica ---
             Text(tr("basic_information"), style: sectionHeaderStyle),
             const SizedBox(height: 8),
             Form(
@@ -573,7 +522,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
 
             const SizedBox(height: 24),
-            // --- Resto de info personal ---
             PersonalInfoForm(
               formKey: _personalInfoFormKey,
               firstName: firstName,
@@ -587,64 +535,45 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               height: height,
               weight: weight,
               onFirstNameChanged: (v) {
-                setState(() {
-                  firstName = v;
-                  _checkChanges();
-                });
+                firstName = v;
+                _checkChanges();
               },
               onLastNameChanged: (v) {
-                setState(() {
-                  lastName = v;
-                  _checkChanges();
-                });
+                lastName = v;
+                _checkChanges();
               },
               onGoalChanged: (v) {
-                setState(() {
-                  goal = v ?? '';
-                  _checkChanges();
-                });
+                goal = v ?? '';
+                _checkChanges();
               },
               onGenderChanged: (v) {
-                setState(() {
-                  gender = v ?? '';
-                  _checkChanges();
-                });
+                gender = v ?? '';
+                _checkChanges();
               },
               onRelationshipGoalChanged: (v) {
-                setState(() {
-                  relationshipGoal = v ?? '';
-                  _checkChanges();
-                });
+                relationshipGoal = v ?? '';
+                _checkChanges();
               },
               onBiographyChanged: (v) {
-                setState(() {
-                  biography = v;
-                  _checkChanges();
-                });
+                biography = v;
+                _checkChanges();
               },
               onAgeChanged: (v) {
-                setState(() {
-                  age = v;
-                  _checkChanges();
-                });
+                age = v;
+                _checkChanges();
               },
               onHeightChanged: (v) {
-                setState(() {
-                  height = v;
-                  _checkChanges();
-                });
+                height = v;
+                _checkChanges();
               },
               onWeightChanged: (v) {
-                setState(() {
-                  weight = v;
-                  _checkChanges();
-                });
+                weight = v;
+                _checkChanges();
               },
               onSeekingSelectionChanged: _handleSeekingChanged,
             ),
 
             const SizedBox(height: 24),
-            // --- Biografía y Ubicación ---
             Text(tr("biography_location"), style: sectionHeaderStyle),
             const SizedBox(height: 8),
             TextFormField(
@@ -684,16 +613,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 errorStyle: const TextStyle(color: Colors.redAccent),
               ),
               style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+                  color: Colors.white, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 24),
-            // --- Básicos: sentadilla, press banca, peso muerto ---
             Text(tr("basic_lifts"), style: sectionHeaderStyle),
             const SizedBox(height: 8),
+            // sentadilla
             TextFormField(
               initialValue: squatWeight?.toString() ?? '',
               style: const TextStyle(color: Colors.white),
@@ -719,6 +645,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               },
             ),
             const SizedBox(height: 16),
+            // press banca
             TextFormField(
               initialValue: benchPressWeight?.toString() ?? '',
               style: const TextStyle(color: Colors.white),
@@ -744,6 +671,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               },
             ),
             const SizedBox(height: 16),
+            // peso muerto
             TextFormField(
               initialValue: deadliftWeight?.toString() ?? '',
               style: const TextStyle(color: Colors.white),
@@ -770,7 +698,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
 
             const SizedBox(height: 24),
-            // --- Fotos ---
             Text(tr("photos"), style: sectionHeaderStyle),
             const SizedBox(height: 8),
             AdditionalPhotosWidget(
@@ -779,24 +706,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               isUploading: isUploading,
               onPickAdditionalImages: _pickAdditionalImages,
               onUploadAdditionalPhotos: _uploadAdditionalPhotos,
-              onRemoveSelectedImage: (i) {
-                setState(() => _additionalImages.removeAt(i));
-              },
+              onRemoveSelectedImage: (i) =>
+                  setState(() => _additionalImages.removeAt(i)),
               onDeletePhoto: _deletePhoto,
               onReorderDone: (newList) {
-                _reorderedPhotos = newList;
-                _photoOrderChanged = true;
-                setState(() {});
+                setState(() {
+                  _reorderedPhotos = newList;
+                  _photoOrderChanged = true;
+                });
               },
             ),
 
             if (errorMessage.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Text(
-                errorMessage,
-                style: const TextStyle(color: Colors.redAccent),
-                textAlign: TextAlign.center,
-              ),
+              Text(errorMessage,
+                  style: const TextStyle(color: Colors.redAccent),
+                  textAlign: TextAlign.center),
             ],
 
             const SizedBox(height: 20),

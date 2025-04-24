@@ -191,64 +191,48 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             Expanded(
               child: TabBarView(
                 children: [
-                  // ────────── PESTAÑA SOBRE MI ─────────────────
-                  Padding(
+                  ListView(
                     padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Fila: Género | Objetivo
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildInfoBox(
-                                title: tr('gender_display'),
-                                content: user.gender ?? tr("not_specified"),
-                              ),
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildInfoBox(
+                              title: tr('gender_display'),
+                              content: user.gender ?? tr("not_specified"),
                             ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _buildInfoBox(
-                                title: tr('goal_title'),
-                                content: user.goal ?? tr("not_specified"),
-                              ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildInfoBox(
+                              title: tr('goal_title'),
+                              content: user.goal ?? tr("not_specified"),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 1),
-
-                        // Caja ancho completo
-                        _buildInfoBox(
-                          title: tr('what_are_you_looking_for'),
-                          content:
-                          user.relationshipGoal ?? tr("not_specified"),
-                        ),
-
-                        // Caja ancho completo
-                        _buildInfoBox(
-                          title: tr('location'),
-                          content: (user.city != null &&
-                              user.city!.isNotEmpty) ||
-                              (user.country != null &&
-                                  user.country!.isNotEmpty)
-                              ? '${user.city}, ${user.country}'
-                              : tr("location_not_defined"),
-                        ),
-
-                        // Básicos
-                        const SizedBox(height: 0),
-                        _buildInfoBox(
-                          title: tr("basic_lifts_profile"),
-                          content:
-                          "${tr('squat')}: ${user.squatWeight != null ? '${user.squatWeight} kg' : tr('not_defined')}\n"
-                              "${tr('bench_press')}: ${user.benchPressWeight != null ? '${user.benchPressWeight} kg' : tr('not_defined')}\n"
-                              "${tr('deadlift')}: ${user.deadliftWeight != null ? '${user.deadliftWeight} kg' : tr('not_defined')}",
-                        ),
-                      ],
-                    ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      _buildInfoBox(
+                        title: tr('what_are_you_looking_for'),
+                        content: user.relationshipGoal ?? tr("not_specified"),
+                      ),
+                      _buildInfoBox(
+                        title: tr('location'),
+                        content: (user.city != null && user.city!.isNotEmpty)
+                            ? '${user.city}, ${user.country}'
+                            : tr("location_not_defined"),
+                      ),
+                      _buildInfoBox(
+                        title: tr("basic_lifts_profile"),
+                        content:
+                        "${tr('squat')}: ${user.squatWeight != null ? '${user.squatWeight} kg' : tr('not_defined')}\n"
+                            "${tr('bench_press')}: ${user.benchPressWeight != null ? '${user.benchPressWeight} kg' : tr('not_defined')}\n"
+                            "${tr('deadlift')}: ${user.deadliftWeight != null ? '${user.deadliftWeight} kg' : tr('not_defined')}",
+                      ),
+                    ],
                   ),
 
-                  // ────────── PESTAÑA FOTOS ─────────────────
+                  // ────────── PESTAÑA FOTOS ───────────────── (igual que antes)
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: user.photos != null && user.photos!.isNotEmpty
@@ -266,8 +250,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                         final photo = user.photos![index];
                         return GestureDetector(
                           onTap: () {
-                            final urls =
-                            user.photos!.map((p) => p.url).toList();
+                            final urls = user.photos!.map((p) => p.url).toList();
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -284,8 +267,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                             placeholder: (context, url) =>
                                 Container(color: Colors.grey[800]),
                             errorWidget: (context, url, error) =>
-                            const Icon(Icons.error,
-                                color: Colors.white),
+                            const Icon(Icons.error, color: Colors.white),
                           ),
                         );
                       },

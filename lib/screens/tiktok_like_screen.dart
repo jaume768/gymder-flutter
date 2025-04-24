@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:app/screens/single_user_view.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -9,7 +10,7 @@ import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:app/screens/premium_purchase_page.dart';
-
+import 'package:permission_handler/permission_handler.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../services/match_service.dart';
@@ -121,7 +122,17 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     });
   }
 
+  Future<void> _requestAndroidNotificationPermission() async {
+    if (await Permission.notification.isDenied) {
+      await Permission.notification.request();
+    }
+  }
+
   Future<void> _setupFCM() async {
+    if (Platform.isAndroid) {
+      await _requestAndroidNotificationPermission();
+    }
+
     final messaging = FirebaseMessaging.instance;
 
     // 1) Pedir permiso

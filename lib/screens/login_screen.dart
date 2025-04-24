@@ -1,4 +1,3 @@
-// lib/screens/login.dart
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -28,7 +27,6 @@ class _LoginScreenState extends State<LoginScreen> {
   );
 
   Future<void> _handleGoogleSignIn() async {
-    if (!mounted) return;
     setState(() {
       isLoading = true;
       errorMessage = '';
@@ -37,14 +35,14 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
-        if (!mounted) return;
+        // Usuario canceló el flujo
         setState(() => isLoading = false);
         return;
       }
+
       final googleAuth = await googleUser.authentication;
       final idToken = googleAuth.idToken;
       if (idToken == null) {
-        if (!mounted) return;
         setState(() {
           isLoading = false;
           errorMessage = "no_id_token".tr();
@@ -52,37 +50,37 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      final result = await Provider.of<AuthProvider>(context, listen: false)
-          .loginWithGoogle(idToken);
+      // Llamada al provider para hacer login con Google
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final result = await authProvider.loginWithGoogle(idToken);
 
-      if (!mounted) return;
-      if (!result['success']) {
-        setState(() {
-          isLoading = false;
-          errorMessage = result['message'] ?? "error_google_signin".tr();
-        });
+      setState(() {
+        isLoading = false;
+      });
+
+      if (!(result['success'] as bool)) {
+        setState(() =>
+            errorMessage = result['message'] ?? "error_google_signin".tr());
         return;
       }
 
-      final isNewAccount = result['newAccount'] ?? false;
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      await authProvider.refreshUser();
-
-      if (!mounted) return;
+      final bool isNewAccount = result['newAccount'] as bool;
       if (isNewAccount) {
+        // Nuevo usuario: vamos a completar registro
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-              builder: (_) => const RegisterScreen(fromGoogle: true)),
+            builder: (_) => const RegisterScreen(fromGoogle: true),
+          ),
         );
       } else {
+        // Usuario existente: directamente al Home
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
       }
     } catch (e) {
-      if (!mounted) return;
       setState(() {
         isLoading = false;
         errorMessage = "error_google_signin".tr(args: [e.toString()]);
@@ -94,7 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     return Scaffold(
-      backgroundColor: const Color.fromRGBO(34, 34, 34, 0.0),
+      backgroundColor: const Color.fromRGBO(34, 34, 34, 1),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -102,13 +100,11 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo
                 Image.asset(
                   'assets/images/logo.png',
                   height: 220,
                 ),
                 const SizedBox(height: 40),
-                // Título
                 Text(
                   "login_title".tr(),
                   style: const TextStyle(
@@ -118,12 +114,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                // Formulario
                 Form(
                   key: _formKey,
                   child: Column(
                     children: [
-                      // Correo Electrónico
                       TextFormField(
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
@@ -145,11 +139,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           }
                           return null;
                         },
-                        onSaved: (value) => email = value!,
+                        onSaved: (value) => email = value!.trim(),
                         cursorColor: Colors.white,
                       ),
                       const SizedBox(height: 20),
-                      // Contraseña
                       TextFormField(
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
@@ -179,7 +172,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         cursorColor: Colors.white,
                       ),
                       const SizedBox(height: 30),
-                      // Botón de Iniciar Sesión
                       SizedBox(
                         width: double.infinity,
                         height: 50,
@@ -200,7 +192,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     setState(() {
                                       isLoading = false;
                                     });
-                                    if (result['success']) {
+                                    if (result['success'] == true) {
                                       Navigator.pushReplacement(
                                         context,
                                         MaterialPageRoute(
@@ -208,21 +200,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                         ),
                                       );
                                     } else {
-                                      if ((result['message'] as String)
-                                          .contains("error_register")) {
-                                        Navigator.pushReplacement(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) =>
-                                                const RegisterScreen(),
-                                          ),
-                                        );
-                                      } else {
-                                        setState(() {
-                                          errorMessage = result['message'] ??
-                                              "error_login".tr();
-                                        });
-                                      }
+                                      setState(() {
+                                        errorMessage = result['message'] ??
+                                            "error_login".tr();
+                                      });
                                     }
                                   }
                                 },
@@ -248,7 +229,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      // Botón Iniciar Sesión con Google
                       SizedBox(
                         width: double.infinity,
                         height: 50,
@@ -266,9 +246,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          onPressed: isLoading
-                              ? null
-                              : () async => await _handleGoogleSignIn(),
+                          onPressed: isLoading ? null : _handleGoogleSignIn,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
@@ -287,7 +265,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       const SizedBox(height: 20),
-                      // Opción para Registrarse
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -300,8 +277,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const RegisterScreen(),
-                                ),
+                                    builder: (_) => const RegisterScreen()),
                               );
                             },
                             child: Text(

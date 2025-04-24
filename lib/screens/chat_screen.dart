@@ -141,7 +141,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     });
 
     _socketService!.onReceiveMessage((data) {
-      if (data['senderId'] == widget.currentUserId) return; // ignora tu propio mensaje
+      if (data['senderId'] == widget.currentUserId)
+        return; // ignora tu propio mensaje
       final newMessage = Message(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         senderId: data['senderId'],
@@ -348,7 +349,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _sendMessage(String message, {
+  void _sendMessage(
+    String message, {
     String type = 'text',
     String? imageUrl,
     String? audioUrl,
@@ -963,7 +965,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             child: TextField(
               controller: _messageController,
               style: const TextStyle(color: Colors.white),
-              onChanged: (_) => _onTyping(),
+              onChanged: (val) {
+                setState(() {}); // fuerza rebuild para actualizar el botón
+                _onTyping();
+              },
               decoration: InputDecoration(
                 hintText: tr("type_a_message"),
                 hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
@@ -978,19 +983,17 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               ),
             ),
           ),
-          GestureDetector(
-            onTap: () => _sendMessage(_messageController.text),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: Colors.blue,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.send,
-                color: Colors.white,
-              ),
-            ),
+          // Usamos IconButton con onPressed nulo cuando no hay texto
+          IconButton(
+            icon: const Icon(Icons.send),
+            color: _messageController.text.trim().isEmpty
+                ? Colors.grey
+                : Colors.blue,
+            onPressed: _messageController.text.trim().isEmpty
+                ? null
+                : () {
+                    _sendMessage(_messageController.text.trim());
+                  },
           ),
         ],
       ),

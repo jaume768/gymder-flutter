@@ -1134,6 +1134,25 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                       scrollDirection: Axis.vertical,
                       itemCount: currentList.length,
                       onPageChanged: (pageIndex) {
+                        final auth = Provider.of<AuthProvider>(context, listen: false);
+                        final isPremium = auth.user?.isPremium ?? false;
+
+                        // Si intento ir hacia arriba (pageIndex < previousPageIndex) y NO soy premium:
+                        if (!isPremium && pageIndex < previousPageIndex) {
+                          _verticalPageController.jumpToPage(previousPageIndex);
+                          _showPremiumDialog(
+                            tr("premium_function"),
+                            tr("premium_scroll_message"),
+                          );
+                          return;
+                        }
+
+                        // Cambio válido: actualizo índices y resto de lógica
+                        setState(() {
+                          previousPageIndex = pageIndex;
+                          _currentPageIndex = pageIndex;
+                        });
+
                         setState(() {
                           _currentPageIndex = pageIndex;
                           // Guardamos la posición actual cuando estamos en la pestaña de aleatorios

@@ -94,15 +94,16 @@ class _MyAppState extends State<MyApp> {
 
     // 4) Mensajes en foreground
     FirebaseMessaging.onMessage.listen((RemoteMessage msg) {
+      final data = msg.data;
+      // Si es un mensaje de chat, no disparamos nada en foreground:
+      if (data['type'] == 'new_message') return;
+
       final notification = msg.notification;
       final android = msg.notification?.android;
-      final data = msg.data;
-
       if (notification != null && android != null) {
-        // Elige canal según tipo
+        // resto de tu código para mostrar likes u otros tipos
         final isChat = data['type'] == 'new_message';
         final channel = isChat ? chatChannel : likesChannel;
-
         flutterLocalNotificationsPlugin.show(
           notification.hashCode,
           notification.title,

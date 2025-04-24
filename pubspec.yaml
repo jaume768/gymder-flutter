@@ -61,6 +61,7 @@ flutter:
     - assets/images/google_logo.png
     - assets/images/default_profile.png
     - assets/translations/
+    - assets/images/welcome_bg.jpg
 
 flutter_icons:
   android: true

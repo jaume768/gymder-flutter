@@ -87,6 +87,10 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
   String _currentRelationshipType = 'Todos';
   bool _currentUseLocation = false;
   RangeValues _currentDistanceRange = const RangeValues(5, 50);
+  final bool _currentFilterByBasics = false;
+  final RangeValues _currentSquatRange = const RangeValues(0, 300);
+  final RangeValues _currentBenchRange = const RangeValues(0, 200);
+  final RangeValues _currentDeadliftRange = const RangeValues(0, 400);
 
   @override
   bool get wantKeepAlive => true;
@@ -137,7 +141,9 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
 
     // 1) Pedir permiso
     final settings = await messaging.requestPermission(
-      alert: true, badge: true, sound: true,
+      alert: true,
+      badge: true,
+      sound: true,
     );
     if (settings.authorizationStatus != AuthorizationStatus.authorized) {
       print('Permiso de notificaciones denegado');
@@ -151,19 +157,21 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
       final token = await auth.getToken();
       if (token != null) {
         await http.post(
-          Uri.parse('https://gymder-api-production.up.railway.app/api/users/fcm-token'),
+          Uri.parse(
+              'https://gymder-api-production.up.railway.app/api/users/fcm-token'),
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $token'
           },
-          body: jsonEncode({ 'token': fcmToken }),
+          body: jsonEncode({'token': fcmToken}),
         );
       }
     }
 
     // 3) Escuchar notificaciones en foreground
     FirebaseMessaging.onMessage.listen((RemoteMessage msg) {
-      print('¡Notificación recibida en foreground!: ${msg.notification?.title}');
+      print(
+          '¡Notificación recibida en foreground!: ${msg.notification?.title}');
       // Si usas flutter_local_notifications, muéstrala aquí
     });
 
@@ -172,11 +180,13 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
       // Por ejemplo, navegar al chat de quien te dio like...
       final data = msg.data;
       if (data['type'] == 'new_like') {
-        Navigator.push(context,
-          MaterialPageRoute(builder: (_) => ChatScreen(
-            currentUserId: data['toUserId'],
-            matchedUserId: data['fromUserId'],
-          )),
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) => ChatScreen(
+                    currentUserId: data['toUserId'],
+                    matchedUserId: data['fromUserId'],
+                  )),
         );
       }
     });
@@ -236,7 +246,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
       );
     }
   }
-
 
   Future<void> _fetchLikedUsers() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -737,9 +746,9 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
   void _showConfirmReportDialog(String reasonKey, {String? details}) {
     final reasonText = {
       'inappropriate_photos': tr('inappropriate_photos'),
-      'fake_profile':        tr('fake_profile'),
-      'offensive_content':   tr('offensive_content'),
-      'other':               tr('other_reason'),
+      'fake_profile': tr('fake_profile'),
+      'offensive_content': tr('offensive_content'),
+      'other': tr('other_reason'),
     }[reasonKey]!;
 
     showModalBottomSheet(
@@ -773,8 +782,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
               ),
               const SizedBox(height: 12),
               Text(
-                tr('confirm_report_message',
-                    namedArgs: {'reason': reasonText}),
+                tr('confirm_report_message', namedArgs: {'reason': reasonText}),
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white70, fontSize: 16),
               ),
@@ -842,8 +850,10 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
           builder: (sheetContext, setModalState) {
             return Container(
               padding: EdgeInsets.only(
-                  left: 24, right: 24, bottom: MediaQuery.of(context).viewInsets.bottom + 24, top: 16
-              ),
+                  left: 24,
+                  right: 24,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                  top: 16),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
@@ -919,14 +929,14 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                           onPressed: customText.trim().isEmpty
                               ? null
                               : () {
-                            // primero cerramos este modal
-                            Navigator.of(sheetContext).pop();
-                            // después, mostramos el de confirmación
-                            _showConfirmReportDialog(
-                              'other',
-                              details: customText.trim(),
-                            );
-                          },
+                                  // primero cerramos este modal
+                                  Navigator.of(sheetContext).pop();
+                                  // después, mostramos el de confirmación
+                                  _showConfirmReportDialog(
+                                    'other',
+                                    details: customText.trim(),
+                                  );
+                                },
                           child: Text(
                             tr('send'),
                             style: const TextStyle(color: Colors.white),
@@ -943,7 +953,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
       },
     );
   }
-
 
   Future<void> _sendReport(String reasonKey, {String? details}) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -1134,7 +1143,8 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                       scrollDirection: Axis.vertical,
                       itemCount: currentList.length,
                       onPageChanged: (pageIndex) {
-                        final auth = Provider.of<AuthProvider>(context, listen: false);
+                        final auth =
+                            Provider.of<AuthProvider>(context, listen: false);
                         final isPremium = auth.user?.isPremium ?? false;
 
                         // Si intento ir hacia arriba (pageIndex < previousPageIndex) y NO soy premium:
@@ -1320,6 +1330,10 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                             initialRelationshipType: _currentRelationshipType,
                             initialUseLocation: _currentUseLocation,
                             initialDistanceRange: _currentDistanceRange,
+                            initialFilterByBasics: _currentFilterByBasics,
+                            initialSquatRange: _currentSquatRange,
+                            initialBenchRange: _currentBenchRange,
+                            initialDeadliftRange: _currentDeadliftRange,
                           ),
                         );
                       },
@@ -1397,6 +1411,12 @@ class FilterModalContent extends StatefulWidget {
   final bool initialUseLocation;
   final RangeValues initialDistanceRange;
 
+  // Estos son los NUEVOS campos:
+  final bool initialFilterByBasics;
+  final RangeValues initialSquatRange;
+  final RangeValues initialBenchRange;
+  final RangeValues initialDeadliftRange;
+
   const FilterModalContent({
     Key? key,
     required this.hasLocation,
@@ -1407,6 +1427,12 @@ class FilterModalContent extends StatefulWidget {
     required this.initialRelationshipType,
     this.initialUseLocation = false,
     this.initialDistanceRange = const RangeValues(5, 50),
+
+    // Y aquí los incoporamos al constructor:
+    required this.initialFilterByBasics,
+    this.initialSquatRange = const RangeValues(0, 300),
+    this.initialBenchRange = const RangeValues(0, 200),
+    this.initialDeadliftRange = const RangeValues(0, 400),
   }) : super(key: key);
 
   @override
@@ -1414,18 +1440,31 @@ class FilterModalContent extends StatefulWidget {
 }
 
 class _FilterModalContentState extends State<FilterModalContent> {
+  // Rangos principales (ya los tienes)
   late RangeValues ageRange;
   late RangeValues weightRange;
   late RangeValues heightRange;
   late String selectedGymStage;
   late String selectedRelationshipType;
-
   bool useLocation = false;
-  RangeValues distanceRange = const RangeValues(5, 50);
+  late RangeValues distanceRange;
+
+  // Parámetros de "filtrar por básicos"
+  late bool filterByBasics;
+  late RangeValues squatRange;
+  late RangeValues benchRange;
+  late RangeValues deadliftRange;
+
+  // Límites máximos para sliders de básicos
+  static const double _maxSquat = 300;
+  static const double _maxBench = 200;
+  static const double _maxDeadlift = 400;
 
   @override
   void initState() {
     super.initState();
+
+    // Inicializamos con los valores recibidos desde el padre
     ageRange = widget.initialAgeRange;
     weightRange = widget.initialWeightRange;
     heightRange = widget.initialHeightRange;
@@ -1433,11 +1472,16 @@ class _FilterModalContentState extends State<FilterModalContent> {
     selectedRelationshipType = widget.initialRelationshipType;
     useLocation = widget.initialUseLocation;
     distanceRange = widget.initialDistanceRange;
+
+    // ¡Aquí el cambio clave!
+    filterByBasics = widget.initialFilterByBasics;
+    squatRange = widget.initialSquatRange;
+    benchRange = widget.initialBenchRange;
+    deadliftRange = widget.initialDeadliftRange;
   }
 
   @override
   Widget build(BuildContext context) {
-    // Map underlying values to localized labels
     final gymStageMap = {
       'Todos': tr('all'),
       'Mantenimiento': tr('maintenance'),
@@ -1459,174 +1503,121 @@ class _FilterModalContentState extends State<FilterModalContent> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 50,
-              height: 5,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              tr("filter"),
-              style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white),
-            ),
-            const SizedBox(height: 40),
             _buildRangeSlider(
               label: tr("age_range"),
               values: ageRange,
               min: 18,
               max: 100,
               divisions: 82,
-              onChanged: (values) {
-                setState(() {
-                  ageRange = values;
-                });
-              },
+              onChanged: (v) => setState(() => ageRange = v),
             ),
+
             _buildRangeSlider(
               label: tr("weight_range"),
               values: weightRange,
               min: 40,
               max: 200,
               divisions: 160,
-              onChanged: (values) {
-                setState(() {
-                  weightRange = values;
-                });
-              },
+              onChanged: (v) => setState(() => weightRange = v),
             ),
+
             _buildRangeSlider(
               label: tr("height_range"),
               values: heightRange,
               min: 100,
               max: 250,
               divisions: 150,
-              onChanged: (values) {
-                setState(() {
-                  heightRange = values;
-                });
-              },
+              onChanged: (v) => setState(() => heightRange = v),
             ),
+
             const SizedBox(height: 10),
-            // Dropdown Gym Stage
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(tr("gym_stage_filter"),
-                    style: const TextStyle(color: Colors.white)),
-                const SizedBox(height: 5),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: DropdownButton<String>(
-                    value: selectedGymStage,
-                    dropdownColor: Colors.grey[850],
-                    style: const TextStyle(color: Colors.white),
-                    isExpanded: true,
-                    underline: const SizedBox(),
-                    items: gymStageMap.entries
-                        .map((e) => DropdownMenuItem(
-                              value: e.key,
-                              child: Text(e.value),
-                            ))
-                        .toList(),
-                    onChanged: (newValue) {
-                      setState(() {
-                        selectedGymStage = newValue!;
-                      });
-                    },
-                  ),
-                ),
-                const SizedBox(height: 10),
-              ],
+
+            _buildDropdown(
+              label: tr("gym_stage_filter"),
+              value: selectedGymStage,
+              items: gymStageMap,
+              onChanged: (v) => setState(() => selectedGymStage = v!),
             ),
-            // Dropdown Relationship Type
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(tr("relationship_type_filter"),
-                    style: const TextStyle(color: Colors.white)),
-                const SizedBox(height: 5),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: DropdownButton<String>(
-                    value: selectedRelationshipType,
-                    dropdownColor: Colors.grey[850],
-                    style: const TextStyle(color: Colors.white),
-                    isExpanded: true,
-                    underline: const SizedBox(),
-                    items: relationshipTypeMap.entries
-                        .map((e) => DropdownMenuItem(
-                              value: e.key,
-                              child: Text(e.value),
-                            ))
-                        .toList(),
-                    onChanged: (newValue) {
-                      setState(() {
-                        selectedRelationshipType = newValue!;
-                      });
-                    },
-                  ),
-                ),
-                const SizedBox(height: 10),
-              ],
+
+            _buildDropdown(
+              label: tr("relationship_type_filter"),
+              value: selectedRelationshipType,
+              items: relationshipTypeMap,
+              onChanged: (v) => setState(() => selectedRelationshipType = v!),
             ),
+
             const SizedBox(height: 20),
-            if (widget.hasLocation)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SwitchListTile(
-                    title: Text(
-                      tr("filter_by_location"),
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    value: useLocation,
-                    activeColor: Colors.blueAccent,
-                    onChanged: (val) {
-                      setState(() {
-                        useLocation = val;
-                      });
-                    },
-                  ),
-                  if (useLocation)
-                    _buildRangeSlider(
-                      label: tr("distance_km"),
-                      values: distanceRange,
-                      min: 0,
-                      max: 100,
-                      divisions: 100,
-                      onChanged: (values) {
-                        setState(() {
-                          distanceRange = values;
-                        });
-                      },
-                    ),
-                ],
+
+            if (widget.hasLocation) ...[
+              SwitchListTile(
+                title: Text(tr("filter_by_location"),
+                    style: TextStyle(color: Colors.white)),
+                value: useLocation,
+                activeColor: Colors.blueAccent,
+                onChanged: (v) => setState(() => useLocation = v),
               ),
+              if (useLocation)
+                _buildRangeSlider(
+                  label: tr("distance_km"),
+                  values: distanceRange,
+                  min: 0,
+                  max: 100,
+                  divisions: 100,
+                  onChanged: (v) => setState(() => distanceRange = v),
+                ),
+            ],
+
             const SizedBox(height: 20),
+            // Switch: filtrar por básicos
+            SwitchListTile(
+              title: Text(tr("filter_by_basics"),
+                  style: const TextStyle(color: Colors.white)),
+              value: filterByBasics,
+              activeColor: Colors.blueAccent,
+              onChanged: (v) => setState(() => filterByBasics = v),
+            ),
+
+            // Si está activo, mostramos sliders de básicos con sus valores guardados
+            if (filterByBasics) ...[
+              _buildRangeSlider(
+                label: tr("squat_kg"),
+                values: squatRange,
+                min: 0,
+                max: _maxSquat,
+                divisions: (_maxSquat ~/ 5),
+                onChanged: (v) => setState(() => squatRange = v),
+              ),
+              _buildRangeSlider(
+                label: tr("bench_press_kg"),
+                values: benchRange,
+                min: 0,
+                max: _maxBench,
+                divisions: (_maxBench ~/ 5),
+                onChanged: (v) => setState(() => benchRange = v),
+              ),
+              _buildRangeSlider(
+                label: tr("deadlift_kg"),
+                values: deadliftRange,
+                min: 0,
+                max: _maxDeadlift,
+                divisions: (_maxDeadlift ~/ 5),
+                onChanged: (v) => setState(() => deadliftRange = v),
+              ),
+            ],
+
+            const SizedBox(height: 20),
+
+            // Botón "Aplicar"
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
+                    borderRadius: BorderRadius.circular(30)),
               ),
               onPressed: () async {
+                // Construimos el mapa de filtros
                 final filters = <String, String>{
                   'ageMin': ageRange.start.round().toString(),
                   'ageMax': ageRange.end.round().toString(),
@@ -1636,29 +1627,44 @@ class _FilterModalContentState extends State<FilterModalContent> {
                   'heightMax': heightRange.end.round().toString(),
                   'gymStage': selectedGymStage,
                   'relationshipGoal': selectedRelationshipType,
-                  'useLocation': useLocation ? 'true' : 'false',
+                  'useLocation': useLocation.toString(),
                 };
-
                 if (useLocation) {
                   filters['distanceMin'] =
                       distanceRange.start.round().toString();
                   filters['distanceMax'] = distanceRange.end.round().toString();
                 }
 
-                final authProvider =
-                    Provider.of<AuthProvider>(context, listen: false);
-                final token = await authProvider.getToken();
+                // Sólo añadimos básicos si el usuario realmente movió el slider
+                if (filterByBasics) {
+                  if (squatRange.start > 0 || squatRange.end < _maxSquat) {
+                    filters['squatMin'] = squatRange.start.round().toString();
+                    filters['squatMax'] = squatRange.end.round().toString();
+                  }
+                  if (benchRange.start > 0 || benchRange.end < _maxBench) {
+                    filters['benchMin'] = benchRange.start.round().toString();
+                    filters['benchMax'] = benchRange.end.round().toString();
+                  }
+                  if (deadliftRange.start > 0 ||
+                      deadliftRange.end < _maxDeadlift) {
+                    filters['deadliftMin'] =
+                        deadliftRange.start.round().toString();
+                    filters['deadliftMax'] =
+                        deadliftRange.end.round().toString();
+                  }
+                }
 
+                // Llamada al backend
+                final auth = Provider.of<AuthProvider>(context, listen: false);
+                final token = await auth.getToken();
                 if (token != null) {
                   final matchService = MatchService(token: token);
                   final result = await matchService
                       .getSuggestedMatchesWithFilters(filters);
-
                   if (result['success'] == true) {
-                    List<dynamic> matchesJson = result['matches'];
-                    List<User> matches =
-                        matchesJson.map((json) => User.fromJson(json)).toList();
-
+                    List<User> matches = (result['matches'] as List)
+                        .map((j) => User.fromJson(j))
+                        .toList();
                     Navigator.of(context).pop({
                       'matches': matches,
                       'ageRange': ageRange,
@@ -1668,43 +1674,44 @@ class _FilterModalContentState extends State<FilterModalContent> {
                       'relationshipType': selectedRelationshipType,
                       'useLocation': useLocation,
                       'distanceRange': distanceRange,
+                      'filterByBasics': filterByBasics,
+                      'squatRange': squatRange,
+                      'benchRange': benchRange,
+                      'deadliftRange': deadliftRange,
                     });
                     return;
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(result['message'] ??
-                            tr("error_fetching_more_users")),
-                      ),
+                          content: Text(result['message'] ??
+                              tr("error_fetching_more_users"))),
                     );
                   }
                 }
 
                 Navigator.of(context).pop();
               },
-              child: Text(
-                tr("apply"),
-                style: const TextStyle(color: Colors.black),
-              ),
+              child: Text(tr("apply"),
+                  style: const TextStyle(color: Colors.black)),
             ),
+
             const SizedBox(height: 10),
+
+            // Botón "Quitar filtros"
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.grey[700],
                 padding:
                     const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
+                    borderRadius: BorderRadius.circular(30)),
               ),
-              onPressed: () {
-                Navigator.of(context).pop({'remove': true});
-              },
-              child: Text(
-                tr("remove_filter"),
-                style: const TextStyle(color: Colors.white),
-              ),
+              onPressed: () => Navigator.of(context).pop({'remove': true}),
+              child: Text(tr("remove_filter"),
+                  style: const TextStyle(color: Colors.white)),
             ),
+
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -1729,12 +1736,45 @@ class _FilterModalContentState extends State<FilterModalContent> {
           max: max,
           divisions: divisions,
           labels: RangeLabels(
-            "${values.start.round()}",
-            "${values.end.round()}",
+            values.start.round().toString(),
+            values.end.round().toString(),
           ),
           activeColor: Colors.blueAccent,
           inactiveColor: Colors.grey,
           onChanged: onChanged,
+        ),
+        const SizedBox(height: 10),
+      ],
+    );
+  }
+
+  Widget _buildDropdown({
+    required String label,
+    required String value,
+    required Map<String, String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: Colors.white)),
+        const SizedBox(height: 5),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+              color: Colors.white24, borderRadius: BorderRadius.circular(10)),
+          child: DropdownButton<String>(
+            value: value,
+            dropdownColor: Colors.grey[850],
+            style: const TextStyle(color: Colors.white),
+            isExpanded: true,
+            underline: const SizedBox(),
+            items: items.entries
+                .map(
+                    (e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+                .toList(),
+            onChanged: onChanged,
+          ),
         ),
         const SizedBox(height: 10),
       ],

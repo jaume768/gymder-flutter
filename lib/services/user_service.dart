@@ -14,6 +14,30 @@ class UserService {
 
   UserService({required this.token});
 
+  Future<Map<String, dynamic>> getNotificationSettings() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/users/notifications'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> setNotificationSetting(String key, bool value) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/users/notification'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+
+      },
+      body: jsonEncode({ key: value }),
+    );
+    return jsonDecode(response.body);
+  }
+
   Future<Map<String, dynamic>> updatePhotoOrder(List<String> photoIds) async {
     final url = Uri.parse('$baseUrl/users/order/photos');
     final response = await http.patch(

@@ -2,6 +2,7 @@
 import 'package:app/screens/splash_screen.dart';
 import 'package:app/screens/suscripciones_pagos_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
@@ -64,15 +65,16 @@ class SettingsScreen extends StatelessWidget {
     }
   }
 
-  Future<bool?> _confirmLogout(BuildContext context) {
-    return showDialog<bool>(
+  Future<void> _confirmLogout(BuildContext context) async {
+    final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => Dialog(
         backgroundColor: Colors.grey[900],
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+        insetPadding:
+        const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
           child: Column(
@@ -110,7 +112,8 @@ class SettingsScreen extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(28),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding:
+                        const EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: Text(
                         tr("cancel"),
@@ -127,7 +130,8 @@ class SettingsScreen extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(28),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding:
+                        const EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: Text(
                         tr("confirm"),
@@ -142,6 +146,15 @@ class SettingsScreen extends StatelessWidget {
         ),
       ),
     );
+
+    if (confirmed == true) {
+      // Aquí cerramos la sesión
+      Provider.of<AuthProvider>(context, listen: false).logoutUser();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    }
   }
 
   @override
@@ -183,56 +196,122 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
-/// PANTALLA DE NOTIFICACIONES
 class NotificacionesScreen extends StatefulWidget {
-  const NotificacionesScreen({Key? key}) : super(key: key);
+  const NotificacionesScreen({super.key});
   @override
   _NotificacionesScreenState createState() => _NotificacionesScreenState();
 }
 
 class _NotificacionesScreenState extends State<NotificacionesScreen> {
-  bool notificarMatches = true;
-  bool notificarMensajes = true;
-  bool notificarLikes = true;
+  bool _notificarMatches = true;
+  bool _notificarMensajes = true;
+  bool _notificarLikes = true;
+  bool _loading = true;
+
+  final FirebaseMessaging _fcm = FirebaseMessaging.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    // 1) Obtener token y luego preferencias del backend
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = await auth.getToken();
+    if (token == null) return;
+
+    final result = await UserService(token: token).getNotificationSettings();
+    if (result['success'] == true) {
+      setState(() {
+        _notificarMatches  = result['settings']['matches'] as bool;
+        _notificarMensajes = result['settings']['messages'] as bool;
+        _notificarLikes    = result['settings']['likes'] as bool;
+        _loading = false;
+      });
+    } else {
+      // Manejar error...
+      setState(() => _loading = false);
+    }
+
+    // 2) Suscribirte o no a topics según lo leído
+    _updateSubscription('new_matches',  _notificarMatches);
+    _updateSubscription('messages',     _notificarMensajes);
+    _updateSubscription('new_likes',    _notificarLikes);
+  }
+
+  Future<void> _updatePreference(String key, bool value) async {
+    setState(() {
+      switch (key) {
+        case 'matches':  _notificarMatches  = value; break;
+        case 'messages': _notificarMensajes = value; break;
+        case 'likes':    _notificarLikes    = value; break;
+      }
+    });
+    // 1) Guardar en tu backend
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = await auth.getToken();
+    if (token != null) {
+      await UserService(token: token).setNotificationSetting(key, value);
+    }
+    // 2) Suscribir / desuscribir topic FCM
+    final topic = {
+      'matches': 'new_matches',
+      'messages': 'messages',
+      'likes': 'new_likes',
+    }[key]!;
+    _updateSubscription(topic, value);
+  }
+
+  void _updateSubscription(String topic, bool subscribe) {
+    if (subscribe) {
+      _fcm.subscribeToTopic(topic);
+    } else {
+      _fcm.unsubscribeFromTopic(topic);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        backgroundColor: Color.fromRGBO(20,20,20,1),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
-        title: Text(tr("notifications"),
-            style: const TextStyle(color: Colors.white)),
+        title: Text(tr("notifications"), style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      backgroundColor: const Color.fromRGBO(20, 20, 20, 1.0),
+      backgroundColor: const Color.fromRGBO(20,20,20,1),
       body: ListView(
         children: [
           SwitchListTile(
-            title: Text(tr("notify_new_matches"),
-                style: const TextStyle(color: Colors.white)),
-            value: notificarMatches,
+            title: Text(tr("notify_new_matches"), style: const TextStyle(color: Colors.white)),
+            value: _notificarMatches,
             activeColor: Colors.blueAccent,
-            onChanged: (v) => setState(() => notificarMatches = v),
+            onChanged: (v) => _updatePreference('matches', v),
           ),
           SwitchListTile(
-            title: Text(tr("notify_messages"),
-                style: const TextStyle(color: Colors.white)),
-            value: notificarMensajes,
+            title: Text(tr("notify_messages"), style: const TextStyle(color: Colors.white)),
+            value: _notificarMensajes,
             activeColor: Colors.blueAccent,
-            onChanged: (v) => setState(() => notificarMensajes = v),
+            onChanged: (v) => _updatePreference('messages', v),
           ),
           SwitchListTile(
-            title: Text(tr("notify_likes"),
-                style: const TextStyle(color: Colors.white)),
-            value: notificarLikes,
+            title: Text(tr("notify_likes"), style: const TextStyle(color: Colors.white)),
+            value: _notificarLikes,
             activeColor: Colors.blueAccent,
-            onChanged: (v) => setState(() => notificarLikes = v),
+            onChanged: (v) => _updatePreference('likes', v),
           ),
         ],
       ),
     );
   }
 }
-
 /// PANTALLA DE IDIOMAS
 class IdiomasScreen extends StatefulWidget {
   const IdiomasScreen({Key? key}) : super(key: key);

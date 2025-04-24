@@ -1494,7 +1494,6 @@ class _FilterModalContentState extends State<FilterModalContent> {
       'Relación': tr('relationship'),
       'Casual': tr('casual'),
       'Otro': tr('other'),
-      'Pendiente': tr('pending'),
     };
 
     return Padding(

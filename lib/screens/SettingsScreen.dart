@@ -64,34 +64,84 @@ class SettingsScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _confirmLogout(BuildContext context) async {
-    final result = await showDialog<bool>(
+  Future<bool?> _confirmLogout(BuildContext context) {
+    return showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(tr("logout_confirm_title")),
-        content: Text(tr("logout_confirm_content")),
-        actions: [
-          TextButton(
-            style: kAppButtonStyle,
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(tr("cancel")),
+      builder: (_) => Dialog(
+        backgroundColor: Colors.grey[900],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.exit_to_app, size: 48, color: Colors.blueAccent),
+              const SizedBox(height: 12),
+              Text(
+                tr("logout_confirm_title"),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                tr("logout_confirm_content"),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 16,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: Colors.blueAccent),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text(
+                        tr("cancel"),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text(
+                        tr("confirm"),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          TextButton(
-            style: kAppButtonStyle,
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(tr("confirm")),
-          ),
-        ],
+        ),
       ),
     );
-
-    if (result == true) {
-      Provider.of<AuthProvider>(context, listen: false).logoutUser();
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
-    }
   }
 
   @override
@@ -108,7 +158,8 @@ class SettingsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(tr("settings"), style: const TextStyle(color: Colors.white)),
+        title:
+            Text(tr("settings"), style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -138,6 +189,7 @@ class NotificacionesScreen extends StatefulWidget {
   @override
   _NotificacionesScreenState createState() => _NotificacionesScreenState();
 }
+
 class _NotificacionesScreenState extends State<NotificacionesScreen> {
   bool notificarMatches = true;
   bool notificarMensajes = true;
@@ -187,6 +239,7 @@ class IdiomasScreen extends StatefulWidget {
   @override
   _IdiomasScreenState createState() => _IdiomasScreenState();
 }
+
 class _IdiomasScreenState extends State<IdiomasScreen> {
   late String idiomaSeleccionado;
   final List<String> idiomas = ["Español", "English"];
@@ -196,12 +249,13 @@ class _IdiomasScreenState extends State<IdiomasScreen> {
     final current = context.locale.languageCode;
     idiomaSeleccionado = current == 'en' ? 'English' : 'Español';
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(tr("languages"),
-            style: const TextStyle(color: Colors.white)),
+        title:
+            Text(tr("languages"), style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -209,8 +263,8 @@ class _IdiomasScreenState extends State<IdiomasScreen> {
       body: ListView(
         children: idiomas.map((idioma) {
           return RadioListTile(
-            title: Text(idioma.tr(),
-                style: const TextStyle(color: Colors.white)),
+            title:
+                Text(idioma.tr(), style: const TextStyle(color: Colors.white)),
             value: idioma,
             groupValue: idiomaSeleccionado,
             activeColor: Colors.blueAccent,
@@ -235,6 +289,7 @@ class SeguridadScreen extends StatefulWidget {
   @override
   _SeguridadScreenState createState() => _SeguridadScreenState();
 }
+
 class _SeguridadScreenState extends State<SeguridadScreen> {
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
@@ -300,7 +355,8 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(tr("security"), style: const TextStyle(color: Colors.white)),
+        title:
+            Text(tr("security"), style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -311,7 +367,9 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
           children: [
             Text(tr("change_password"),
                 style: const TextStyle(
-                    color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
 
             // Contraseña actual
@@ -367,16 +425,18 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
               style: TextButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
               ),
               onPressed: isUpdating ? null : _changePassword,
               child: isUpdating
                   ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : Text(tr("update_password")),
             ),
 

@@ -374,11 +374,10 @@ class PersonalInfoForm extends StatelessWidget {
                       label: tr('relationship_goal_label'),
                       value: relationshipGoal.isNotEmpty ? relationshipGoal : null,
                       items: [
-                        tr('friendship_option'),
-                        tr('dating_option'),
-                        tr('serious_relationship_option'),
-                        tr('casual_option'),
-                        tr('not_sure_option')
+                        tr('friendship'),
+                        tr('relationship'),
+                        tr('casual'),
+                        tr('other')
                       ],
                       onChanged: onRelationshipGoalChanged,
                       validatorMsg: tr('please_select_relationship_goal_error'),

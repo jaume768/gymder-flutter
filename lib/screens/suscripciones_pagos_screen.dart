@@ -51,14 +51,12 @@ class _SuscripcionesPagosScreenState extends State<SuscripcionesPagosScreen> {
       await authProvider.refreshUser();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-          Text(result['message'] ?? tr("subscription_cancelled")),
+          content: Text(result['message'] ?? tr("subscription_cancelled")),
         ),
       );
     } else {
       setState(() {
-        errorMessage =
-            result['message'] ?? tr("error_cancelling_subscription");
+        errorMessage = result['message'] ?? tr("error_cancelling_subscription");
       });
     }
 
@@ -70,21 +68,79 @@ class _SuscripcionesPagosScreenState extends State<SuscripcionesPagosScreen> {
   Future<void> _confirmCancelSubscription() async {
     final bool? result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(tr("confirm_cancel_subscription")),
-        content: Text(tr("confirm_cancel_subscription_message")),
-        actions: [
-          TextButton(
-            style: kAppButtonStyle,
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(tr("no")),
+      builder: (_) => Dialog(
+        backgroundColor: Colors.grey[900],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.subscriptions, size: 48, color: Colors.blueAccent),
+              const SizedBox(height: 12),
+              Text(
+                tr("confirm_cancel_subscription"),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                tr("confirm_cancel_subscription_message"),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 16,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.blueAccent),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text(
+                        tr("no"),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text(
+                        tr("yes"),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          TextButton(
-            style: kAppButtonStyle,
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(tr("yes")),
-          ),
-        ],
+        ),
       ),
     );
 
@@ -101,7 +157,7 @@ class _SuscripcionesPagosScreenState extends State<SuscripcionesPagosScreen> {
     String fechaExpiracion = '';
     if (esPremium && user?.premiumExpiration != null) {
       fechaExpiracion =
-      user!.premiumExpiration!.toLocal().toString().split(' ')[0];
+          user!.premiumExpiration!.toLocal().toString().split(' ')[0];
     }
 
     return Scaffold(
@@ -128,9 +184,9 @@ class _SuscripcionesPagosScreenState extends State<SuscripcionesPagosScreen> {
                 ),
                 subtitle: esPremium && fechaExpiracion.isNotEmpty
                     ? Text(
-                  "${tr("expires_on")}: $fechaExpiracion",
-                  style: const TextStyle(color: Colors.white70),
-                )
+                        "${tr("expires_on")}: $fechaExpiracion",
+                        style: const TextStyle(color: Colors.white70),
+                      )
                     : null,
               ),
             ),
@@ -150,14 +206,13 @@ class _SuscripcionesPagosScreenState extends State<SuscripcionesPagosScreen> {
             if (esPremium)
               ElevatedButton(
                 style: kAppButtonStyle,
-                onPressed:
-                isLoading ? null : _confirmCancelSubscription,
+                onPressed: isLoading ? null : _confirmCancelSubscription,
                 child: isLoading
                     ? const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : Text(tr("cancel_subscription")),
               ),
             if (errorMessage.isNotEmpty)

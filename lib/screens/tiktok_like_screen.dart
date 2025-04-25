@@ -1185,6 +1185,22 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                         final dy = notification.dragDetails!.delta.dy;
                         // Si delta.dy < 0, es gesto de "arrastrar hacia arriba" => intentar bajar página
                         final tryingToGoNextPage = dy < 0;
+                        final isPremium =
+                            Provider.of<AuthProvider>(context, listen: false)
+                                    .user
+                                    ?.isPremium ==
+                                true;
+
+                        if (!isPremium && dy > 0) {
+                          // rebotamos al mismo índice
+                          _verticalPageController.jumpToPage(previousPageIndex);
+                          // mostramos diálogo Premium
+                          _showPremiumDialog(
+                            tr("premium_function"),
+                            tr("upgrade_to_premium_message"),
+                          );
+                          return true; // consumimos el evento
+                        }
 
                         if (_isScrollLimitReached && tryingToGoNextPage) {
                           // Bloqueamos volviendo a la misma página
@@ -1203,10 +1219,24 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                       itemCount: currentList.length,
                       onPageChanged: (newPage) {
                         // Si hay límite y es intento de bajar página, lo ignoramos
+                        final isPremium = Provider.of<AuthProvider>(context, listen: false)
+                            .user
+                            ?.isPremium ==
+                            true;
+
                         if (_isScrollLimitReached &&
                             newPage > previousPageIndex) {
                           _verticalPageController.jumpToPage(previousPageIndex);
                           _showScrollLimitDialog();
+                          return;
+                        }
+
+                        if (!isPremium && newPage < previousPageIndex) {
+                          _verticalPageController.jumpToPage(previousPageIndex);
+                          _showPremiumDialog(
+                            tr("premium_function"),
+                            tr("upgrade_to_premium_message"),
+                          );
                           return;
                         }
 

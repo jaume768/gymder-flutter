@@ -199,6 +199,7 @@
   "confirm_cancel_subscription_message": "Are you sure you want to cancel your subscription?",
   "yes": "Yes",
   "no": "No",
+  "upgrade_to_premium_message": "The previous user function is only available for Premium users. Do you want to subscribe?",
   "cancel_subscription": "Cancel subscription",
   "premium_user": "You are a Premium user",
   "standard_user": "Standard user",

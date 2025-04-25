@@ -1,3 +1,5 @@
+// lib/screens/login_screen.dart
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -74,10 +76,11 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         );
       } else {
-        // Usuario existente: directamente al Home
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          MaterialPageRoute(
+            builder: (_) => const HomeScreen(fromGoogle: false),
+          ),
         );
       }
     } catch (e) {
@@ -196,7 +199,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                       Navigator.pushReplacement(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) => const HomeScreen(),
+                                          builder: (_) => const HomeScreen(
+                                              fromGoogle: false),
                                         ),
                                       );
                                     } else {

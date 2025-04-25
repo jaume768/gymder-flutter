@@ -1,3 +1,5 @@
+// lib/screens/home_screen.dart
+
 import 'package:app/screens/register_screen.dart';
 import 'package:app/screens/tiktok_like_screen.dart';
 import 'package:flutter/cupertino.dart';
@@ -13,7 +15,8 @@ import 'matches_chats_screen.dart';
 import 'my_profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final bool fromGoogle; // nuevo parámetro
+  const HomeScreen({Key? key, this.fromGoogle = false}) : super(key: key);
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -27,7 +30,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Instanciamos nuestras pantallas:
   late TikTokLikeScreen _tikTokLikeScreen;
-  // Para forzar refresco en Matches, usaremos un UniqueKey o recrearemos la pantalla
   late Widget _matchesScreen;
 
   @override
@@ -56,9 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
         suggestedMatches =
             List<User>.from(result['matches'].map((x) => User.fromJson(x)));
         isLoading = false;
-        // Instanciamos la pantalla de swipes:
         _tikTokLikeScreen = TikTokLikeScreen(users: suggestedMatches);
-        // Instanciamos MatchesChatsScreen (con UniqueKey para refrescar si queremos):
         _matchesScreen = MatchesChatsScreen(key: UniqueKey());
       });
     } else {
@@ -69,22 +69,19 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Refrescar la pantalla de Matches cada vez que se hace tap en la opción 0
   void _onItemTapped(int index) {
     setState(() {
       if (index == 0) {
-        // Recreamos la pantalla de Matches para que se ejecute initState y se refresque
         _matchesScreen = MatchesChatsScreen(key: UniqueKey());
       }
       _selectedIndex = index;
     });
   }
 
-  // Solo dos pantallas en los tabs:
   List<Widget> _widgetOptions() {
     return [
-      _matchesScreen, // index 0
-      _tikTokLikeScreen, // index 1
+      _matchesScreen,
+      _tikTokLikeScreen,
     ];
   }
 
@@ -93,8 +90,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.user;
 
-    // Si el usuario está pendiente en gender o relationshipGoal, lo enviamos a completar registro
-    if (user != null &&
+    if (!widget.fromGoogle &&
+        user != null &&
         (user.gender == 'Pendiente' || user.relationshipGoal == 'Pendiente')) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.pushReplacement(
@@ -128,14 +125,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   index: _selectedIndex,
                   children: _widgetOptions(),
                 ),
-      // Bottom navigation con tres opciones: Matches, Swipes y Perfil (push)
       bottomNavigationBar: Container(
         color: Colors.transparent,
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Opción 0: Matches
             GestureDetector(
               onTap: () => _onItemTapped(0),
               child: CircleAvatar(
@@ -150,7 +145,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(width: 40),
-            // Opción 1: Swipes (TikTokLikeScreen)
             GestureDetector(
               onTap: () => _onItemTapped(1),
               child: CircleAvatar(
@@ -165,7 +159,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(width: 40),
-            // "Opción 2": Perfil -> push al perfil
             GestureDetector(
               onTap: () {
                 Navigator.push(

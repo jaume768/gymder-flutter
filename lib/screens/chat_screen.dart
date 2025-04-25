@@ -126,42 +126,42 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   void _initSocket() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final token = await authProvider.getToken();
+    if (token == null) return;
 
+    // 1) Si ya había un socket, desuscribe cada evento y desconecta
+    if (_socketService != null && _socketService!.socket != null) {
+      final sock = _socketService!.socket!;
+
+      sock.off('connect');
+      sock.off('disconnect');
+      sock.off('error');
+      sock.off('receiveMessage');
+      sock.off('messagesMarkedAsRead');
+      sock.off('userTyping');
+      sock.off('userStoppedTyping');
+      sock.off('userOnline');
+      sock.off('userOffline');
+
+      _socketService!.disconnect();
+      _socketService = null;
+    }
+
+    // 2) Crea uno nuevo con la URL correcta
     _socketService = SocketService(
       'https://gymder-api-production.up.railway.app',
-      token!,
+      token,
       widget.currentUserId,
       widget.matchedUserId,
     );
 
+    // 3) Conéctalo y registra callbacks una sola vez
     _socketService!.connect();
 
-    _socketService!.onConnect(() {
-      print('Connected to socket server');
-    });
-
     _socketService!.onReceiveMessage((data) {
-      if (data['senderId'] == widget.currentUserId)
-        return; // ignora tu propio mensaje
-      final newMessage = Message(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        senderId: data['senderId'],
-        message: data['message'] ?? '',
-        type: data['type'] ?? 'text',
-        imageUrl: data['imageUrl'] ?? '',
-        audioUrl: data['audioUrl'] ?? '',
-        audioDuration: (data['audioDuration'] ?? 0).toDouble(),
-        videoUrl: data['videoUrl'] ?? '',
-        videoDuration: (data['videoDuration'] ?? 0).toDouble(),
-        createdAt: DateTime.parse(data['timestamp']),
-        seenAt: null,
-      );
-      setState(() {
-        messages.insert(0, newMessage);
-      });
-      if (newMessage.senderId == widget.matchedUserId) {
-        _markMessagesAsRead();
-      }
+      if (data['senderId'] == widget.currentUserId) return;
+      final msg = Message.fromJson(data);
+      setState(() => messages.insert(0, msg));
+      if (msg.senderId == widget.matchedUserId) _markMessagesAsRead();
     });
 
     _socketService!.onMessagesMarkedAsRead((data) {
@@ -178,40 +178,25 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     });
 
     _socketService!.onUserTyping((data) {
-      if (data['userId'] == widget.matchedUserId && mounted) {
-        setState(() {
-          isTyping = true;
-        });
-      }
+      if (data['userId'] == widget.matchedUserId && mounted)
+        setState(() => isTyping = true);
     });
-
     _socketService!.onUserStoppedTyping((data) {
-      if (data['userId'] == widget.matchedUserId && mounted) {
-        setState(() {
-          isTyping = false;
-        });
-      }
+      if (data['userId'] == widget.matchedUserId && mounted)
+        setState(() => isTyping = false);
     });
 
     _socketService!.onUserOnline((data) {
-      if (data['userId'] == widget.matchedUserId && mounted) {
-        setState(() {
-          isOnline = true;
-        });
-      }
+      if (data['userId'] == widget.matchedUserId && mounted)
+        setState(() => isOnline = true);
     });
-
     _socketService!.onUserOffline((data) {
-      if (data['userId'] == widget.matchedUserId && mounted) {
-        setState(() {
-          isOnline = false;
-        });
-      }
+      if (data['userId'] == widget.matchedUserId && mounted)
+        setState(() => isOnline = false);
     });
 
-    _socketService!
-        .onDisconnect(() => print('Disconnected from socket server'));
-    _socketService!.onError((error) => print('Socket error: $error'));
+    _socketService!.onDisconnect(() => print('Socket disconnected'));
+    _socketService!.onError((err) => print('Socket error: $err'));
   }
 
   Future<void> _loadMatchedUserInfo() async {

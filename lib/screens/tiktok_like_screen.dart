@@ -124,6 +124,13 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
         }
       }
     });
+    _verticalPageController.addListener(() {
+      final currentPage = _verticalPageController.page?.round() ?? 0;
+      if (currentPage != previousPageIndex) {
+        previousPageIndex = currentPage;
+        _updateScrollCount();
+      }
+    });
   }
 
   Future<void> _requestAndroidNotificationPermission() async {
@@ -288,7 +295,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
         // Verificar si se ha alcanzado el límite
         final limitReached = result['limitReached'] ?? false;
 
-        if (limitReached && !_isScrollLimitReached) {
+        if (limitReached) {
           setState(() {
             _isScrollLimitReached = true;
 
@@ -533,43 +540,121 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
   void _showPremiumDialog(String title, String content) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Text(
-          title,
-          style:
-              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        content: Text(
-          content,
-          style: const TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(tr("cancel"),
-                style: const TextStyle(color: Colors.blueAccent)),
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Colors.blue, Colors.black87],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black45,
+                blurRadius: 12,
+                offset: Offset(0, 6),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const PremiumPurchasePage(),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Ícono premium
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  shape: BoxShape.circle,
                 ),
-              );
-            },
-            child: Text(tr("buy_premium"),
-                style: const TextStyle(color: Colors.blueAccent)),
+                child: const Icon(Icons.star, size: 40, color: Colors.white),
+              ),
+              const SizedBox(height: 16),
+
+              // Título
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Contenido
+              Text(
+                content,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 16,
+                  height: 1.3,
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Botones
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.white24,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: const Text(
+                        'Cancelar',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const PremiumPurchasePage(),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        'Comprar Premium',
+                        style: TextStyle(
+                          color: Colors.blue[800],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
+
 
   Widget _buildMatchAvatar(String? imageUrl, {double radius = 50}) {
     return CircleAvatar(
@@ -1170,6 +1255,12 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                             _savedRandomPosition = pageIndex;
                           }
                         });
+
+                        setState(() {
+                          _currentPageIndex = pageIndex;
+                          previousPageIndex = pageIndex;
+                        });
+                        _updateScrollCount();
 
                         final nextIndex = pageIndex + 1;
                         if (nextIndex < _randomUsers.length) {

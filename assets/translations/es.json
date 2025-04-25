@@ -339,7 +339,7 @@
   "in_app_not_available": "Cargando información...",
   "no_users_to_show": "No hay usuarios para mostrar",
   "premium_le_gustas_message": "Para ver los usuarios que te han dado like, necesitas ser premium.",
-  "scroll_limit_message": "Te has quedado sin scrolls por hoy. Si este perfil te gusta, aún puedes darle like. Para seguir descubriendo más perfiles libremente, considera activar GymSwipe Premium.",
+  "scroll_limit_message": "Te has quedado sin scrolls por hoy. Si este perfil te gusta, aún puedes darle like. Considera activar GymSwipe Premium.",
   "liked_users_count": "Usuarios que te han dado like: {0}",
   "height_out_of_range": "La altura está fuera de rango",
   "weight_out_of_range": "El peso está fuera de rango",

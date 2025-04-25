@@ -655,7 +655,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     );
   }
 
-
   Widget _buildMatchAvatar(String? imageUrl, {double radius = 50}) {
     return CircleAvatar(
       radius: radius,
@@ -1180,102 +1179,53 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                   )
                 : NotificationListener<ScrollNotification>(
                     onNotification: (notification) {
-                      // Usamos el controlador de página directamente en lugar de intentar
-                      // acceder a la propiedad inexistente currentPage
+                      // Solo interceptamos gestos de arrastre de usuario:
                       if (notification is ScrollUpdateNotification &&
-                          notification.metrics.axis == Axis.vertical) {
-                        // Obtener la página actual desde el controlador
-                        final currentPage =
-                            _verticalPageController.page?.round() ?? 0;
+                          notification.dragDetails != null) {
+                        final dy = notification.dragDetails!.delta.dy;
+                        // Si delta.dy < 0, es gesto de "arrastrar hacia arriba" => intentar bajar página
+                        final tryingToGoNextPage = dy < 0;
 
-                        // Si el límite de scroll está alcanzado y el usuario intenta hacer scroll hacia abajo
-                        if (_isScrollLimitReached &&
-                            currentPage > previousPageIndex) {
-                          // Bloquear el scroll volviendo a la página anterior
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            _verticalPageController
-                                .jumpToPage(previousPageIndex);
-                          });
-
-                          // Mostrar el diálogo de límite alcanzado
+                        if (_isScrollLimitReached && tryingToGoNextPage) {
+                          // Bloqueamos volviendo a la misma página
+                          _verticalPageController.jumpToPage(previousPageIndex);
+                          // Mostramos el diálogo de límite
                           _showScrollLimitDialog();
-                          return false;
-                        }
-
-                        if (currentPage > previousPageIndex) {
-                          _updateScrollCount();
-
-                          // Registrar el perfil como visto y enviarlo al backend
-                          if (currentPage < _randomUsers.length) {
-                            final viewedUser = _randomUsers[currentPage];
-                            if (!_seenProfileIds.contains(viewedUser.id)) {
-                              _seenProfileIds.add(viewedUser.id);
-                              _updateSeenProfile(viewedUser.id);
-                            }
-                          }
-
-                          previousPageIndex = currentPage;
+                          return true; // consumimos el evento
                         }
                       }
-                      return false;
+                      return false; // dejamos pasar todos los demás scrolls
                     },
                     child: PageView.builder(
-                      // Eliminamos la key para que no reconstruya el widget al cambiar de pestaña
                       controller: _verticalPageController,
-                      physics: LimitedScrollPhysics(
-                        isLimitReached: _isScrollLimitReached,
-                      ),
                       scrollDirection: Axis.vertical,
+                      physics: const PageScrollPhysics(),
                       itemCount: currentList.length,
-                      onPageChanged: (pageIndex) {
-                        final auth =
-                            Provider.of<AuthProvider>(context, listen: false);
-                        final isPremium = auth.user?.isPremium ?? false;
-
-                        // Si intento ir hacia arriba (pageIndex < previousPageIndex) y NO soy premium:
-                        if (!isPremium && pageIndex < previousPageIndex) {
+                      onPageChanged: (newPage) {
+                        // Si hay límite y es intento de bajar página, lo ignoramos
+                        if (_isScrollLimitReached &&
+                            newPage > previousPageIndex) {
                           _verticalPageController.jumpToPage(previousPageIndex);
-                          _showPremiumDialog(
-                            tr("premium_function"),
-                            tr("premium_scroll_message"),
-                          );
+                          _showScrollLimitDialog();
                           return;
                         }
 
-                        // Cambio válido: actualizo índices y resto de lógica
-                        setState(() {
-                          previousPageIndex = pageIndex;
-                          _currentPageIndex = pageIndex;
-                        });
-
-                        setState(() {
-                          _currentPageIndex = pageIndex;
-                          // Guardamos la posición actual cuando estamos en la pestaña de aleatorios
-                          if (showRandom) {
-                            _savedRandomPosition = pageIndex;
-                          }
-                        });
-
-                        setState(() {
-                          _currentPageIndex = pageIndex;
-                          previousPageIndex = pageIndex;
-                        });
                         _updateScrollCount();
 
-                        final nextIndex = pageIndex + 1;
-                        if (nextIndex < _randomUsers.length) {
-                          _preloadImagesForUser(_randomUsers[nextIndex]);
-                        }
-                        // Si llegas cerca del final, sigue fetchMoreUsers…
-                        if (pageIndex >= _randomUsers.length - 5) {
-                          _fetchMoreUsers();
+                        // Cambio válido: actualizamos índices y lógica
+                        setState(() {
+                          previousPageIndex = newPage;
+                          _currentPageIndex = newPage;
+                        });
+
+                        // Preload siguiente imagen
+                        final nextIndex = newPage + 1;
+                        if (nextIndex < currentList.length) {
+                          _preloadImagesForUser(currentList[nextIndex]);
                         }
 
-                        // Ya estamos manejando la actualización del contador en el NotificationListener,
-                        // así que aquí solo verificamos si necesitamos cargar más usuarios
-                        if (pageIndex >= _randomUsers.length - 5) {
-                          print(
-                              "Alcanzado umbral de carga: $pageIndex >= ${_randomUsers.length - 5}");
+                        // Si llegamos al final del listado aleatorio, pedimos más
+                        if (showRandom && newPage >= _randomUsers.length - 5) {
                           _fetchMoreUsers();
                         }
                       },

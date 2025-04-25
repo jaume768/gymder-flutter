@@ -79,6 +79,28 @@
   "what_are_you_looking_for": "Cosa stai cercando?",
   "connection_purpose": "Scopo della connessione",
   "select_objective": "Seleziona obiettivo",
+  "gender": {
+    "male": "Maschile",
+    "female": "Femminile",
+    "non_binary": "Non binario",
+    "prefer_not_to_say": "Preferisco non dirlo",
+    "other": "Altro",
+    "pending": "Non specificato"
+  },
+  "fitness_goal": {
+    "volume": "Volume",
+    "definition": "Definizione",
+    "maintenance": "Mantenimento",
+    "other": "Altro",
+    "pending": "Non specificato"
+  },
+  "relationship_goal_map": {
+    "friendship": "Amicizia",
+    "casual": "Casuale",
+    "relationship": "Relazione",
+    "other": "Altro",
+    "pending": "Non specificato"
+  },
   "share_your_location": "Dove sei?",
   "share_your_current_location": "Condividi la tua posizione attuale",
   "get_my_location": "Ottieni la mia posizione",

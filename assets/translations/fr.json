@@ -107,6 +107,28 @@
   "buy_premium": "Acheter Premium",
   "unlimited_likes": "Likes illimités",
   "access_le_gustas": "Accès à 'Il t'aime'",
+  "gender": {
+    "male": "Masculin",
+    "female": "Féminin",
+    "non_binary": "Non binaire",
+    "prefer_not_to_say": "Je préfère ne pas le dire",
+    "other": "Autre",
+    "pending": "Non spécifié"
+  },
+  "fitness_goal": {
+    "volume": "Volume",
+    "definition": "Définition",
+    "maintenance": "Maintien",
+    "other": "Autre",
+    "pending": "Non spécifié"
+  },
+  "relationship_goal_map": {
+    "friendship": "Amitié",
+    "casual": "Occasionnel",
+    "relationship": "Relation",
+    "other": "Autre",
+    "pending": "Non spécifié"
+  },
   "registration_is_almost_complete": "Votre inscription est presque terminée",
   "continue_with_google_or_facebook": "Continuez avec Google ou Facebook",
   "or": "ou",

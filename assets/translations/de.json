@@ -425,6 +425,28 @@
   "enter_basic_lifts_weights": "Geben Sie Ihre Maximalgewichte bei den Grundübungen ein",
   "squat_kg": "Kniebeuge (kg)",
   "bench_press_kg": "Bankdrücken (kg)",
+  "gender": {
+    "male": "Männlich",
+    "female": "Weiblich",
+    "non_binary": "Nicht-binär",
+    "prefer_not_to_say": "Möchte ich nicht angeben",
+    "other": "Andere",
+    "pending": "Nicht angegeben"
+  },
+  "fitness_goal": {
+    "volume": "Volumen",
+    "definition": "Definition",
+    "maintenance": "Erhaltung",
+    "other": "Andere",
+    "pending": "Nicht angegeben"
+  },
+  "relationship_goal_map": {
+    "friendship": "Freundschaft",
+    "casual": "Locker",
+    "relationship": "Beziehung",
+    "other": "Andere",
+    "pending": "Nicht angegeben"
+  },
   "deadlift_kg": "Kreuzheben (kg)",
   "basic_lifts_profile": "Grundübungen",
   "about_me": "ÜBER MICH",

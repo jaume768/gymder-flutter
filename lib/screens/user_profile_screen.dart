@@ -1,3 +1,5 @@
+// lib/screens/user_profile_screen.dart
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -207,6 +209,42 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
+  // ———— MAPPING INTERNO → DISPLAY ————
+
+  static Map<String, String> _mapFor(String type) {
+    if (type == 'fitness') {
+      return {
+        'General': tr('general_option'),
+        'Definición': tr('definition_option'),
+        'Volumen': tr('volume_option'),
+        'Mantenimiento': tr('maintenance_option'),
+      };
+    } else if (type == 'relationship') {
+      return {
+        'Amistad': tr('friendship_option'),
+        'Citas': tr('dating_option'),
+        'Relación seria': tr('serious_relationship_option'),
+        'Casual': tr('casual_option'),
+        'No estoy seguro': tr('not_sure_option'),
+      };
+    } else if (type == 'gender') {
+      return {
+        'Masculino': tr('male_option'),
+        'Femenino': tr('female_option'),
+        'No Binario': tr('non_binary_option'),
+        'Prefiero no decirlo': tr('prefer_not_to_say_option'),
+        'Otro': tr('other_gender_option'),
+      };
+    }
+    return {};
+  }
+
+  String _displayFor(String? internal, String type) {
+    if (internal == null || internal.isEmpty) return tr('not_specified');
+    final map = _mapFor(type);
+    return map[internal] ?? internal;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -242,7 +280,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Widget _buildProfileContent() {
-    // Preparo el contenido de "Básicos"
+    // Muestras básicos de levantamientos
     final basicsContent = [
       "${tr('squat')}: ${user!.squatWeight != null ? '${user!.squatWeight} kg' : tr('not_defined')}",
       "${tr('bench_press')}: ${user!.benchPressWeight != null ? '${user!.benchPressWeight} kg' : tr('not_defined')}",
@@ -254,8 +292,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       child: Column(
         children: [
           const SizedBox(height: 16),
-
-          // ─── Foto de perfil ────────────────────────────────
+          // Foto
           Center(
             child: CircleAvatar(
               radius: 70,
@@ -266,9 +303,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       as ImageProvider,
             ),
           ),
-
           const SizedBox(height: 16),
-          // ─── Nombre de usuario ─────────────────────────────
+          // Username
           Text(
             user!.username ?? '',
             style: const TextStyle(
@@ -277,8 +313,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               color: Colors.white,
             ),
           ),
-
-          // ─── Biografía ─────────────────────────────────────
+          // Biografía
           if (user!.biography != null && user!.biography!.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
@@ -290,7 +325,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             ),
 
           const SizedBox(height: 16),
-          // ─── Pestañas SOBRE MI / FOTOS ──────────────────────
+          // Pestañas
           TabBar(
             indicatorColor: Colors.white,
             labelColor: Colors.white,
@@ -301,11 +336,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             ],
           ),
 
-          // ─── Contenido de cada pestaña ────────────────────────
+          // Contenido
           Expanded(
             child: TabBarView(
               children: [
-                // ────────── PESTAÑA SOBRE MI ─────────────────
+                // ─── SOBRE MÍ ───
                 ListView(
                   padding: const EdgeInsets.all(16.0),
                   children: [
@@ -314,14 +349,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         Expanded(
                           child: _buildInfoBox(
                             title: tr('gender_display'),
-                            content: user!.gender ?? tr("not_specified"),
+                            content: _displayFor(user!.gender, 'gender'),
                           ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: _buildInfoBox(
                             title: tr('goal_title'),
-                            content: user!.goal ?? tr("not_specified"),
+                            content: _displayFor(user!.goal, 'fitness'),
                           ),
                         ),
                       ],
@@ -329,7 +364,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     const SizedBox(height: 16),
                     _buildInfoBox(
                       title: tr('what_are_you_looking_for'),
-                      content: user!.relationshipGoal ?? tr("not_specified"),
+                      content:
+                          _displayFor(user!.relationshipGoal, 'relationship'),
                     ),
                     _buildInfoBox(
                       title: tr('location'),
@@ -344,7 +380,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   ],
                 ),
 
-                // ────────── PESTAÑA FOTOS ─────────────────
+                // ─── FOTOS ───
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: GridView.builder(

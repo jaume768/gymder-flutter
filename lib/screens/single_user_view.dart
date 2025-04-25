@@ -1,3 +1,5 @@
+// lib/widgets/perfil/single_user_view.dart
+
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -41,7 +43,6 @@ class _SingleUserViewState extends State<SingleUserView>
       duration: const Duration(milliseconds: 800),
     );
 
-    // Configuración de animaciones
     _heartAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
       CurvedAnimation(parent: _heartAnimationController, curve: Curves.easeOut),
     );
@@ -64,7 +65,6 @@ class _SingleUserViewState extends State<SingleUserView>
     setState(() {
       _showHeart = true;
     });
-    // Mostramos el corazón durante 300ms antes de iniciar la animación
     await Future.delayed(const Duration(milliseconds: 300));
     _heartAnimationController.forward(from: 0).then((_) {
       Future.delayed(const Duration(milliseconds: 500), () {
@@ -89,10 +89,24 @@ class _SingleUserViewState extends State<SingleUserView>
     }
   }
 
+  /// Mapea el valor interno de 'goal' a su texto traducido
+  String _displayGoal(String? internal) {
+    if (internal == null || internal.isEmpty) return '';
+    final map = {
+      'General': tr('general_option'),
+      'Definición': tr('definition_option'),
+      'Volumen': tr('volume_option'),
+      'Mantenimiento': tr('maintenance_option'),
+    };
+    return map[internal] ?? internal;
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = widget.user;
     final photos = user.photos ?? [];
+
+    final displayGoal = _displayGoal(user.goal);
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -105,6 +119,7 @@ class _SingleUserViewState extends State<SingleUserView>
       onDoubleTap: _handleDoubleTap,
       child: Stack(
         children: [
+          // ─── Fotos horizontales ─────────────────────────
           PageView.builder(
             controller: _horizontalPageController,
             scrollDirection: Axis.horizontal,
@@ -140,6 +155,8 @@ class _SingleUserViewState extends State<SingleUserView>
               );
             },
           ),
+
+          // ─── Paginación ─────────────────────────────────
           if (photos.isNotEmpty)
             Positioned(
               bottom: 92,
@@ -162,7 +179,8 @@ class _SingleUserViewState extends State<SingleUserView>
                 }),
               ),
             ),
-          // Datos del usuario: nombre, objetivo y biografía
+
+          // ─── Nombre, meta y biografía ──────────────────
           Positioned(
             left: 20,
             right: 20,
@@ -179,7 +197,7 @@ class _SingleUserViewState extends State<SingleUserView>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Nombre de usuario con el objetivo entre paréntesis en un tamaño menor
+                  // Usuario + (Goal)
                   RichText(
                     text: TextSpan(
                       children: [
@@ -194,9 +212,9 @@ class _SingleUserViewState extends State<SingleUserView>
                             ],
                           ),
                         ),
-                        if (user.goal != null)
+                        if (displayGoal.isNotEmpty)
                           TextSpan(
-                            text: " (${user.goal!})",
+                            text: " ($displayGoal)",
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 21,
@@ -209,6 +227,7 @@ class _SingleUserViewState extends State<SingleUserView>
                       ],
                     ),
                   ),
+
                   // Biografía
                   if (user.biography != null && user.biography!.isNotEmpty)
                     Padding(
@@ -229,6 +248,8 @@ class _SingleUserViewState extends State<SingleUserView>
               ),
             ),
           ),
+
+          // ─── Animación del corazón ────────────────────
           if (_showHeart && _heartPosition != null)
             AnimatedBuilder(
               animation: _heartAnimationController,

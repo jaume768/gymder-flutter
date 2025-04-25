@@ -88,6 +88,26 @@ class UserService {
     }
   }
 
+  Future<Map<String, dynamic>> purchaseTopLike() async {
+    final url = Uri.parse('$baseUrl/users/top_like/purchase');
+    final resp = await http.post(url, headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    },);
+    final data = jsonDecode(resp.body);
+    return data;
+  }
+
+  Future<Map<String, dynamic>> superLikeUser(String targetUserId) async {
+    final url = Uri.parse('$baseUrl/users/top_like/$targetUserId');
+    final resp = await http.post(url, headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    },);
+    final data = jsonDecode(resp.body);
+    return data;
+  }
+
   Future<Map<String, dynamic>> getUserLikes() async {
     final url = Uri.parse('$baseUrl/users/likes');
     final response = await http.get(

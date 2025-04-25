@@ -67,6 +67,7 @@ class User {
   final LocationData? location;
   final String? biography;
   final String? city;
+  final int topLikeCount;
   final String? country;
   final int? age;
   final int? squatWeight;
@@ -90,6 +91,7 @@ class User {
     this.profilePicture,
     this.firstName,
     this.lastName,
+    required this.topLikeCount,
     this.gender,
     this.biography,
     this.seeking,
@@ -161,6 +163,7 @@ class User {
           : null,
       city: json['city'],
       country: json['country'],
+      topLikeCount: json['topLikeCount'] as int? ?? 0,
       age: json['age'] != null
           ? (json['age'] is int
               ? json['age']

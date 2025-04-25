@@ -7,6 +7,7 @@ import 'package:easy_localization/easy_localization.dart';
 
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../services/user_service.dart';
 import '../utils/error_handler.dart';
 
 class AuthProvider with ChangeNotifier {
@@ -146,7 +147,7 @@ class AuthProvider with ChangeNotifier {
       } else {
         // Procesar errores específicos de campos
         _processFieldErrors(result);
-        
+
         return {
           'success': false,
           'message': result['message'] ?? tr('error_register'),
@@ -165,11 +166,11 @@ class AuthProvider with ChangeNotifier {
   void _processFieldErrors(Map<String, dynamic> result) {
     if (result.containsKey('fieldErrors') && result['fieldErrors'] != null) {
       Map<String, dynamic> fieldErrors = result['fieldErrors'];
-      
+
       fieldErrors.forEach((key, value) {
         _fieldErrors[key] = value.toString();
       });
-      
+
       notifyListeners();
     }
   }
@@ -184,14 +185,14 @@ class AuthProvider with ChangeNotifier {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'token': googleIdToken}),
       );
-      
+
       if (response.statusCode != 200) {
         final apiError = ApiError.fromResponse(response);
         return {'success': false, 'message': apiError.message};
       }
-      
+
       final data = jsonDecode(response.body);
-      
+
       // Guardar el token en SecureStorage
       await _authService.storage.write(key: 'token', value: data['token']);
 
@@ -233,5 +234,27 @@ class AuthProvider with ChangeNotifier {
       _user = await _authService.fetchUserData(token);
       notifyListeners();
     }
+  }
+
+  Future<bool> buyTopLike() async {
+    final String? t = await _authService.getToken();
+    if (t == null) return false;
+    final svc = UserService(token: t);
+    final res = await svc.purchaseTopLike();
+    if (res['success'] == true) {
+      await refreshUser();
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> superLike(String targetId) async {
+    final svc = UserService(token: token!);
+    final res = await svc.superLikeUser(targetId);
+    if (res['success']) {
+      await refreshUser(); // << recarga _user desde el backend
+      return true;
+    }
+    return false;
   }
 }

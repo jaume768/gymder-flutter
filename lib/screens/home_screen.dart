@@ -1,21 +1,22 @@
 // lib/screens/home_screen.dart
 
-import 'package:app/screens/register_screen.dart';
-import 'package:app/screens/tiktok_like_screen.dart';
-import 'package:flutter/cupertino.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../services/user_service.dart';
+import 'register_screen.dart';
+import 'tiktok_like_screen.dart';
 import 'login_screen.dart';
 import 'matches_chats_screen.dart';
 import 'my_profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  final bool fromGoogle; // nuevo parámetro
+  final bool fromGoogle;
   const HomeScreen({Key? key, this.fromGoogle = false}) : super(key: key);
 
   @override
@@ -23,25 +24,41 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  // Estado para sugerencias y navegación
   List<User> suggestedMatches = [];
   bool isLoading = true;
   String errorMessage = '';
   int _selectedIndex = 1;
-
-  // Instanciamos nuestras pantallas:
   late TikTokLikeScreen _tikTokLikeScreen;
   late Widget _matchesScreen;
+
+  // In-App Purchase
+  final InAppPurchase _iap = InAppPurchase.instance;
+  final String _topLikeId = 'top_like';
+  bool _iapAvailable = false;
+  List<ProductDetails> _products = [];
+  late StreamSubscription<List<PurchaseDetails>> _sub;
 
   @override
   void initState() {
     super.initState();
     _fetchSuggestedMatches();
+    _initIAP();
+    _sub = _iap.purchaseStream.listen(_onPurchaseUpdated, onDone: () {
+      _sub.cancel();
+    });
   }
 
-  Future<void> _fetchSuggestedMatches() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final token = await authProvider.getToken();
+  @override
+  void dispose() {
+    _sub.cancel();
+    super.dispose();
+  }
 
+  // Carga sugerencias de matches
+  Future<void> _fetchSuggestedMatches() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = await auth.getToken();
     if (token == null) {
       Navigator.pushReplacement(
         context,
@@ -49,11 +66,9 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       return;
     }
-
-    final userService = UserService(token: token);
-    final result = await userService.getSuggestedMatches();
-
-    if (result['success']) {
+    final svc = UserService(token: token);
+    final result = await svc.getSuggestedMatches();
+    if (result['success'] == true) {
       setState(() {
         suggestedMatches =
             List<User>.from(result['matches'].map((x) => User.fromJson(x)));
@@ -69,6 +84,68 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // Inicializa el plugin IAP y consulta el producto
+  Future<void> _initIAP() async {
+    _iapAvailable = await _iap.isAvailable();
+    if (!_iapAvailable) return;
+    final response = await _iap.queryProductDetails({_topLikeId});
+    if (response.error == null && response.productDetails.isNotEmpty) {
+      setState(() {
+        _products = response.productDetails;
+      });
+    }
+  }
+
+  // Maneja actualizaciones de compra
+  void _onPurchaseUpdated(List<PurchaseDetails> purchases) async {
+    for (var purchase in purchases) {
+      if (purchase.productID == _topLikeId) {
+        if (purchase.status == PurchaseStatus.purchased) {
+          final auth = Provider.of<AuthProvider>(context, listen: false);
+          final token = await auth.getToken();
+          if (token != null) {
+            final svc = UserService(token: token);
+            final res = await svc.purchaseTopLike();
+            if (res['success'] == true) {
+              await auth.refreshUser();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('TopLike comprado 🎉')),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(res['message'] ?? tr('error'))),
+              );
+            }
+          }
+          if (purchase.pendingCompletePurchase) {
+            await _iap.completePurchase(purchase);
+          }
+        } else if (purchase.status == PurchaseStatus.error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Error de compra: ${purchase.error?.message ?? 'Unknown error'}'),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  // Dispara la compra consumible
+  void _buyTopLike() {
+    if (!_iapAvailable || _products.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(tr('in_app_not_available'))),
+      );
+      return;
+    }
+    final product = _products.firstWhere((p) => p.id == _topLikeId);
+    final param = PurchaseParam(productDetails: product);
+    _iap.buyConsumable(purchaseParam: param);
+  }
+
+  // Maneja la navegación inferior
   void _onItemTapped(int index) {
     setState(() {
       if (index == 0) {
@@ -78,18 +155,14 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  List<Widget> _widgetOptions() {
-    return [
-      _matchesScreen,
-      _tikTokLikeScreen,
-    ];
-  }
+  List<Widget> _widgetOptions() => [_matchesScreen, _tikTokLikeScreen];
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final user = authProvider.user;
+    final auth = Provider.of<AuthProvider>(context);
+    final user = auth.user;
 
+    // Redirige si registro incompleto
     if (!widget.fromGoogle &&
         user != null &&
         (user.gender == 'Pendiente' || user.relationshipGoal == 'Pendiente')) {
@@ -113,7 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
           : errorMessage.isNotEmpty
               ? Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(16),
                     child: Text(
                       errorMessage,
                       style: const TextStyle(color: Colors.red, fontSize: 16),
@@ -125,59 +198,125 @@ class _HomeScreenState extends State<HomeScreen> {
                   index: _selectedIndex,
                   children: _widgetOptions(),
                 ),
-      bottomNavigationBar: Container(
-        color: Colors.transparent,
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            GestureDetector(
-              onTap: () => _onItemTapped(0),
-              child: CircleAvatar(
-                radius: 24,
-                backgroundColor:
-                    _selectedIndex == 0 ? Colors.white : Colors.grey.shade800,
-                child: Icon(
-                  Icons.chat_bubble,
-                  color: _selectedIndex == 0 ? Colors.black : Colors.white,
-                  size: 28,
-                ),
+      bottomNavigationBar: _buildBottomBar(auth, user!),
+    );
+  }
+
+  Widget _buildBottomBar(AuthProvider auth, User user) {
+    return Container(
+      color: Colors.transparent,
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Icono Chats
+          GestureDetector(
+            onTap: () => _onItemTapped(0),
+            child: CircleAvatar(
+              radius: 27,
+              backgroundColor:
+                  _selectedIndex == 0 ? Colors.white : Colors.grey.shade800,
+              child: Icon(
+                Icons.chat_bubble,
+                color: _selectedIndex == 0 ? Colors.black : Colors.white,
+                size: 28,
               ),
             ),
-            const SizedBox(width: 40),
-            GestureDetector(
-              onTap: () => _onItemTapped(1),
-              child: CircleAvatar(
-                radius: 34,
-                backgroundColor:
-                    _selectedIndex == 1 ? Colors.white : Colors.grey.shade800,
-                child: Icon(
-                  Icons.favorite,
-                  color: _selectedIndex == 1 ? Colors.black : Colors.white,
-                  size: 38,
-                ),
-              ),
-            ),
-            const SizedBox(width: 40),
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const MyProfileScreen()),
+          ),
+          const SizedBox(width: 40),
+          // Icono TopLike / SuperLike
+          GestureDetector(
+            onTap: () {
+              if (_selectedIndex == 0) {
+                _onItemTapped(1);
+              } else {
+                showModalBottomSheet(
+                  context: context,
+                  builder: (_) => Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          tr('what_do_you_want'),
+                          style: const TextStyle(fontSize: 18),
+                        ),
+                        const SizedBox(height: 12),
+                        ListTile(
+                          leading: const Icon(Icons.flash_on),
+                          title: Text(tr('buy_more_quick_likes')),
+                          onTap: () {
+                            Navigator.pop(context);
+                            _buyTopLike();
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.thumb_up_alt),
+                          title: Text(tr('use_quick_like')),
+                          onTap: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
                 );
-              },
-              child: CircleAvatar(
-                radius: 24,
-                backgroundColor: Colors.grey.shade800,
-                child: const Icon(
-                  Icons.person,
-                  color: Colors.white,
-                  size: 28,
+              }
+            },
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                CircleAvatar(
+                  radius: 37,
+                  backgroundColor:
+                      _selectedIndex == 1 ? Colors.white : Colors.grey.shade800,
+                  child: Icon(
+                    Icons.favorite,
+                    color: _selectedIndex == 1 ? Colors.black : Colors.white,
+                    size: 45,
+                  ),
                 ),
+                Positioned(
+                  right: -2,
+                  top: -8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.lightBlueAccent,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.black),
+                    ),
+                    child: Text(
+                      user.topLikeCount > 0 ? '${user.topLikeCount}' : '+',
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 40),
+          // Icono Perfil
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MyProfileScreen()),
+              );
+            },
+            child: CircleAvatar(
+              radius: 27,
+              backgroundColor: Colors.grey.shade800,
+              child: const Icon(
+                Icons.person,
+                color: Colors.white,
+                size: 34,
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

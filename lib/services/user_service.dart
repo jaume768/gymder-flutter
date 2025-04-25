@@ -25,15 +25,38 @@ class UserService {
     return jsonDecode(response.body);
   }
 
-  Future<Map<String, dynamic>> setNotificationSetting(String key, bool value) async {
+  Future<Map<String, dynamic>> getLikeLimitStatus() async {
+    final url = Uri.parse('$baseUrl/users/like/status');
+    final response = await http.get(url, headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    });
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return {
+        'success': true,
+        'limitActive': data['limitActive'],
+        'likeCount': data['likeCount'],
+        'likeLimit': data['limitInfo']?['likeLimit'],
+        'resetAt': data['limitInfo']?['resetAt'],
+      };
+    } else {
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Error obteniendo estado de likes'
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> setNotificationSetting(
+      String key, bool value) async {
     final response = await http.post(
       Uri.parse('$baseUrl/users/notification'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
-
       },
-      body: jsonEncode({ key: value }),
+      body: jsonEncode({key: value}),
     );
     return jsonDecode(response.body);
   }
@@ -111,9 +134,9 @@ class UserService {
   }
 
   Future<Map<String, dynamic>> changePassword(
-      String currentPassword,
-      String newPassword,
-      ) async {
+    String currentPassword,
+    String newPassword,
+  ) async {
     // Apunta a /api/users/change-password
     final url = Uri.parse('$baseUrl/users/change-password');
     final response = await http.patch(
@@ -336,29 +359,33 @@ class UserService {
   // Método para dar like a otro usuario
   Future<Map<String, dynamic>> likeUser(String likedUserId) async {
     final url = Uri.parse('$baseUrl/users/like/$likedUserId');
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
+    final response = await http.post(url, headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    });
     final data = jsonDecode(response.body);
+
     if (response.statusCode == 200) {
       return {
         'success': true,
-        'message': data['message'],
         'matchedUser': data['matchedUser'] != null
             ? User.fromJson(data['matchedUser'])
             : null,
       };
-    } else {
+    }
+    // 403 → límite alcanzado
+    if (response.statusCode == 403 && data['limitReached'] == true) {
       return {
         'success': false,
-        'message': data['message'] ?? 'Error al dar like',
+        'limitReached': true,
+        'likeLimit': data['limitInfo']['likeLimit'],
+        'resetAt': data['limitInfo']['resetAt'],
       };
     }
+    return {
+      'success': false,
+      'message': data['message'] ?? 'Error al dar like',
+    };
   }
 
   // Método para subir foto de perfil
@@ -462,7 +489,7 @@ class UserService {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return {
-        'success': true, 
+        'success': true,
         'user': data['user'],
       };
     } else {
@@ -475,10 +502,10 @@ class UserService {
   }
 
   Future<Map<String, dynamic>> reportUser(
-      String reportedUserId, {
-        required String reason,
-        String? details,
-      }) async {
+    String reportedUserId, {
+    required String reason,
+    String? details,
+  }) async {
     final url = Uri.parse('$baseUrl/users/report/$reportedUserId');
     final response = await http.post(
       url,
@@ -492,7 +519,10 @@ class UserService {
     if (response.statusCode == 200) {
       return {'success': true, 'message': data['message']};
     } else {
-      return {'success': false, 'message': data['message'] ?? 'Error al reportar'};
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Error al reportar'
+      };
     }
   }
 
@@ -516,7 +546,8 @@ class UserService {
       if (mimeTypeData.length != 2) {
         return {
           'success': false,
-          'message': 'Tipo de archivo desconocido para el archivo: ${photo.path}',
+          'message':
+              'Tipo de archivo desconocido para el archivo: ${photo.path}',
         };
       }
 

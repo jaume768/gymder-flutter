@@ -64,6 +64,8 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
   int _lastFetchThreshold = 0;
 
   int _currentPageIndex = 0;
+  bool _isLikeLimitReached = false;
+  DateTime? _likeLimitResetAt;
   int previousPageIndex = 0;
 
   // Variable para guardar la posición en la lista de aleatoria
@@ -107,6 +109,7 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     for (var user in _randomUsers) {
       _loadedProfileIds.add(user.id);
     }
+    _checkLikeLimitStatus();
 
     // Establecer el umbral de carga inicial
     _lastFetchThreshold = (_randomUsers.length / 2).floor();
@@ -131,6 +134,29 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
         _updateScrollCount();
       }
     });
+  }
+
+  Future<void> _checkLikeLimitStatus() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = await auth.getToken();
+    if (token == null) return;
+    final service = UserService(token: token);
+    final res = await service.getLikeLimitStatus();
+    if (res['success'] == true && res['limitActive'] == true) {
+      setState(() {
+        _isLikeLimitReached = true;
+        _likeLimitResetAt = DateTime.parse(res['resetAt']);
+      });
+    }
+  }
+
+  void _showLikeLimitDialog() {
+    final hoursLeft = _likeLimitResetAt != null
+        ? _likeLimitResetAt!.difference(DateTime.now()).inHours
+        : 0;
+    final title = tr("premium_function");
+    final content = tr("like_limit_message", args: [hoursLeft.toString()]);
+    _showPremiumDialog(title, content);
   }
 
   Future<void> _requestAndroidNotificationPermission() async {
@@ -442,53 +468,56 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
 
   void _handleLike(int userIndex) async {
     if (_isProcessing) return;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final isPremium = auth.user?.isPremium ?? false;
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final userIsPremium = authProvider.user?.isPremium ?? false;
-    int localMaxLike = (authProvider.user?.gender == 'Masculino') ? 20 : 40;
-
-    // Verificar el límite de likes antes de proceder
-    if (!userIsPremium) {
-      // No hay implementación de límite de likes en este código
-    }
-
-    _isProcessing = true;
-    final user = _randomUsers[userIndex];
-
-    final token = await authProvider.getToken();
-    if (token == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(tr("token_not_found_login"))),
-      );
-      _isProcessing = false;
+    if (!isPremium && _isLikeLimitReached) {
+      _showLikeLimitDialog();
       return;
     }
 
-    final userService = UserService(token: token);
-    final result = await userService.likeUser(user.id);
+    setState(() => _isProcessing = true);
+    final token = await auth.getToken();
+    if (token == null) {
+      /* error token */ return;
+    }
+    final service = UserService(token: token);
+
+    final user = _randomUsers[userIndex];
+    final result = await service.likeUser(user.id);
 
     if (result['success'] == true) {
-      final currentUser = authProvider.user;
-      if (result['matchedUser'] != null && currentUser != null) {
-        _mostrarModalMatch(context, currentUser, user);
+      // Si hay match, muestro modal…
+      if (result['matchedUser'] != null) {
+        _mostrarModalMatch(context, auth.user!, user);
       }
+      // Y elimino el perfil de la lista
+      setState(() => _randomUsers.removeAt(userIndex));
+    } else if (result['limitReached'] == true) {
+      // Actualizo estado y muestro diálogo, pero NO lo quito de la lista
+      setState(() {
+        _isLikeLimitReached = true;
+        _likeLimitResetAt = DateTime.parse(result['resetAt']);
+      });
+      _showLikeLimitDialog();
+      // Importante: salgo sin ejecutar ninguna eliminación
+      _isProcessing = false;
+      return;
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message'] ?? tr("error_liking_user"))),
-      );
+      // Otro error
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(result['message'] ?? tr("error_liking_user"))));
     }
 
-    setState(() {
-      _randomUsers.removeAt(userIndex);
-    });
-
+    // Si la lista quedó vacía tras un like o match...
     if (_randomUsers.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(tr("no_more_users"))),
-      );
-    } else if (userIndex < _randomUsers.length) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(tr("no_more_users"))));
+    } else {
+      // Mantengo la posición actual para mostrar el siguiente perfil
+      final nextIndex = userIndex.clamp(0, _randomUsers.length - 1);
       _verticalPageController.animateToPage(
-        userIndex,
+        nextIndex,
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeIn,
       );
@@ -1218,11 +1247,11 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                       physics: const PageScrollPhysics(),
                       itemCount: currentList.length,
                       onPageChanged: (newPage) {
-                        // Si hay límite y es intento de bajar página, lo ignoramos
-                        final isPremium = Provider.of<AuthProvider>(context, listen: false)
-                            .user
-                            ?.isPremium ==
-                            true;
+                        final isPremium =
+                            Provider.of<AuthProvider>(context, listen: false)
+                                    .user
+                                    ?.isPremium ==
+                                true;
 
                         if (_isScrollLimitReached &&
                             newPage > previousPageIndex) {

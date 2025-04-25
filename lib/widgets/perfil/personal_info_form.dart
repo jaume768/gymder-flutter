@@ -159,10 +159,9 @@ class PersonalInfoForm extends StatelessWidget {
     } else if (type == 'relationship') {
       return {
         tr('friendship_option'): 'Amistad',
-        tr('dating_option'): 'Citas',
-        tr('serious_relationship_option'): 'Relación seria',
+        tr('serious_relationship_option'): 'Relación',
         tr('casual_option'): 'Casual',
-        tr('not_sure_option'): 'No estoy seguro',
+        tr('not_sure_option'): 'Otro',
       };
     } else if (type == 'gender') {
       return {

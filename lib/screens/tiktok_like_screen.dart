@@ -1206,10 +1206,14 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                 : NotificationListener<ScrollNotification>(
                     onNotification: (notification) {
                       // Solo interceptamos gestos de arrastre de usuario:
-                      if (notification is ScrollUpdateNotification &&
+                      if (_isProcessing &&
+                          notification is ScrollUpdateNotification &&
                           notification.dragDetails != null) {
                         final dy = notification.dragDetails!.delta.dy;
-                        // Si delta.dy < 0, es gesto de "arrastrar hacia arriba" => intentar bajar página
+                        // dy > 0 = gesto de arrastrar hacia abajo dedo = intentar ir a la página anterior
+                        if (dy > 0) {
+                          return true; // consume el evento y no deja subir
+                        }
                         final tryingToGoNextPage = dy < 0;
                         final isPremium =
                             Provider.of<AuthProvider>(context, listen: false)
@@ -1241,7 +1245,9 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
                     child: PageView.builder(
                       controller: _verticalPageController,
                       scrollDirection: Axis.vertical,
-                      physics: const PageScrollPhysics(),
+                      physics: _isProcessing
+                          ? const NeverScrollableScrollPhysics()
+                          : const PageScrollPhysics(),
                       itemCount: currentList.length,
                       onPageChanged: (newPage) {
                         final isPremium =

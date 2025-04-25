@@ -1,3 +1,5 @@
+// lib/screens/EditProfileScreen.dart
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -23,14 +25,35 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  // Keys para formularios
+  // Mapas para convertir de texto mostrado → valor interno en español
+  static const Map<String, String> _genderKeyMap = {
+    'Masculino': 'Masculino',
+    'Femenino': 'Femenino',
+    'No Binario': 'No Binario',
+    'Prefiero no decirlo': 'Prefiero no decirlo',
+    'Otro': 'Otro',
+  };
+  static const Map<String, String> _fitnessGoalKeyMap = {
+    'General': 'General',
+    'Definición': 'Definición',
+    'Volumen': 'Volumen',
+    'Mantenimiento': 'Mantenimiento',
+  };
+  static const Map<String, String> _relationshipGoalKeyMap = {
+    'Amistad': 'Amistad',
+    'Citas': 'Casual',
+    'Relación seria': 'Relación',
+    'Casual': 'Casual',
+    'No estoy seguro': 'Otro',
+  };
+
   final _usernameFormKey = GlobalKey<FormState>();
   final _personalInfoFormKey = GlobalKey<FormState>();
 
   bool isUploading = false;
   String errorMessage = '';
 
-  // Variables editables
+  // Valores mostrados en los dropdowns / chips
   String username = '';
   String firstName = '';
   String lastName = '';
@@ -46,18 +69,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   int? benchPressWeight;
   int? deadliftWeight;
 
-  // Valores originales para comparar cambios
-  String originalUsername = '';
-  String originalFirstName = '';
-  String originalLastName = '';
-  String originalGoal = '';
-  String originalGender = '';
-  List<String> originalSeeking = [];
-  String originalRelationshipGoal = '';
-  String originalBiography = '';
-  int originalAge = 18;
-  int originalHeight = 0;
-  int originalWeight = 0;
+  // Para detectar cambios
+  late final String originalUsername;
+  late final String originalFirstName;
+  late final String originalLastName;
+  late final String originalGoal;
+  late final String originalGender;
+  late final List<String> originalSeeking;
+  late final String originalRelationshipGoal;
+  late final String originalBiography;
+  late final int originalAge;
+  late final int originalHeight;
+  late final int originalWeight;
   int? originalSquatWeight;
   int? originalBenchPressWeight;
   int? originalDeadliftWeight;
@@ -74,51 +97,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   List<File> _additionalImages = [];
   final ImagePicker _picker = ImagePicker();
 
-  // Control de reordenamiento de fotos
+  // Para reordenar fotos
   List<Photo> _reorderedPhotos = [];
   bool _photoOrderChanged = false;
 
   @override
   void initState() {
     super.initState();
-    final user = Provider.of<AuthProvider>(context, listen: false).user;
-    _locationController = TextEditingController(text: location);
-    if (user != null) {
-      // --- inicializar todos los campos desde user ---
-      username = originalUsername = user.username ?? '';
-      originalFirstName = user.firstName ?? '';
-      originalLastName = user.lastName ?? '';
-      originalGoal = user.goal ?? '';
-      originalGender = user.gender ?? '';
-      originalSeeking = List.from(user.seeking ?? []);
-      originalRelationshipGoal = user.relationshipGoal ?? '';
-      originalBiography = user.biography ?? '';
-      originalAge = user.age ?? 18;
-      originalHeight = user.height ?? 0;
-      originalWeight = user.weight ?? 0;
-      originalSquatWeight = user.squatWeight;
-      originalBenchPressWeight = user.benchPressWeight;
-      originalDeadliftWeight = user.deadliftWeight;
+    final user = Provider.of<AuthProvider>(context, listen: false).user!;
+    _locationController = TextEditingController();
 
-      firstName = originalFirstName;
-      lastName = originalLastName;
-      goal = originalGoal;
-      gender = originalGender;
-      seeking = List.from(originalSeeking);
-      relationshipGoal = originalRelationshipGoal;
-      biography = originalBiography;
-      age = originalAge;
-      height = originalHeight;
-      weight = originalWeight;
-      squatWeight = originalSquatWeight;
-      benchPressWeight = originalBenchPressWeight;
-      deadliftWeight = originalDeadliftWeight;
+    // Inicializar campos y copias originales
+    username = originalUsername = user.username ?? '';
+    firstName = originalFirstName = user.firstName ?? '';
+    lastName = originalLastName = user.lastName ?? '';
+    goal = originalGoal = user.goal ?? '';
+    gender = originalGender = user.gender ?? '';
+    originalSeeking = List<String>.from(user.seeking ?? []);
+    seeking         = List<String>.from(originalSeeking);
+    relationshipGoal = originalRelationshipGoal = user.relationshipGoal ?? '';
+    biography = originalBiography = user.biography ?? '';
+    age = originalAge = user.age ?? 18;
+    height = originalHeight = user.height ?? 0;
+    weight = originalWeight = user.weight ?? 0;
+    squatWeight = originalSquatWeight = user.squatWeight;
+    benchPressWeight = originalBenchPressWeight = user.benchPressWeight;
+    deadliftWeight = originalDeadliftWeight = user.deadliftWeight;
 
-      if ((user.city?.isNotEmpty ?? false) ||
-          (user.country?.isNotEmpty ?? false)) {
-        location = '${user.city}, ${user.country}';
-        _locationController.text = location;
-      }
+    if ((user.city?.isNotEmpty ?? false) ||
+        (user.country?.isNotEmpty ?? false)) {
+      location = '${user.city}, ${user.country}';
+      _locationController.text = location;
     }
   }
 
@@ -143,9 +152,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           squatWeight != originalSquatWeight ||
           benchPressWeight != originalBenchPressWeight ||
           deadliftWeight != originalDeadliftWeight ||
+          locationUpdated ||
           seeking.length != originalSeeking.length ||
-          !seeking.every(originalSeeking.contains) ||
-          locationUpdated);
+          !seeking.every(originalSeeking.contains));
     });
   }
 
@@ -159,7 +168,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (perm == LocationPermission.denied ||
           perm == LocationPermission.deniedForever) {
         setState(() {
-          errorMessage = tr("location_permission_denied");
+          errorMessage = tr('location_permission_denied');
           isLoadingLocation = false;
         });
         return;
@@ -182,26 +191,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _checkChanges();
       } else {
         setState(() {
-          errorMessage = tr("could_not_determine_city");
+          errorMessage = tr('could_not_determine_city');
           isLoadingLocation = false;
         });
       }
     } catch (e) {
       setState(() {
-        errorMessage = '${tr("error_getting_location")}: $e';
+        errorMessage = '${tr('error_getting_location')}: $e';
         isLoadingLocation = false;
       });
     }
-  }
-
-  void _handleSeekingChanged(String option, bool isSelected) {
-    setState(() {
-      if (isSelected)
-        seeking.add(option);
-      else
-        seeking.remove(option);
-    });
-    _checkChanges();
   }
 
   Future<void> _pickProfileImage() async {
@@ -224,7 +223,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (token == null) {
       setState(() {
         isUploading = false;
-        errorMessage = tr("token_not_found_login");
+        errorMessage = tr('token_not_found_login');
       });
       return;
     }
@@ -233,21 +232,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final res = await svc.uploadProfilePicture(_imageFile!);
       if (res['success']) {
         await auth.refreshUser();
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(tr("profile_updated_successfully")),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(tr('profile_updated_successfully')),
+              backgroundColor: Colors.green),
+        );
         setState(() => _imageFile = null);
       } else {
         setState(() => errorMessage =
-            res['message'] ?? tr("error_uploading_profile_picture"));
+            res['message'] ?? tr('error_uploading_profile_picture'));
       }
     } catch (e) {
       setState(
-          () => errorMessage = '${tr("error_uploading_profile_picture")}: $e');
+          () => errorMessage = '${tr('error_uploading_profile_picture')}: $e');
     } finally {
       setState(() => isUploading = false);
     }
@@ -259,7 +256,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (picked != null) {
       if (picked.length > 5) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(tr("max_5_photos"))));
+            .showSnackBar(SnackBar(content: Text(tr('max_5_photos'))));
         return;
       }
       setState(
@@ -278,7 +275,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (token == null) {
       setState(() {
         isUploading = false;
-        errorMessage = tr("token_not_found_login");
+        errorMessage = tr('token_not_found_login');
       });
       return;
     }
@@ -289,34 +286,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         await auth.refreshUser();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(tr("additional_photos_uploaded_successfully"))),
+              content: Text(tr('additional_photos_uploaded_successfully'))),
         );
         setState(() => _additionalImages = []);
       } else {
         setState(() => errorMessage =
-            res['message'] ?? tr("error_uploading_additional_photos"));
+            res['message'] ?? tr('error_uploading_additional_photos'));
       }
     } catch (e) {
       setState(() =>
-          errorMessage = '${tr("error_uploading_additional_photos")}: $e');
+          errorMessage = '${tr('error_uploading_additional_photos')}: $e');
     } finally {
       setState(() => isUploading = false);
-    }
-  }
-
-  Future<void> _updatePhotoOrder(List<Photo> newList) async {
-    if (newList.isEmpty) return;
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final token = await auth.getToken();
-    if (token == null) return;
-    final svc = UserService(token: token);
-    final ids = newList.map((p) => p.id).toList();
-    final res = await svc.updatePhotoOrder(ids);
-    if (res['success'] == true) {
-      await auth.refreshUser();
-    } else {
-      setState(() =>
-          errorMessage = res['message'] ?? tr("error_updating_photo_order"));
     }
   }
 
@@ -326,7 +307,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     _usernameFormKey.currentState!.save();
     _personalInfoFormKey.currentState!.save();
-
     setState(() {
       isUploading = true;
       errorMessage = '';
@@ -335,30 +315,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     try {
       final auth = Provider.of<AuthProvider>(context, listen: false);
       final token = await auth.getToken();
-      if (token == null) {
-        setState(() => errorMessage = tr("token_not_found_login"));
-        return;
-      }
-      final svc = UserService(token: token);
+      if (token == null) throw Exception(tr('token_not_found_login'));
 
-      // 1) Username si cambió
+      // 1) Actualizar username si cambió
       if (username != auth.user?.username) {
-        final usrRes = await svc.updateUsername(username);
-        if (!usrRes['success']) {
-          setState(
-              () => errorMessage = usrRes['message'] ?? tr("enter_username"));
-          return;
-        }
+        final usrRes = await UserService(token: token).updateUsername(username);
+        if (!usrRes['success']) throw Exception(usrRes['message']);
       }
 
-      // 2) Perfil general
+      // 2) Convertir display → interno en español
+      final internalGoal = _fitnessGoalKeyMap[goal] ?? goal;
+      final internalGender = _genderKeyMap[gender] ?? gender;
+      final internalRelGoal =
+          _relationshipGoalKeyMap[relationshipGoal] ?? relationshipGoal;
+      final internalSeeking =
+          seeking.map((d) => _genderKeyMap[d] ?? d).toList();
+
       final profileData = {
         'firstName': firstName,
         'lastName': lastName,
-        'goal': goal,
-        'gender': gender,
-        'seeking': seeking,
-        'relationshipGoal': relationshipGoal,
+        'goal': internalGoal,
+        'gender': internalGender,
+        'seeking': internalSeeking,
+        'relationshipGoal': internalRelGoal,
         'biography': biography,
         'age': age,
         'height': height,
@@ -372,39 +351,34 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             'coordinates': [userLongitude, userLatitude],
           },
       };
-      final res = await svc.updateProfile(profileData);
-      if (!res['success']) {
-        setState(() =>
-            errorMessage = res['message'] ?? tr("error_updating_profile"));
-        return;
-      }
 
-      // 3) Si reordenó fotos, persistir también ese cambio
+      final res = await UserService(token: token).updateProfile(profileData);
+      if (!res['success']) throw Exception(res['message']);
+
+      // 3) Reordenar fotos si cambió
       if (_photoOrderChanged) {
-        await _updatePhotoOrder(_reorderedPhotos);
-        _photoOrderChanged = false;
+        final ids = _reorderedPhotos.map((p) => p.id).toList();
+        final ordRes = await UserService(token: token).updatePhotoOrder(ids);
+        if (!ordRes['success']) throw Exception(ordRes['message']);
       }
 
-      // 4) Refrescar y cerrar
+      // 4) Refrescar y navegar
       await auth.refreshUser();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(tr("profile_updated_successfully")),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
+            content: Text(tr('profile_updated_successfully')),
+            backgroundColor: Colors.green),
       );
-      setState(() => hasChanges = false);
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const MyProfileScreen()),
       );
     } catch (e) {
-      setState(() => errorMessage = '${tr("error_updating_profile")}: $e');
+      setState(() => errorMessage = e.toString());
     } finally {
-      setState(() => isUploading = false);
+      setState(() {
+        isUploading = false;
+      });
     }
   }
 
@@ -418,22 +392,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (token == null) {
       setState(() {
         isUploading = false;
-        errorMessage = tr("token_not_found_login");
+        errorMessage = tr('token_not_found_login');
       });
       return;
     }
-    final svc = UserService(token: token);
-    final res = await svc.deletePhoto(publicId);
-    if (res['success'] == true) {
+    final res = await UserService(token: token).deletePhoto(publicId);
+    if (res['success']) {
       await auth.refreshUser();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(tr("photo_deleted_successfully"))),
+        SnackBar(content: Text(tr('photo_deleted_successfully'))),
       );
     } else {
       setState(
-          () => errorMessage = res['message'] ?? tr("error_deleting_photo"));
+          () => errorMessage = res['message'] ?? tr('error_deleting_photo'));
     }
-    setState(() => isUploading = false);
+    setState(() {
+      isUploading = false;
+    });
   }
 
   @override
@@ -445,7 +420,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         Navigator.pushReplacement(
             context, MaterialPageRoute(builder: (_) => const LoginScreen()));
       });
-      return const Scaffold(body: SizedBox());
+      return const Scaffold();
     }
 
     final showSave = hasChanges || _photoOrderChanged;
@@ -457,7 +432,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(tr("edit_profile"),
+        title: Text(tr('edit_profile'),
             style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -475,7 +450,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           color: Colors.white, strokeWidth: 2),
                     )
                   : const Icon(Icons.save, color: Colors.white),
-              label: Text(isUploading ? tr("saving") : tr("save_changes"),
+              label: Text(isUploading ? tr('saving') : tr('save_changes'),
                   style: const TextStyle(color: Colors.white)),
             )
           : null,
@@ -485,18 +460,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ProfilePictureWidget(
-                user: user,
-                imageFile: _imageFile,
-                onPickImage: _pickProfileImage),
+              user: user,
+              imageFile: _imageFile,
+              onPickImage: _pickProfileImage,
+            ),
             const SizedBox(height: 16),
-            Text(tr("basic_information"), style: sectionHeaderStyle),
+            Text(tr('basic_information'), style: sectionHeaderStyle),
             const SizedBox(height: 8),
             Form(
               key: _usernameFormKey,
               child: TextFormField(
                 initialValue: username,
                 decoration: InputDecoration(
-                  labelText: tr("username"),
+                  labelText: tr('username'),
                   floatingLabelBehavior: FloatingLabelBehavior.always,
                   filled: true,
                   fillColor: Colors.white12,
@@ -517,10 +493,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   _checkChanges();
                 },
                 validator: (v) =>
-                    (v == null || v.isEmpty) ? tr("enter_username") : null,
+                    (v == null || v.isEmpty) ? tr('enter_username') : null,
               ),
             ),
-
             const SizedBox(height: 24),
             PersonalInfoForm(
               formKey: _personalInfoFormKey,
@@ -543,15 +518,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 _checkChanges();
               },
               onGoalChanged: (v) {
-                goal = v ?? '';
+                goal = v!;
                 _checkChanges();
               },
               onGenderChanged: (v) {
-                gender = v ?? '';
+                gender = v!;
                 _checkChanges();
               },
               onRelationshipGoalChanged: (v) {
-                relationshipGoal = v ?? '';
+                relationshipGoal = v!;
                 _checkChanges();
               },
               onBiographyChanged: (v) {
@@ -570,17 +545,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 weight = v;
                 _checkChanges();
               },
-              onSeekingSelectionChanged: _handleSeekingChanged,
+              onSeekingSelectionChanged: (opt, sel) {
+                setState(() {
+                  sel ? seeking.add(opt) : seeking.remove(opt);
+                });
+                _checkChanges();
+              },
             ),
-
             const SizedBox(height: 24),
-            Text(tr("biography_location"), style: sectionHeaderStyle),
+            Text(tr('biography_location'), style: sectionHeaderStyle),
             const SizedBox(height: 8),
             TextFormField(
               controller: _locationController,
               readOnly: true,
               decoration: InputDecoration(
-                labelText: tr("location"),
+                labelText: tr('location'),
                 floatingLabelBehavior: FloatingLabelBehavior.always,
                 filled: true,
                 fillColor: Colors.white12,
@@ -615,17 +594,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               style: const TextStyle(
                   color: Colors.white, fontWeight: FontWeight.bold),
             ),
-
             const SizedBox(height: 24),
-            Text(tr("basic_lifts"), style: sectionHeaderStyle),
+            Text(tr('basic_lifts'), style: sectionHeaderStyle),
             const SizedBox(height: 8),
-            // sentadilla
+            // Sentadilla
             TextFormField(
               initialValue: squatWeight?.toString() ?? '',
               style: const TextStyle(color: Colors.white),
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
-                labelText: tr("squat_kg"),
+                labelText: tr('squat_kg'),
                 floatingLabelBehavior: FloatingLabelBehavior.always,
                 filled: true,
                 fillColor: Colors.white12,
@@ -645,13 +623,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               },
             ),
             const SizedBox(height: 16),
-            // press banca
+            // Press de banca
             TextFormField(
               initialValue: benchPressWeight?.toString() ?? '',
               style: const TextStyle(color: Colors.white),
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
-                labelText: tr("bench_press_kg"),
+                labelText: tr('bench_press_kg'),
                 floatingLabelBehavior: FloatingLabelBehavior.always,
                 filled: true,
                 fillColor: Colors.white12,
@@ -671,13 +649,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               },
             ),
             const SizedBox(height: 16),
-            // peso muerto
+            // Peso muerto
             TextFormField(
               initialValue: deadliftWeight?.toString() ?? '',
               style: const TextStyle(color: Colors.white),
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
-                labelText: tr("deadlift_kg"),
+                labelText: tr('deadlift_kg'),
                 floatingLabelBehavior: FloatingLabelBehavior.always,
                 filled: true,
                 fillColor: Colors.white12,
@@ -696,9 +674,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 _checkChanges();
               },
             ),
-
             const SizedBox(height: 24),
-            Text(tr("photos"), style: sectionHeaderStyle),
+            Text(tr('photos'), style: sectionHeaderStyle),
             const SizedBox(height: 8),
             AdditionalPhotosWidget(
               user: user,
@@ -716,14 +693,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 });
               },
             ),
-
             if (errorMessage.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(errorMessage,
                   style: const TextStyle(color: Colors.redAccent),
                   textAlign: TextAlign.center),
             ],
-
             const SizedBox(height: 20),
           ],
         ),

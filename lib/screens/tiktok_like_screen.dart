@@ -543,9 +543,6 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
     final result = await userService.likeUser(user.id);
 
     if (result['success'] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(tr("like_success"))),
-      );
       if (result['matchedUser'] != null) {
         final currentUser =
             Provider.of<AuthProvider>(context, listen: false).user;

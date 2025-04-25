@@ -14,10 +14,28 @@ class WelcomeScreen extends StatelessWidget {
     const locales = [
       Locale('es'),
       Locale('en'),
+      Locale('fr'),
+      Locale('de'),
+      Locale('it'),
     ];
     // Texto para cada locale
-    String localeName(Locale l) =>
-        l.languageCode == 'es' ? 'Español' : 'English';
+    String localeName(Locale l) {
+      switch (l.languageCode) {
+        case 'es':
+          return 'Español';
+        case 'en':
+          return 'English';
+        case 'fr':
+          return 'Français';
+        case 'de':
+          return 'Deutsch';
+        case 'it':
+          return 'Italian';
+        default:
+          return l.languageCode;
+      }
+    }
+
     final current = context.locale;
 
     return Scaffold(

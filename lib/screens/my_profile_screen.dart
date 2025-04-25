@@ -1,3 +1,5 @@
+// lib/screens/MyProfileScreen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -18,18 +20,40 @@ class MyProfileScreen extends StatefulWidget {
 }
 
 class _MyProfileScreenState extends State<MyProfileScreen> {
+  // Mapas que convierten el texto en español del API a claves para tr(...)
+  static const Map<String, String> _genderKeyMap = {
+    'Masculino': 'male',
+    'Femenino': 'female',
+    'No Binario': 'non_binary',
+    'Prefiero no decirlo': 'prefer_not_to_say',
+    'Otro': 'other',
+    'Pendiente': 'pending',
+  };
+  static const Map<String, String> _fitnessGoalKeyMap = {
+    'Volumen': 'volume',
+    'Definición': 'definition',
+    'Mantenimiento': 'maintenance',
+    'Otro': 'other',
+    'Pendiente': 'pending',
+  };
+  static const Map<String, String> _relationshipGoalKeyMap = {
+    'Amistad': 'friendship',
+    'Casual': 'casual',
+    'Relación': 'relationship',
+    'Otro': 'other',
+    'Pendiente': 'pending',
+  };
+
   @override
   void initState() {
     super.initState();
+    // Fuerza refrescar el usuario al entrar
     Provider.of<AuthProvider>(context, listen: false).refreshUser();
   }
 
-  Widget _buildInfoBox({
-    required String title,
-    required String content,
-  }) {
+  Widget _buildInfoBox({required String title, required String content}) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         border: Border.all(color: Colors.white),
@@ -42,18 +66,12 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           Text(
             title,
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+                color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
             content,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 16,
-            ),
+            style: const TextStyle(color: Colors.white70, fontSize: 16),
           ),
         ],
       ),
@@ -64,11 +82,18 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final User? user = authProvider.user;
+
     if (user == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
+
+    // Resuelve contenido traducido dinámico:
+    final genderKey = _genderKeyMap[user.gender] ?? 'pending';
+    final fitnessGoalKey = _fitnessGoalKeyMap[user.goal] ?? 'pending';
+    final relationshipGoalKey =
+        _relationshipGoalKeyMap[user.relationshipGoal] ?? 'pending';
 
     return DefaultTabController(
       length: 2,
@@ -84,7 +109,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             },
           ),
           title: Text(
-            tr("personal_information"),
+            tr('personal_information'),
             style: const TextStyle(color: Colors.white),
           ),
           backgroundColor: Colors.black,
@@ -105,8 +130,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         body: Column(
           children: [
             const SizedBox(height: 16),
-
-            // ─── Foto de perfil + icono de editar ─────────────────
+            // Foto de perfil + editar
             Center(
               child: SizedBox(
                 width: 140,
@@ -118,8 +142,9 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                       backgroundColor: Colors.white,
                       backgroundImage: user.profilePicture != null
                           ? CachedNetworkImageProvider(user.profilePicture!.url)
-                          : const AssetImage('assets/images/default_profile.png')
-                      as ImageProvider,
+                          : const AssetImage(
+                                  'assets/images/default_profile.png')
+                              as ImageProvider,
                     ),
                     Positioned(
                       bottom: 0,
@@ -134,15 +159,13 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                         },
                         child: Container(
                           decoration: const BoxDecoration(
-                            color: Colors.black54,
-                            shape: BoxShape.circle,
-                          ),
+                              color: Colors.black54, shape: BoxShape.circle),
                           padding: const EdgeInsets.all(8),
                           child: Icon(
                             Icons.edit,
                             color: Colors.white,
                             size: 24,
-                            semanticLabel: tr("edit_button"),
+                            semanticLabel: tr('edit_button'),
                           ),
                         ),
                       ),
@@ -151,19 +174,16 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                 ),
               ),
             ),
-
             const SizedBox(height: 16),
-            // ─── Nombre de usuario ────────────────────────────────
+            // Username
             Text(
               user.username ?? '',
               style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white),
             ),
-
-            // ─── Biografía ─────────────────────────────────────────
+            // Biografía
             if (user.biography != null && user.biography!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
@@ -175,8 +195,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
               ),
 
             const SizedBox(height: 16),
-
-            // ─── Pestañas SOBRE MI / FOTOS ──────────────────────
+            // Pestañas
             TabBar(
               indicatorColor: Colors.white,
               labelColor: Colors.white,
@@ -186,8 +205,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                 Tab(text: tr('photos_profile')),
               ],
             ),
-
-            // ─── Contenido de cada pestaña ────────────────────────
+            // Contenido
             Expanded(
               child: TabBarView(
                 children: [
@@ -199,85 +217,85 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                           Expanded(
                             child: _buildInfoBox(
                               title: tr('gender_display'),
-                              content: user.gender ?? tr("not_specified"),
+                              content: tr('gender.$genderKey'),
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: _buildInfoBox(
                               title: tr('goal_title'),
-                              content: user.goal ?? tr("not_specified"),
+                              content: tr('fitness_goal.$fitnessGoalKey'),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
                       _buildInfoBox(
                         title: tr('what_are_you_looking_for'),
-                        content: user.relationshipGoal ?? tr("not_specified"),
+                        content: tr('relationship_goal_map.$relationshipGoalKey'),
                       ),
                       _buildInfoBox(
                         title: tr('location'),
                         content: (user.city != null && user.city!.isNotEmpty)
                             ? '${user.city}, ${user.country}'
-                            : tr("location_not_defined"),
+                            : tr('location_not_defined'),
                       ),
                       _buildInfoBox(
-                        title: tr("basic_lifts_profile"),
+                        title: tr('basic_lifts_profile'),
                         content:
-                        "${tr('squat')}: ${user.squatWeight != null ? '${user.squatWeight} kg' : tr('not_defined')}\n"
+                            "${tr('squat')}: ${user.squatWeight != null ? '${user.squatWeight} kg' : tr('not_defined')}\n"
                             "${tr('bench_press')}: ${user.benchPressWeight != null ? '${user.benchPressWeight} kg' : tr('not_defined')}\n"
                             "${tr('deadlift')}: ${user.deadliftWeight != null ? '${user.deadliftWeight} kg' : tr('not_defined')}",
                       ),
                     ],
                   ),
-
-                  // ────────── PESTAÑA FOTOS ───────────────── (igual que antes)
+                  // Fotos
                   Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: user.photos != null && user.photos!.isNotEmpty
+                    child: (user.photos != null && user.photos!.isNotEmpty)
                         ? GridView.builder(
-                      physics: const NeverScrollableScrollPhysics(),
-                      shrinkWrap: true,
-                      gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        crossAxisSpacing: 4,
-                        mainAxisSpacing: 4,
-                      ),
-                      itemCount: user.photos!.length,
-                      itemBuilder: (context, index) {
-                        final photo = user.photos![index];
-                        return GestureDetector(
-                          onTap: () {
-                            final urls = user.photos!.map((p) => p.url).toList();
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => PhotoGalleryScreen(
-                                  imageUrls: urls,
-                                  initialIndex: index,
+                            physics: const NeverScrollableScrollPhysics(),
+                            shrinkWrap: true,
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              crossAxisSpacing: 4,
+                              mainAxisSpacing: 4,
+                            ),
+                            itemCount: user.photos!.length,
+                            itemBuilder: (context, index) {
+                              final photo = user.photos![index];
+                              return GestureDetector(
+                                onTap: () {
+                                  final urls =
+                                      user.photos!.map((p) => p.url).toList();
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => PhotoGalleryScreen(
+                                        imageUrls: urls,
+                                        initialIndex: index,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: CachedNetworkImage(
+                                  imageUrl: photo.url,
+                                  fit: BoxFit.cover,
+                                  placeholder: (context, url) =>
+                                      Container(color: Colors.grey[800]),
+                                  errorWidget: (context, url, error) =>
+                                      const Icon(Icons.error,
+                                          color: Colors.white),
                                 ),
-                              ),
-                            );
-                          },
-                          child: CachedNetworkImage(
-                            imageUrl: photo.url,
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) =>
-                                Container(color: Colors.grey[800]),
-                            errorWidget: (context, url, error) =>
-                            const Icon(Icons.error, color: Colors.white),
-                          ),
-                        );
-                      },
-                    )
+                              );
+                            },
+                          )
                         : Center(
-                      child: Text(
-                        tr('no_photos'),
-                        style: const TextStyle(color: Colors.white70),
-                      ),
-                    ),
+                            child: Text(
+                              tr('no_photos'),
+                              style: const TextStyle(color: Colors.white70),
+                            ),
+                          ),
                   ),
                 ],
               ),

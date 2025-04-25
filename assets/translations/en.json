@@ -138,6 +138,28 @@
   "already_have_account": "Already have an account?",
   "user_profile": "User Profile",
   "block_user": "Block User",
+  "gender": {
+    "male": "Male",
+    "female": "Female",
+    "non_binary": "Non-binary",
+    "prefer_not_to_say": "Prefer not to say",
+    "other": "Other",
+    "pending": "Not specified"
+  },
+  "fitness_goal": {
+    "volume": "Volume",
+    "definition": "Definition",
+    "maintenance": "Maintenance",
+    "other": "Other",
+    "pending": "Not specified"
+  },
+  "relationship_goal_map": {
+    "friendship": "Friendship",
+    "casual": "Casual",
+    "relationship": "Relationship",
+    "other": "Other",
+    "pending": "Not specified"
+  },
   "block_user_confirm": "Are you sure you want to block this user?",
   "block": "Block",
   "auth_error": "Authentication error",

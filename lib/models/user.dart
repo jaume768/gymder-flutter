@@ -46,7 +46,6 @@ class LocationData {
   }
 }
 
-
 class User {
   final String id;
   final String email;
@@ -75,6 +74,11 @@ class User {
   final int? deadliftWeight;
   final int? height;
   final int? weight;
+  final int likeCount;
+  final int scrollCount;
+  final String? scrollLimitProfileId;
+  final DateTime? scrollLimitReachedAt;
+  final DateTime? likeLimitReachedAt;
 
   User({
     required this.id,
@@ -104,6 +108,11 @@ class User {
     this.age,
     this.height,
     this.weight,
+    required this.likeCount,
+    required this.scrollCount,
+    this.scrollLimitProfileId,
+    this.scrollLimitReachedAt,
+    this.likeLimitReachedAt,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -114,7 +123,7 @@ class User {
     } else {
       print('Profile picture is null for user: ${json['username']}');
     }
-    
+
     return User(
       id: json['id'] ?? json['_id'],
       email: json['email'],
@@ -133,11 +142,15 @@ class User {
       squatWeight: json['squatWeight'] as int?,
       benchPressWeight: json['benchPressWeight'] as int?,
       deadliftWeight: json['deadliftWeight'] as int?,
-      seeking: json['seeking'] != null ? List<String>.from(json['seeking']) : [],
+      seeking:
+          json['seeking'] != null ? List<String>.from(json['seeking']) : [],
       relationshipGoal: json['relationshipGoal'],
       likes: json['likes'] != null ? List<String>.from(json['likes']) : [],
-      matches: json['matches'] != null ? List<String>.from(json['matches']) : [],
-      blockedUsers: json['blockedUsers'] != null ? List<String>.from(json['blockedUsers']) : [],
+      matches:
+          json['matches'] != null ? List<String>.from(json['matches']) : [],
+      blockedUsers: json['blockedUsers'] != null
+          ? List<String>.from(json['blockedUsers'])
+          : [],
       photos: json['photos'] != null
           ? List<Photo>.from(json['photos'].map((x) => Photo.fromJson(x)))
           : [],
@@ -148,9 +161,30 @@ class User {
           : null,
       city: json['city'],
       country: json['country'],
-      age: json['age'] != null ? (json['age'] is int ? json['age'] : int.tryParse(json['age'].toString())) : null,
-      height: json['height'] != null ? (json['height'] is int ? json['height'] : int.tryParse(json['height'].toString())) : null,
-      weight: json['weight'] != null ? (json['weight'] is int ? json['weight'] : int.tryParse(json['weight'].toString())) : null,
+      age: json['age'] != null
+          ? (json['age'] is int
+              ? json['age']
+              : int.tryParse(json['age'].toString()))
+          : null,
+      height: json['height'] != null
+          ? (json['height'] is int
+              ? json['height']
+              : int.tryParse(json['height'].toString()))
+          : null,
+      weight: json['weight'] != null
+          ? (json['weight'] is int
+              ? json['weight']
+              : int.tryParse(json['weight'].toString()))
+          : null,
+      likeCount: json['likeCount'] as int? ?? 0,
+      scrollCount: json['scrollCount'] as int? ?? 0,
+      scrollLimitProfileId: json['scrollLimitProfileId'] as String?,
+      scrollLimitReachedAt: json['scrollLimitReachedAt'] != null
+          ? DateTime.parse(json['scrollLimitReachedAt'])
+          : null,
+      likeLimitReachedAt: json['likeLimitReachedAt'] != null
+          ? DateTime.parse(json['likeLimitReachedAt'])
+          : null,
     );
   }
 }

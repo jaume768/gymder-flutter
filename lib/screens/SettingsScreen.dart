@@ -73,8 +73,7 @@ class SettingsScreen extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        insetPadding:
-        const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
           child: Column(
@@ -112,8 +111,7 @@ class SettingsScreen extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(28),
                         ),
-                        padding:
-                        const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: Text(
                         tr("cancel"),
@@ -130,8 +128,7 @@ class SettingsScreen extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(28),
                         ),
-                        padding:
-                        const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: Text(
                         tr("confirm"),
@@ -225,9 +222,9 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
     final result = await UserService(token: token).getNotificationSettings();
     if (result['success'] == true) {
       setState(() {
-        _notificarMatches  = result['settings']['matches'] as bool;
+        _notificarMatches = result['settings']['matches'] as bool;
         _notificarMensajes = result['settings']['messages'] as bool;
-        _notificarLikes    = result['settings']['likes'] as bool;
+        _notificarLikes = result['settings']['likes'] as bool;
         _loading = false;
       });
     } else {
@@ -236,17 +233,23 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
     }
 
     // 2) Suscribirte o no a topics según lo leído
-    _updateSubscription('new_matches',  _notificarMatches);
-    _updateSubscription('messages',     _notificarMensajes);
-    _updateSubscription('new_likes',    _notificarLikes);
+    _updateSubscription('new_matches', _notificarMatches);
+    _updateSubscription('messages', _notificarMensajes);
+    _updateSubscription('new_likes', _notificarLikes);
   }
 
   Future<void> _updatePreference(String key, bool value) async {
     setState(() {
       switch (key) {
-        case 'matches':  _notificarMatches  = value; break;
-        case 'messages': _notificarMensajes = value; break;
-        case 'likes':    _notificarLikes    = value; break;
+        case 'matches':
+          _notificarMatches = value;
+          break;
+        case 'messages':
+          _notificarMensajes = value;
+          break;
+        case 'likes':
+          _notificarLikes = value;
+          break;
       }
     });
     // 1) Guardar en tu backend
@@ -276,33 +279,37 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
-        backgroundColor: Color.fromRGBO(20,20,20,1),
+        backgroundColor: Color.fromRGBO(20, 20, 20, 1),
         body: Center(child: CircularProgressIndicator()),
       );
     }
     return Scaffold(
       appBar: AppBar(
-        title: Text(tr("notifications"), style: const TextStyle(color: Colors.white)),
+        title: Text(tr("notifications"),
+            style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      backgroundColor: const Color.fromRGBO(20,20,20,1),
+      backgroundColor: const Color.fromRGBO(20, 20, 20, 1),
       body: ListView(
         children: [
           SwitchListTile(
-            title: Text(tr("notify_new_matches"), style: const TextStyle(color: Colors.white)),
+            title: Text(tr("notify_new_matches"),
+                style: const TextStyle(color: Colors.white)),
             value: _notificarMatches,
             activeColor: Colors.blueAccent,
             onChanged: (v) => _updatePreference('matches', v),
           ),
           SwitchListTile(
-            title: Text(tr("notify_messages"), style: const TextStyle(color: Colors.white)),
+            title: Text(tr("notify_messages"),
+                style: const TextStyle(color: Colors.white)),
             value: _notificarMensajes,
             activeColor: Colors.blueAccent,
             onChanged: (v) => _updatePreference('messages', v),
           ),
           SwitchListTile(
-            title: Text(tr("notify_likes"), style: const TextStyle(color: Colors.white)),
+            title: Text(tr("notify_likes"),
+                style: const TextStyle(color: Colors.white)),
             value: _notificarLikes,
             activeColor: Colors.blueAccent,
             onChanged: (v) => _updatePreference('likes', v),
@@ -312,6 +319,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
     );
   }
 }
+
 /// PANTALLA DE IDIOMAS
 class IdiomasScreen extends StatefulWidget {
   const IdiomasScreen({Key? key}) : super(key: key);
@@ -321,12 +329,24 @@ class IdiomasScreen extends StatefulWidget {
 
 class _IdiomasScreenState extends State<IdiomasScreen> {
   late String idiomaSeleccionado;
-  final List<String> idiomas = ["Español", "English"];
+  final List<String> idiomas = [
+    "Español",
+    "English",
+    "Français",
+    "Deutsch",
+    "Italiano",
+  ];
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final current = context.locale.languageCode;
-    idiomaSeleccionado = current == 'en' ? 'English' : 'Español';
+    final code = context.locale.languageCode;
+    idiomaSeleccionado = {
+      'es': 'Español',
+      'en': 'English',
+      'fr': 'Français',
+      'de': 'Deutsch',
+      'it': 'Italiano',
+    }[code]!;
   }
 
   @override
@@ -349,7 +369,14 @@ class _IdiomasScreenState extends State<IdiomasScreen> {
             activeColor: Colors.blueAccent,
             onChanged: (String? value) {
               setState(() => idiomaSeleccionado = value!);
-              context.setLocale(Locale(value == "Español" ? 'es' : 'en'));
+              final newCode = {
+                'Español': 'es',
+                'English': 'en',
+                'Français': 'fr',
+                'Deutsch': 'de',
+                'Italian': 'it',
+              }[value]!;
+              context.setLocale(Locale(newCode));
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (_) => const SplashScreen()),

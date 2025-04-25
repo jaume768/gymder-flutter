@@ -1,3 +1,5 @@
+// lib/widgets/perfil/personal_info_form.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -6,9 +8,9 @@ import 'package:easy_localization/easy_localization.dart';
 class TwoLineTextInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue,
-      TextEditingValue newValue,
-      ) {
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     final newlineCount = '\n'.allMatches(newValue.text).length;
     return (newlineCount > 1) ? oldValue : newValue;
   }
@@ -81,7 +83,13 @@ class _BiographyTextFieldState extends State<BiographyTextField> {
         ),
         const SizedBox(height: 4),
         Text(
-          tr('characters_count', namedArgs: {'count': _controller.text.length.toString(), 'max': maxChars.toString()}),
+          tr(
+            'characters_count',
+            namedArgs: {
+              'count': _controller.text.length.toString(),
+              'max': maxChars.toString(),
+            },
+          ),
           style: const TextStyle(color: Colors.white70, fontSize: 12),
         ),
       ],
@@ -94,10 +102,10 @@ class PersonalInfoForm extends StatelessWidget {
   final GlobalKey<FormState> formKey;
   final String firstName;
   final String lastName;
-  final String goal;
-  final String gender;
-  final List<String> seeking;
-  final String relationshipGoal;
+  final String goal; // valor interno en español
+  final String gender; // valor interno en español
+  final List<String> seeking; // valores internos en español
+  final String relationshipGoal; // valor interno en español
   final String biography;
   final int age;
   final int height;
@@ -138,6 +146,46 @@ class PersonalInfoForm extends StatelessWidget {
     required this.onWeightChanged,
     required this.onSeekingSelectionChanged,
   }) : super(key: key);
+
+  /// Mapea cada tipo a un map display→valorInterno
+  static Map<String, String> getValueMap(String type) {
+    if (type == 'fitness') {
+      return {
+        tr('general_option'): 'General',
+        tr('definition_option'): 'Definición',
+        tr('volume_option'): 'Volumen',
+        tr('maintenance_option'): 'Mantenimiento',
+      };
+    } else if (type == 'relationship') {
+      return {
+        tr('friendship_option'): 'Amistad',
+        tr('dating_option'): 'Citas',
+        tr('serious_relationship_option'): 'Relación seria',
+        tr('casual_option'): 'Casual',
+        tr('not_sure_option'): 'No estoy seguro',
+      };
+    } else if (type == 'gender') {
+      return {
+        tr('male_option'): 'Masculino',
+        tr('female_option'): 'Femenino',
+        tr('non_binary_option'): 'No Binario',
+        tr('prefer_not_to_say_option'): 'Prefiero no decirlo',
+        tr('other_gender_option'): 'Otro',
+      };
+    }
+    return {};
+  }
+
+  /// Dado un valor interno, devuelve su clave display para el Dropdown
+  String? _getTranslatedKey(String? internalValue, String type) {
+    if (internalValue == null) return null;
+    final map = PersonalInfoForm.getValueMap(type);
+    final entry = map.entries.firstWhere(
+      (e) => e.value == internalValue,
+      orElse: () => const MapEntry('', ''),
+    );
+    return entry.key.isEmpty ? null : entry.key;
+  }
 
   Widget _buildTextField({
     required String label,
@@ -205,7 +253,8 @@ class PersonalInfoForm extends StatelessWidget {
         final n = int.tryParse(v);
         if (n == null) return tr('please_enter_valid_number');
         if ((min != null && n < min) || (max != null && n > max)) {
-          return tr('value_between_range', namedArgs: {'min': min.toString(), 'max': max.toString()});
+          return tr('value_between_range',
+              namedArgs: {'min': min.toString(), 'max': max.toString()});
         }
         return null;
       },
@@ -217,62 +266,35 @@ class PersonalInfoForm extends StatelessWidget {
     );
   }
 
-  // Mapeo de valores traducidos a valores internos para los menús desplegables
-  Map<String, String> _getValueMap(String type) {
-    if (type == 'fitness') {
-      return {
-        tr('general_option'): 'General',
-        tr('definition_option'): 'Definición',
-        tr('volume_option'): 'Volumen',
-        tr('maintenance_option'): 'Mantenimiento',
-      };
-    } else if (type == 'relationship') {
-      return {
-        tr('friendship_option'): 'Amistad',
-        tr('dating_option'): 'Citas',
-        tr('serious_relationship_option'): 'Relación seria',
-        tr('casual_option'): 'Casual',
-        tr('not_sure_option'): 'No estoy seguro',
-      };
-    } else if (type == 'gender') {
-      return {
-        tr('male_option'): 'Masculino',
-        tr('female_option'): 'Femenino',
-        tr('non_binary_option'): 'No Binario',
-        tr('prefer_not_to_say_option'): 'Prefiero no decirlo',
-        tr('other_gender_option'): 'Otro',
-      };
-    }
-    return {};
-  }
-
-  // Obtener la clave traducida a partir del valor interno
-  String? _getTranslatedKey(String? value, String type) {
-    if (value == null) return null;
-    
-    final map = _getValueMap(type);
-    for (var entry in map.entries) {
-      if (entry.value == value) {
-        return entry.key;
-      }
-    }
-    return null;
-  }
-
   Widget _buildDropdownField({
     required String label,
-    required String? value,
-    required List<String> items,
+    required String? value, // valor interno
+    required String type, // 'fitness' | 'relationship' | 'gender'
     required ValueChanged<String?> onChanged,
     required String validatorMsg,
-    required String type,
   }) {
-    // Convertir el valor interno al valor traducido para mostrar
-    final translatedValue = _getTranslatedKey(value, type);
-    
+    final map = PersonalInfoForm.getValueMap(type);
+    final items = map.keys.toList();
+    final displayValue = _getTranslatedKey(value, type);
+
     return DropdownButtonFormField<String>(
-      value: translatedValue,
-      style: const TextStyle(color: Colors.white),
+      isExpanded: true,
+      value: displayValue,
+      items: items
+          .map((display) => DropdownMenuItem(
+                value: display,
+                child: Text(
+                  display,
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ))
+          .toList(),
+      onChanged: (display) {
+        final internal = display != null ? map[display] : null;
+        onChanged(internal);
+      },
+      validator: (v) => (v == null || v.isEmpty) ? validatorMsg : null,
       dropdownColor: Colors.grey[800],
       decoration: InputDecoration(
         labelText: label,
@@ -288,23 +310,7 @@ class PersonalInfoForm extends StatelessWidget {
           borderSide: const BorderSide(color: Colors.blueAccent),
           borderRadius: BorderRadius.circular(12),
         ),
-        errorStyle: const TextStyle(color: Colors.redAccent),
       ),
-      items: items
-          .map((o) => DropdownMenuItem(value: o, child: Text(o)))
-          .toList(),
-      onChanged: (String? newValue) {
-        if (newValue != null) {
-          // Convertir el valor traducido al valor interno antes de pasarlo al callback
-          final internalValue = _getValueMap(type)[newValue];
-          onChanged(internalValue);
-        } else {
-          onChanged(null);
-        }
-      },
-      validator: (v) => (v == null || v.isEmpty) ? validatorMsg : null,
-      selectedItemBuilder: (ctx) =>
-          items.map((o) => Text(o, style: const TextStyle(color: Colors.white))).toList(),
     );
   }
 
@@ -316,160 +322,150 @@ class PersonalInfoForm extends StatelessWidget {
       fontWeight: FontWeight.bold,
     );
 
+    // Para "Looking for", reutilizamos el mapa de 'gender'
+    final seekingMap = PersonalInfoForm.getValueMap('gender');
+
     return Card(
       color: Colors.transparent,
       elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(0),
-        child: Form(
-          key: formKey,
-          child: Column(
-            children: [
-              // Nombre / Apellido en fila
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildTextField(
-                      label: tr('first_name_label'),
-                      initialValue: firstName,
-                      onChanged: onFirstNameChanged,
-                      validatorMsg: tr('please_enter_first_name_error'),
-                    ),
+      child: Form(
+        key: formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Nombre y Apellido
+            Row(
+              children: [
+                Expanded(
+                  child: _buildTextField(
+                    label: tr('first_name_label'),
+                    initialValue: firstName,
+                    onChanged: onFirstNameChanged,
+                    validatorMsg: tr('please_enter_first_name_error'),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildTextField(
-                      label: tr('last_name_label'),
-                      initialValue: lastName,
-                      onChanged: onLastNameChanged,
-                      validatorMsg: tr('please_enter_last_name_error'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Encabezado Objetivos
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(tr('objectives_section'), style: sectionHeaderStyle),
-              ),
-              const SizedBox(height: 8),
-              // Objetivo fitness + Objetivo de Relación
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildDropdownField(
-                      label: tr('fitness_goal_label'),
-                      value: goal.isNotEmpty ? goal : null,
-                      items: [tr('general_option'), tr('definition_option'), tr('volume_option'), tr('maintenance_option')],
-                      onChanged: onGoalChanged,
-                      validatorMsg: tr('please_select_goal_error'),
-                      type: 'fitness',
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildDropdownField(
-                      label: tr('relationship_goal_label'),
-                      value: relationshipGoal.isNotEmpty ? relationshipGoal : null,
-                      items: [
-                        tr('friendship'),
-                        tr('relationship'),
-                        tr('casual'),
-                        tr('other')
-                      ],
-                      onChanged: onRelationshipGoalChanged,
-                      validatorMsg: tr('please_select_relationship_goal_error'),
-                      type: 'relationship',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Género
-              _buildDropdownField(
-                label: tr('gender_label'),
-                value: gender.isNotEmpty ? gender : null,
-                items: [
-                  tr('male_option'),
-                  tr('female_option'),
-                  tr('non_binary_option'),
-                  tr('prefer_not_to_say_option'),
-                  tr('other_gender_option')
-                ],
-                onChanged: onGenderChanged,
-                validatorMsg: tr('please_select_gender_error'),
-                type: 'gender',
-              ),
-              const SizedBox(height: 16),
-
-              // Buscando
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  tr('looking_for_label'),
-                  style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 16),
                 ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildTextField(
+                    label: tr('last_name_label'),
+                    initialValue: lastName,
+                    onChanged: onLastNameChanged,
+                    validatorMsg: tr('please_enter_last_name_error'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Objetivos
+            Text(tr('objectives_section'), style: sectionHeaderStyle),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildDropdownField(
+                    label: tr('fitness_goal_label'),
+                    value: goal,
+                    type: 'fitness',
+                    onChanged: onGoalChanged,
+                    validatorMsg: tr('please_select_goal_error'),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildDropdownField(
+                    label: tr('relationship_goal_label'),
+                    value: relationshipGoal,
+                    type: 'relationship',
+                    onChanged: onRelationshipGoalChanged,
+                    validatorMsg: tr('please_select_relationship_goal_error'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Género
+            _buildDropdownField(
+              label: tr('gender_label'),
+              value: gender,
+              type: 'gender',
+              onChanged: onGenderChanged,
+              validatorMsg: tr('please_select_gender_error'),
+            ),
+            const SizedBox(height: 16),
+
+            // Buscando (seeking)
+            Text(
+              tr('looking_for_label'),
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 16,
               ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 10,
-                children: [tr('male_option'), tr('female_option'), tr('non_binary_option'), tr('prefer_not_to_say_option'), tr('other_gender_option')]
-                    .map((opt) {
-                  final sel = seeking.contains(opt);
-                  return FilterChip(
-                    label: Text(opt, style: TextStyle(color: sel ? Colors.black : Colors.white)),
-                    selected: sel,
-                    backgroundColor: Colors.transparent,
-                    selectedColor: Colors.blueAccent,
-                    side: const BorderSide(color: Colors.white54),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 10,
+              children: seekingMap.entries.map((entry) {
+                final display = entry.key;
+                final internal = entry.value;
+                final isSelected = seeking.contains(internal);
+                return FilterChip(
+                  label: Text(
+                    display,
+                    style: TextStyle(
+                      color: isSelected ? Colors.black : Colors.white,
                     ),
-                    onSelected: (b) => onSeekingSelectionChanged(opt, b),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
+                  ),
+                  selected: isSelected,
+                  backgroundColor: Colors.transparent,
+                  selectedColor: Colors.blueAccent,
+                  side: const BorderSide(color: Colors.white54),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  onSelected: (sel) => onSeekingSelectionChanged(internal, sel),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
 
-              // Edad, Altura, Peso
-              _buildNumericField(
-                label: tr('age_label'),
-                initialValue: age,
-                onChanged: onAgeChanged,
-                validatorMsg: tr('please_enter_age_error'),
-                min: 18,
-                max: 100,
-              ),
-              const SizedBox(height: 16),
-              _buildNumericField(
-                label: tr('height_label'),
-                initialValue: height,
-                onChanged: onHeightChanged,
-                validatorMsg: tr('please_enter_height_error'),
-                min: 120,
-                max: 250,
-              ),
-              const SizedBox(height: 16),
-              _buildNumericField(
-                label: tr('weight_label'),
-                initialValue: weight,
-                onChanged: onWeightChanged,
-                validatorMsg: tr('please_enter_weight_error'),
-                min: 30,
-                max: 250,
-              ),
-              const SizedBox(height: 16),
+            // Edad, Altura, Peso
+            _buildNumericField(
+              label: tr('age_label'),
+              initialValue: age,
+              onChanged: onAgeChanged,
+              validatorMsg: tr('please_enter_age_error'),
+              min: 18,
+              max: 100,
+            ),
+            const SizedBox(height: 16),
+            _buildNumericField(
+              label: tr('height_label'),
+              initialValue: height,
+              onChanged: onHeightChanged,
+              validatorMsg: tr('please_enter_height_error'),
+              min: 120,
+              max: 250,
+            ),
+            const SizedBox(height: 16),
+            _buildNumericField(
+              label: tr('weight_label'),
+              initialValue: weight,
+              onChanged: onWeightChanged,
+              validatorMsg: tr('please_enter_weight_error'),
+              min: 30,
+              max: 250,
+            ),
+            const SizedBox(height: 16),
 
-              // Biografía
-              BiographyTextField(
-                initialValue: biography,
-                onChanged: onBiographyChanged,
-              ),
-            ],
-          ),
+            // Biografía
+            BiographyTextField(
+              initialValue: biography,
+              onChanged: onBiographyChanged,
+            ),
+            const SizedBox(height: 16),
+          ],
         ),
       ),
     );

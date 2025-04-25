@@ -356,6 +356,28 @@
   "last_name": "Apellido",
   "relationship_goal": "Objetivo de relación",
   "all": "Todos",
+  "gender": {
+    "male": "Masculino",
+    "female": "Femenino",
+    "non_binary": "No Binario",
+    "prefer_not_to_say": "Prefiero no decirlo",
+    "other": "Otro",
+    "pending": "No especificado"
+  },
+  "fitness_goal": {
+    "volume": "Volumen",
+    "definition": "Definición",
+    "maintenance": "Mantenimiento",
+    "other": "Otro",
+    "pending": "No especificado"
+  },
+  "relationship_goal_map": {
+    "friendship": "Amistad",
+    "casual": "Casual",
+    "relationship": "Relación",
+    "other": "Otro",
+    "pending": "No especificado"
+  },
   "maintenance": "Mantenimiento",
   "volume": "Volumen",
   "definition": "Definición",

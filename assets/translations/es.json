@@ -342,6 +342,8 @@
   "use_quick_like": "Usar Quick Like",
   "in_app_not_available": "Cargando información...",
   "what_do_you_want": "¿Qué quieres hacer?",
+  "confirm_quicklike_title": "Confirmar Quick Like",
+  "confirm_quicklike_message": "¿Estás seguro de que quieres enviar un quick like?",
   "no_users_to_show": "No hay usuarios para mostrar",
   "premium_le_gustas_message": "¡Descubre quién está interesado en ti! Activa GymSwipe Premium para ver quién te ha dado like.",
   "scroll_limit_message": "Te has quedado sin scrolls por hoy. Considera activar GymSwipe Premium.",

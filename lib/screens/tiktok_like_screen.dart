@@ -49,10 +49,10 @@ class TikTokLikeScreen extends StatefulWidget {
   const TikTokLikeScreen({Key? key, required this.users}) : super(key: key);
 
   @override
-  State<TikTokLikeScreen> createState() => _TikTokLikeScreenState();
+  State<TikTokLikeScreen> createState() => TikTokLikeScreenState();
 }
 
-class _TikTokLikeScreenState extends State<TikTokLikeScreen>
+class TikTokLikeScreenState extends State<TikTokLikeScreen>
     with AutomaticKeepAliveClientMixin {
   late PageController _verticalPageController;
   bool _isProcessing = false;
@@ -134,6 +134,126 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
         _updateScrollCount();
       }
     });
+  }
+
+  Future<void> useSuperLike() async {
+    if (_isProcessing) return;
+    setState(() => _isProcessing = true);
+
+    // 1) Preguntar confirmación con showModalBottomSheet
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black54,
+      isScrollControlled: false,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              tr("confirm_quicklike_title"),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              tr("confirm_quicklike_message"),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70, fontSize: 16),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.white38),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: Text(
+                      tr("cancel"),
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: Text(
+                      tr("yes"),
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true) {
+      setState(() => _isProcessing = false);
+      return;
+    }
+
+    // 2) Llamar al servicio
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = await auth.getToken();
+    if (token == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(tr("token_not_found"))));
+      setState(() => _isProcessing = false);
+      return;
+    }
+    final service = UserService(token: token);
+    final target = _randomUsers[_currentPageIndex];
+    final res = await service.superLikeUser(target.id);
+
+    // 3) Procesar respuesta
+    if (res['success'] == true) {
+      await auth.refreshUser();
+      // si el backend ya considera match directo, te lo devuelve en res['matchedUser']
+      if (res['matchedUser'] != null) {
+        _mostrarModalMatch(context, auth.user!, target);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(tr("superlike_sent"))),
+        );
+      }
+      // quitar perfil de la lista (igual que un like normal)
+      setState(() => _randomUsers.removeAt(_currentPageIndex));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(res['message'] ?? tr("error"))),
+      );
+    }
+
+    setState(() => _isProcessing = false);
   }
 
   Future<void> _checkLikeLimitStatus() async {
@@ -696,78 +816,92 @@ class _TikTokLikeScreenState extends State<TikTokLikeScreen>
 
   void _mostrarModalMatch(
       BuildContext context, User usuarioActual, User matchedUser) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          backgroundColor: Colors.black.withOpacity(0.6),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                tr("match_title"),
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                tr("match_message",
-                    namedArgs: {"username": matchedUser.username ?? ""}),
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70, fontSize: 16),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildMatchAvatar(usuarioActual.profilePicture?.url,
-                      radius: 50),
-                  const SizedBox(width: 20),
-                  _buildMatchAvatar(matchedUser.profilePicture?.url,
-                      radius: 50),
-                ],
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueAccent,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30)),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                ),
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ChatScreen(
-                        currentUserId: usuarioActual.id,
-                        matchedUserId: matchedUser.id,
-                      ),
-                    ),
-                  );
-                },
-                child: Text(tr("send_message"),
-                    style: const TextStyle(color: Colors.white)),
-              ),
-              const SizedBox(height: 10),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: Text(tr("continue_browsing"),
-                    style: const TextStyle(color: Colors.grey)),
-              )
-            ],
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black54,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
-        );
-      },
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              tr("match_title"),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              tr("match_message",
+                  namedArgs: {"username": matchedUser.username ?? ""}),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70, fontSize: 16),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildMatchAvatar(usuarioActual.profilePicture?.url,
+                    radius: 50),
+                const SizedBox(width: 20),
+                _buildMatchAvatar(matchedUser.profilePicture?.url, radius: 50),
+              ],
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blueAccent,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ChatScreen(
+                      currentUserId: usuarioActual.id,
+                      matchedUserId: matchedUser.id,
+                    ),
+                  ),
+                );
+              },
+              child: Text(tr("send_message"),
+                  style: const TextStyle(color: Colors.white)),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.white38),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+              ),
+              onPressed: () => Navigator.pop(context),
+              child: Text(tr("continue_browsing"),
+                  style: const TextStyle(color: Colors.white70)),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

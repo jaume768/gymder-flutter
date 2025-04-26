@@ -25,6 +25,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   // Estado para sugerencias y navegación
+  final _tikTokKey = GlobalKey<TikTokLikeScreenState>();
   List<User> suggestedMatches = [];
   bool isLoading = true;
   String errorMessage = '';
@@ -73,7 +74,8 @@ class _HomeScreenState extends State<HomeScreen> {
         suggestedMatches =
             List<User>.from(result['matches'].map((x) => User.fromJson(x)));
         isLoading = false;
-        _tikTokLikeScreen = TikTokLikeScreen(users: suggestedMatches);
+        _tikTokLikeScreen =
+            TikTokLikeScreen(key: _tikTokKey, users: suggestedMatches);
         _matchesScreen = MatchesChatsScreen(key: UniqueKey());
       });
     } else {
@@ -232,28 +234,72 @@ class _HomeScreenState extends State<HomeScreen> {
               } else {
                 showModalBottomSheet(
                   context: context,
-                  builder: (_) => Padding(
-                    padding: const EdgeInsets.all(16),
+                  backgroundColor: Colors.transparent,
+                  barrierColor: Colors.black54,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  builder: (_) => Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           tr('what_do_you_want'),
-                          style: const TextStyle(fontSize: 18),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 12),
                         ListTile(
-                          leading: const Icon(Icons.flash_on),
-                          title: Text(tr('buy_more_quick_likes')),
+                          leading: const Icon(Icons.flash_on,
+                              color: Colors.blueAccent),
+                          title: Text(
+                            tr('buy_more_quick_likes'),
+                            style: const TextStyle(color: Colors.white),
+                          ),
                           onTap: () {
                             Navigator.pop(context);
                             _buyTopLike();
                           },
                         ),
                         ListTile(
-                          leading: const Icon(Icons.thumb_up_alt),
-                          title: Text(tr('use_quick_like')),
-                          onTap: () => Navigator.pop(context),
+                          leading: const Icon(Icons.thumb_up_alt,
+                              color: Colors.blueAccent),
+                          title: Text(
+                            tr('use_quick_like'),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          onTap: () async {
+                            Navigator.pop(context);
+                            await _tikTokKey.currentState?.useSuperLike();
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.white38),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(
+                            tr('cancel'),
+                            style: const TextStyle(color: Colors.white70),
+                          ),
                         ),
                       ],
                     ),

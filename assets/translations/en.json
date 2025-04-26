@@ -165,6 +165,8 @@
   "buy_more_quick_likes": "Buy more Quick Likes",
   "use_quick_like": "Use Quick Like",
   "what_do_you_want": "What do you want to do?",
+  "confirm_quicklike_title": "Confirm Quick Like",
+  "confirm_quicklike_message": "Are you sure you want to send a quick like?",
   "auth_error": "Authentication error",
   "token_not_found_auth": "Authentication token not found.",
   "user_not_found": "User not found.",

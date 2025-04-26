@@ -340,6 +340,8 @@
   "must_select_profile_picture": "Sie müssen ein Profilbild auswählen, um fortzufahren",
   "random": "Zufällig",
   "le_gustas_button": "Er mag dich ({count})",
+  "confirm_superlike_title": "Bestätigung Quick Like",
+  "confirm_superlike_message": "Sind Sie sicher, dass Sie einen Quick Like senden möchten?",
   "premium_function": "Premium-Funktion",
   "in_app_not_available": "Informationen werden geladen...",
   "no_users_to_show": "Keine Nutzer zum Anzeigen",

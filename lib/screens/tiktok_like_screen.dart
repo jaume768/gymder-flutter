@@ -17,6 +17,31 @@ import '../services/match_service.dart';
 import '../services/user_service.dart';
 import '../screens/chat_screen.dart';
 
+class ReverseScrollPhysics extends PageScrollPhysics {
+  final bool blockReverse;
+  const ReverseScrollPhysics({
+    ScrollPhysics? parent,
+    required this.blockReverse,
+  }) : super(parent: parent);
+
+  @override
+  ReverseScrollPhysics applyTo(ScrollPhysics? ancestor) {
+    return ReverseScrollPhysics(
+      parent: buildParent(ancestor),
+      blockReverse: blockReverse,
+    );
+  }
+
+  @override
+  double applyPhysicsToUserOffset(ScrollMetrics position, double offset) {
+    // offset > 0 → gesto de arrastrar hacia abajo = anterior página
+    if (blockReverse && offset > 0) {
+      return 0.0; // cortamos el scroll
+    }
+    return super.applyPhysicsToUserOffset(position, offset);
+  }
+}
+
 // ScrollPhysics personalizado para bloquear el scroll cuando se alcanza el límite
 class LimitedScrollPhysics extends ScrollPhysics {
   final bool isLimitReached;
@@ -64,6 +89,7 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
   int _lastFetchThreshold = 0;
 
   int _currentPageIndex = 0;
+  bool _hasShownScrollLimitDialog = false;
   bool _isLikeLimitReached = false;
   DateTime? _likeLimitResetAt;
   int previousPageIndex = 0;
@@ -134,6 +160,19 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
         _updateScrollCount();
       }
     });
+  }
+
+  void _showScrollLimitDialogOnce() {
+    if (_hasShownScrollLimitDialog) return;
+    _hasShownScrollLimitDialog = true;
+    _showPremiumDialog(
+      tr("premium_function"),
+      tr("scroll_limit_message", args: [_remainingHours.toString()]),
+    );
+  }
+
+  void _resetScrollLimitDialogFlag() {
+    _hasShownScrollLimitDialog = false;
   }
 
   Future<void> useSuperLike() async {
@@ -1322,7 +1361,8 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final auth = Provider.of<AuthProvider>(context);
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final isPremium = auth.user?.isPremium == true;
     final List<User> currentList = showRandom ? _randomUsers : _likedUsers;
 
     return Scaffold(
@@ -1339,42 +1379,55 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
                   )
                 : NotificationListener<ScrollNotification>(
                     onNotification: (notification) {
-                      // Solo interceptamos gestos de arrastre de usuario:
-                      if (_isProcessing &&
-                          notification is ScrollUpdateNotification &&
+                      final isPremium =
+                          Provider.of<AuthProvider>(context, listen: false)
+                                  .user
+                                  ?.isPremium ==
+                              true;
+                      final currentPage =
+                          (_verticalPageController.page ?? 0).round();
+
+                      // 1) Capturar over-scroll en la primera página (índice 0)
+                      if (notification is OverscrollNotification &&
+                          notification.overscroll <
+                              0 && // arrastrando hacia abajo más allá de la página 0
+                          currentPage == 0 &&
+                          !isPremium) {
+                        // mostramos modal premium y consumimos el evento
+                        _showPremiumDialog(
+                          tr("premium_function"),
+                          tr("upgrade_to_premium_message"),
+                        );
+                        return true;
+                      }
+
+                      // 2) Capturar scroll normal con dragDetails
+                      if (notification is ScrollUpdateNotification &&
                           notification.dragDetails != null) {
                         final dy = notification.dragDetails!.delta.dy;
-                        // dy > 0 = gesto de arrastrar hacia abajo dedo = intentar ir a la página anterior
-                        if (dy > 0) {
-                          return true; // consume el evento y no deja subir
-                        }
-                        final tryingToGoNextPage = dy < 0;
-                        final isPremium =
-                            Provider.of<AuthProvider>(context, listen: false)
-                                    .user
-                                    ?.isPremium ==
-                                true;
 
-                        if (!isPremium && dy > 0) {
-                          // rebotamos al mismo índice
-                          _verticalPageController.jumpToPage(previousPageIndex);
-                          // mostramos diálogo Premium
+                        // Intento de scroll hacia arriba en cualquier página:
+                        // dy > 0 → movimiento hacia abajo de dedo = intentar ir a perfil anterior
+                        if (dy > 0 && !isPremium) {
+                          _verticalPageController.jumpToPage(currentPage);
                           _showPremiumDialog(
                             tr("premium_function"),
                             tr("upgrade_to_premium_message"),
                           );
-                          return true; // consumimos el evento
+                          return true;
                         }
 
-                        if (_isScrollLimitReached && tryingToGoNextPage) {
-                          // Bloqueamos volviendo a la misma página
-                          _verticalPageController.jumpToPage(previousPageIndex);
-                          // Mostramos el diálogo de límite
-                          _showScrollLimitDialog();
-                          return true; // consumimos el evento
+                        // Bloquear scroll hacia adelante si llegaste al límite
+                        if (dy < 0 && _isScrollLimitReached) {
+                          _verticalPageController.jumpToPage(currentPage);
+                          _showScrollLimitDialogOnce();
+                          return true;
                         }
+                        return false;
                       }
-                      return false; // dejamos pasar todos los demás scrolls
+
+                      // dejar pasar el resto de eventos de scroll
+                      return false;
                     },
                     child: PageView.builder(
                       controller: _verticalPageController,
@@ -1395,6 +1448,10 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
                           _verticalPageController.jumpToPage(previousPageIndex);
                           _showScrollLimitDialog();
                           return;
+                        }
+
+                        if (!(newPage > previousPageIndex && _isScrollLimitReached)) {
+                          _resetScrollLimitDialogFlag();
                         }
 
                         if (!isPremium && newPage < previousPageIndex) {
@@ -1445,7 +1502,7 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
               children: [
                 IconButton(
                   onPressed: _showReportModal,
-                  icon: Icon(Icons.warning, color: Colors.white),
+                  icon: const Icon(Icons.warning, color: Colors.white),
                 ),
                 Expanded(
                   child: Row(

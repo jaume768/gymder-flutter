@@ -922,8 +922,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _previousStep() {
-    // Evitar retroceso de paso 1 a 0 si viene de Google
-    if (widget.fromGoogle && _currentStep == 1) return;
+    // Si venimos de Google, no permitimos retroceder hasta que superen el paso 2.
+    if (widget.fromGoogle && _currentStep <= 2) return;
 
     if (_currentStep > 0) {
       setState(() {
@@ -1022,7 +1022,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          if (_currentStep > 0 && !(widget.fromGoogle && _currentStep == 1))
+          if (_currentStep > 0 && !(widget.fromGoogle && _currentStep == 2))
             ElevatedButton(
               onPressed: _previousStep,
               style: ElevatedButton.styleFrom(

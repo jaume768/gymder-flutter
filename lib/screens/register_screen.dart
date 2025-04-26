@@ -28,65 +28,60 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   late PageController _pageController;
+  int _currentStep = 0;
 
   // --- NUEVO: campo para la URL de la foto de Google ---
   String? googleProfilePictureUrl;
+  final int emailVerificationStepIndex = 1;
 
-  int _currentStep = 0;
-  final int _totalSteps = 12;
+  // Pesos opcionales
   double? squatWeight;
   double? benchPressWeight;
   double? deadliftWeight;
+
+  // Verificación de email
   String verificationCode = '';
-  final int emailVerificationStepIndex = 1;
+  bool _emailVerified = false;
   final RegExp emailRegex = RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$");
 
+  // Check username
   bool isCheckingUsername = false;
-  bool _emailVerified = false;
   String usernameCheckMessage = '';
 
-  String email = '';
-  String password = '';
-  String username = '';
-
-  String firstName = '';
-  String lastName = '';
-
+  // Campos de registro
+  String email = '', password = '', username = '';
+  String firstName = '', lastName = '';
   DateTime? birthDate;
+  int? age;
   String gender = '';
-  bool isLoadingLocation = false;
   List<String> seeking = [];
   String relationshipGoal = '';
+  bool isLoadingLocation = false;
   String location = '';
+  double userLatitude = 0, userLongitude = 0;
+
+  // Fitness
   String gymStage = '';
-  double userLatitude = 0.0;
-  double userLongitude = 0.0;
+  double? height, weight;
 
-  double? height;
-  double? weight;
-  int? age;
-
+  // Términos
   bool acceptedTerms = false;
 
+  // Fotos
+  File? profilePictureFile;
   final List<File> selectedPhotos = [];
+  final ImagePicker _picker = ImagePicker();
 
+  // Estado UI
   String errorMessage = '';
   bool isLoading = false;
-
   Map<String, String> fieldErrors = {};
-
-  File? profilePictureFile;
-  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
-    if (widget.fromGoogle) {
-      _currentStep = 2;
-      _pageController = PageController(initialPage: 2);
-    } else {
-      _pageController = PageController();
-    }
+    _pageController = PageController(initialPage: 0);
+    _currentStep = 0;
   }
 
   @override
@@ -94,63 +89,72 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.didChangeDependencies();
     if (widget.fromGoogle && googleProfilePictureUrl == null) {
       final user = Provider.of<AuthProvider>(context, listen: false).user;
-      if (user?.profilePicture?.url != null && user!.profilePicture!.url.isNotEmpty) {
-        setState(() {
-          googleProfilePictureUrl = user.profilePicture!.url;
-        });
+      if (user?.profilePicture?.url != null &&
+          user!.profilePicture!.url.isNotEmpty) {
+        setState(() => googleProfilePictureUrl = user.profilePicture!.url);
       }
     }
   }
 
-  String? getFieldError(String fieldName) {
-    return fieldErrors[fieldName];
-  }
+  List<Widget> get _manualSteps => [
+        _buildStep0(), // 0: email + password
+        _buildStepEmailVerification(), // 1: verify email
+        _buildStep1(), // 2: username + names
+        _buildStep2(), // 3: birthdate
+        _buildStep3(), // 4: gender
+        _buildStep4(), // 5: seeking
+        _buildStep5(), // 6: relationshipGoal
+        _buildStep6(), // 7: location
+        _buildStep7(), // 8: gymStage + height + weight
+        _buildStep8Lifts(), // 9: basic lifts
+        _buildStepProfilePicture(), // 10: profile picture
+        _buildStep8(), // 11: additional photos
+      ];
+
+  List<Widget> get _googleSteps => _manualSteps.sublist(2);
+
+  List<Widget> get _steps => widget.fromGoogle ? _googleSteps : _manualSteps;
+
+  int get _totalSteps => _steps.length;
 
   void clearErrors() {
     setState(() {
       errorMessage = '';
-      fieldErrors = {};
+      fieldErrors.clear();
     });
   }
 
-  Future<void> _checkUsernameAvailability(String username) async {
-    if (username.isEmpty) {
+  String? getFieldError(String name) => fieldErrors[name];
+
+  Future<void> _checkUsernameAvailability(String u) async {
+    if (u.isEmpty) {
       setState(() {
         isCheckingUsername = false;
         usernameCheckMessage = '';
       });
       return;
     }
-
     setState(() {
       isCheckingUsername = true;
       usernameCheckMessage = tr("checking_availability");
     });
-
     final url = Uri.parse(
-        'https://gymder-api-production.up.railway.app/api/users/check_username/$username');
+        'https://gymder-api-production.up.railway.app/api/users/check_username/$u');
     try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        bool available = data['available'] ?? false;
-        setState(() {
-          isCheckingUsername = false;
-          if (available) {
-            usernameCheckMessage = tr("username_available");
-            fieldErrors.remove('username');
-          } else {
-            usernameCheckMessage = tr("username_unavailable");
-            fieldErrors['username'] = tr("username_unavailable");
-          }
-        });
-      } else {
-        setState(() {
-          isCheckingUsername = false;
-          usernameCheckMessage = tr("error_checking_availability");
-        });
-      }
-    } catch (e) {
+      final resp = await http.get(url);
+      final data = jsonDecode(resp.body);
+      bool ok = resp.statusCode == 200 && (data['available'] ?? false);
+      setState(() {
+        isCheckingUsername = false;
+        if (ok) {
+          usernameCheckMessage = tr("username_available");
+          fieldErrors.remove('username');
+        } else {
+          usernameCheckMessage = tr("username_unavailable");
+          fieldErrors['username'] = tr("username_unavailable");
+        }
+      });
+    } catch (_) {
       setState(() {
         isCheckingUsername = false;
         usernameCheckMessage = tr("connection_error");
@@ -158,289 +162,189 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  Future<bool> _checkEmailAvailability(String email) async {
-    if (email.isEmpty || !emailRegex.hasMatch(email)) {
-      return false;
-    }
-
-    setState(() {
-      errorMessage = tr("checking_email_availability");
-    });
-
+  Future<bool> _checkEmailAvailability(String e) async {
+    if (e.isEmpty || !emailRegex.hasMatch(e)) return false;
+    setState(() => errorMessage = tr("checking_email_availability"));
     final url = Uri.parse(
-        'https://gymder-api-production.up.railway.app/api/users/check_email/$email');
+        'https://gymder-api-production.up.railway.app/api/users/check_email/$e');
     try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        bool available = data['available'] ?? false;
-
-        if (!available) {
-          setState(() {
+      final resp = await http.get(url);
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        bool ok = data['available'] ?? false;
+        setState(() {
+          if (!ok)
             fieldErrors['email'] = tr("email_in_use");
-          });
-        } else {
-          setState(() {
+          else
             fieldErrors.remove('email');
-          });
-        }
-
-        return available;
+        });
+        return ok;
       }
     } catch (e) {
-      setState(() {
-        errorMessage = '${tr("error_checking_email")} $e';
-      });
+      setState(() => errorMessage = '${tr("error_checking_email")} $e');
     }
     return false;
   }
 
   Future<void> _nextStep() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    authProvider.clearFieldErrors();
+    clearErrors();
 
-    // Actualizar fieldErrors con los del provider para mantener consistencia
-    fieldErrors = Map.from(authProvider.fieldErrors);
-
-    if (_currentStep == 7 && location.isEmpty) {
-      bool? continuar = await showDialog<bool>(
-          context: context,
-          builder: (_) => AlertDialog(
-                title: Text(tr("no_location")),
-                content: Text(tr("no_location_dialog_content")),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: Text(tr("cancel")),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: Text(tr("continue")),
-                  ),
-                ],
-              ));
-
-      if (continuar == false) {
+    // special: on manual step0 send email
+    if (!widget.fromGoogle && _currentStep == 0) {
+      if (!await _checkEmailAvailability(email)) {
+        errorMessage = fieldErrors['email'] ?? tr("email_in_use");
+        setState(() {});
         return;
       }
+      await _sendVerificationEmail();
     }
-    if (_validateCurrentStep()) {
-      if (_currentStep == 0) {
-        if (email.isEmpty || password.isEmpty) {
-          setState(() {
-            errorMessage = tr("fill_email_password");
-            if (email.isEmpty) fieldErrors['email'] = tr("email_required");
-            if (password.isEmpty)
-              fieldErrors['password'] = tr("password_required");
-          });
-          return;
-        }
 
-        bool emailAvailable = await _checkEmailAvailability(email);
-        if (!emailAvailable) {
-          setState(() {
-            errorMessage = fieldErrors['email'] ?? tr("email_in_use");
-          });
-          return;
-        }
+    if (!_validateCurrentStep()) return;
 
-        await _sendVerificationEmail();
-      }
-
-      if (_currentStep < _totalSteps - 1) {
-        setState(() {
-          errorMessage = '';
-          _currentStep++;
-        });
-        _pageController.animateToPage(
-          _currentStep,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      }
+    if (_currentStep < _totalSteps - 1) {
+      setState(() {
+        errorMessage = '';
+        _currentStep++;
+      });
+      _pageController.animateToPage(_currentStep,
+          duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     }
   }
 
   bool _validateCurrentStep() {
-    // Limpiar errores antes de validar
     setState(() {
       errorMessage = '';
       fieldErrors.clear();
     });
-
-    switch (_currentStep) {
-      case 0:
-        if (email.isEmpty || password.isEmpty) {
-          setState(() {
-            errorMessage = tr("fill_email_password");
-            if (email.isEmpty) fieldErrors['email'] = tr("email_required");
-            if (password.isEmpty)
-              fieldErrors['password'] = tr("password_required");
-          });
-          return false;
-        }
-        if (!acceptedTerms) {
-          setState(() {
-            errorMessage = tr("must_accept_terms");
-          });
-          return false;
-        }
-        if (!emailRegex.hasMatch(email)) {
-          setState(() {
-            errorMessage = tr("enter_email_password");
+    final s = _currentStep;
+    // manual index mapping if fromGoogle: originalIndex = s + 2
+    int idx = widget.fromGoogle ? s + 2 : s;
+    switch (idx) {
+      case 0: // email + pw
+        if (email.isEmpty ||
+            password.isEmpty ||
+            !acceptedTerms ||
+            !emailRegex.hasMatch(email) ||
+            password.length < 6) {
+          if (email.isEmpty) fieldErrors['email'] = tr("email_required");
+          if (password.isEmpty)
+            fieldErrors['password'] = tr("password_required");
+          if (!acceptedTerms) errorMessage = tr("must_accept_terms");
+          if (!emailRegex.hasMatch(email))
             fieldErrors['email'] = tr("invalid_email_format");
-          });
-          return false;
-        }
-        if (password.length < 6) {
-          setState(() {
-            errorMessage = tr("password_min_length");
+          if (password.length < 6)
             fieldErrors['password'] = tr("password_min_length");
-          });
+          if (errorMessage.isEmpty) errorMessage = tr("fill_email_password");
           return false;
         }
         break;
-      case 1:
+      case 1: // verify email
         if (!_emailVerified) {
-          setState(() {
-            errorMessage = tr("verify_code_error");
-            fieldErrors['verificationCode'] = tr("verify_code_error");
-          });
+          errorMessage = tr("verify_code_error");
+          fieldErrors['verificationCode'] = tr("verify_code_error");
           return false;
         }
         break;
-      case 2:
+      case 2: // username + names
         if (username.isEmpty || firstName.isEmpty || lastName.isEmpty) {
-          setState(() {
-            errorMessage = tr("enter_username_first_last");
-            if (username.isEmpty)
-              fieldErrors['username'] = tr("username_required");
-            if (firstName.isEmpty)
-              fieldErrors['firstName'] = tr("first_name_required");
-            if (lastName.isEmpty)
-              fieldErrors['lastName'] = tr("last_name_required");
-          });
+          if (username.isEmpty)
+            fieldErrors['username'] = tr("username_required");
+          if (firstName.isEmpty)
+            fieldErrors['firstName'] = tr("first_name_required");
+          if (lastName.isEmpty)
+            fieldErrors['lastName'] = tr("last_name_required");
+          errorMessage = tr("enter_username_first_last");
           return false;
         }
-        RegExp digitRegex = RegExp(r'\d');
-        if (digitRegex.hasMatch(firstName) || digitRegex.hasMatch(lastName)) {
-          setState(() {
-            errorMessage = tr("name_no_numbers");
-            if (digitRegex.hasMatch(firstName))
-              fieldErrors['firstName'] = tr("name_no_numbers");
-            if (digitRegex.hasMatch(lastName))
-              fieldErrors['lastName'] = tr("name_no_numbers");
-          });
+        final digit = RegExp(r'\d');
+        if (digit.hasMatch(firstName) || digit.hasMatch(lastName)) {
+          errorMessage = tr("name_no_numbers");
+          if (digit.hasMatch(firstName))
+            fieldErrors['firstName'] = tr("name_no_numbers");
+          if (digit.hasMatch(lastName))
+            fieldErrors['lastName'] = tr("name_no_numbers");
           return false;
         }
         if (usernameCheckMessage == tr("username_unavailable")) {
-          setState(() {
-            errorMessage = tr("username_not_available");
-            fieldErrors['username'] = tr("username_not_available");
-          });
+          errorMessage = tr("username_not_available");
+          fieldErrors['username'] = tr("username_not_available");
           return false;
         }
         break;
-      case 3:
+      case 3: // birthdate
         if (birthDate == null) {
-          setState(() {
-            errorMessage = tr("select_your_birthdate");
-            fieldErrors['birthDate'] = tr("select_your_birthdate");
-          });
+          errorMessage = tr("select_your_birthdate");
+          fieldErrors['birthDate'] = tr("select_your_birthdate");
           return false;
         }
         final today = DateTime.now();
-        int computedAge = today.year - birthDate!.year;
+        int calcAge = today.year - birthDate!.year;
         if (today.month < birthDate!.month ||
             (today.month == birthDate!.month && today.day < birthDate!.day)) {
-          computedAge--;
+          calcAge--;
         }
-        setState(() {
-          age = computedAge;
-        });
-        if (computedAge < 18) {
-          setState(() {
-            errorMessage = tr("must_be_18");
-            fieldErrors['birthDate'] = tr("must_be_18");
-          });
+        age = calcAge;
+        if (calcAge < 18) {
+          errorMessage = tr("must_be_18");
+          fieldErrors['birthDate'] = tr("must_be_18");
           return false;
         }
         break;
-      case 4:
+      case 4: // gender
         if (gender.isEmpty) {
-          setState(() {
-            errorMessage = tr("select_gender");
-            fieldErrors['gender'] = tr("select_gender");
-          });
+          errorMessage = tr("select_gender");
+          fieldErrors['gender'] = tr("select_gender");
           return false;
         }
         break;
-      case 5:
+      case 5: // seeking
         if (seeking.isEmpty) {
-          setState(() {
-            errorMessage = tr("select_one_or_more");
-            fieldErrors['seeking'] = tr("select_one_or_more");
-          });
+          errorMessage = tr("select_one_or_more");
+          fieldErrors['seeking'] = tr("select_one_or_more");
           return false;
         }
         break;
-      case 6:
+      case 6: // relationshipGoal
         if (relationshipGoal.isEmpty) {
-          setState(() {
-            errorMessage = tr("select_connection_purpose");
-            fieldErrors['relationshipGoal'] = tr("select_connection_purpose");
-          });
+          errorMessage = tr("select_connection_purpose");
+          fieldErrors['relationshipGoal'] = tr("select_connection_purpose");
           return false;
         }
         break;
-      case 7:
+      case 7: // location
+        // no required
         break;
-      case 8:
-        if (gymStage.isEmpty || height == null || weight == null) {
-          setState(() {
-            errorMessage = tr("select_your_gym_stage_height_weight");
-            if (gymStage.isEmpty)
-              fieldErrors['gymStage'] = tr("gym_stage_required");
-            if (height == null) fieldErrors['height'] = tr("height_required");
-            if (weight == null) fieldErrors['weight'] = tr("weight_required");
-          });
+      case 8: // gymStage + height + weight
+        if (gymStage.isEmpty)
+          fieldErrors['gymStage'] = tr("gym_stage_required");
+        if (height == null) fieldErrors['height'] = tr("height_required");
+        if (weight == null) fieldErrors['weight'] = tr("weight_required");
+        if (fieldErrors.isNotEmpty) {
+          errorMessage = tr("select_your_gym_stage_height_weight");
           return false;
         }
-
-        // Validar que la altura esté entre 100 y 250 cm
         if (height! < 100 || height! > 250) {
-          setState(() {
-            errorMessage = tr("height_out_of_range");
-            fieldErrors['height'] = tr("height_must_be_between_100_250");
-          });
+          errorMessage = tr("height_out_of_range");
+          fieldErrors['height'] = tr("height_must_be_between_100_250");
           return false;
         }
-
-        // Validar que el peso esté entre 40 y 200 kg
         if (weight! < 40 || weight! > 200) {
-          setState(() {
-            errorMessage = tr("weight_out_of_range");
-            fieldErrors['weight'] = tr("weight_must_be_between_40_200");
-          });
+          errorMessage = tr("weight_out_of_range");
+          fieldErrors['weight'] = tr("weight_must_be_between_40_200");
           return false;
         }
         break;
-      case 9:
+      case 9: // lifts
         break;
-      case 10:
+      case 10: // profile picture
         break;
-      case 11:
-        // Validación para las fotos adicionales
+      case 11: // extra photos
         if (selectedPhotos.length < 2) {
-          setState(() {
-            errorMessage = tr("upload_minimum_photos");
-            fieldErrors['photos'] = tr("upload_minimum_photos");
-          });
+          errorMessage = tr("upload_minimum_photos");
+          fieldErrors['photos'] = tr("upload_minimum_photos");
           return false;
         }
         break;
-      default:
-        return true;
     }
     return true;
   }
@@ -453,51 +357,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
       return;
     }
-
     setState(() {
       isLoading = true;
       errorMessage = '';
       fieldErrors.remove('verificationCode');
     });
-
     final url = Uri.parse(
         'https://gymder-api-production.up.railway.app/api/users/verify-email');
     try {
-      final response = await http.post(
+      final resp = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'code': verificationCode}),
       );
-
-      setState(() {
-        isLoading = false;
-      });
-
-      if (response.statusCode == 200) {
+      setState(() => isLoading = false);
+      if (resp.statusCode == 200) {
         setState(() {
-          errorMessage = '';
           _emailVerified = true;
-          _currentStep = emailVerificationStepIndex + 1;
         });
-        _pageController.animateToPage(
-          _currentStep,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
+        _nextStep();
       } else {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(resp.body);
         setState(() {
           errorMessage = data['message'] ?? tr("invalid_code");
           fieldErrors['verificationCode'] = errorMessage;
-          _emailVerified = false;
         });
       }
     } catch (e) {
       setState(() {
         isLoading = false;
-        errorMessage = tr("connection_error") + ": $e";
+        errorMessage = '${tr("connection_error")}: $e';
         fieldErrors['verificationCode'] = errorMessage;
-        _emailVerified = false;
       });
     }
   }
@@ -507,23 +397,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
       isLoading = true;
       errorMessage = '';
     });
-
     final url = Uri.parse(
         'https://gymder-api-production.up.railway.app/api/users/send-verification-email');
     try {
-      final response = await http.post(
+      final resp = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email}),
       );
-
-      setState(() {
-        isLoading = false;
-      });
-
-      if (response.statusCode == 200) {
-        print("Código de verificación enviado");
-        // Mostrar mensaje de éxito
+      setState(() => isLoading = false);
+      if (resp.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(tr("verification_code_sent")),
@@ -532,7 +415,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         );
       } else {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(resp.body);
         setState(() {
           errorMessage =
               data['message'] ?? tr("error_sending_verification_email");
@@ -542,7 +425,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } catch (e) {
       setState(() {
         isLoading = false;
-        errorMessage = tr("connection_error_sending_email") + ": $e";
+        errorMessage = '${tr("connection_error_sending_email")}: $e';
       });
     }
   }
@@ -921,21 +804,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  void _previousStep() {
-    // Si venimos de Google, no permitimos retroceder hasta que superen el paso 2.
-    if (widget.fromGoogle && _currentStep <= 2) return;
-
+  Future<void> _previousStep() async {
     if (_currentStep > 0) {
       setState(() {
         errorMessage = '';
         fieldErrors.clear();
         _currentStep--;
       });
-      _pageController.animateToPage(
-        _currentStep,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+      _pageController.animateToPage(_currentStep,
+          duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     }
   }
 
@@ -955,9 +832,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _pickImages() async {
-    final pickedFiles = await _picker.pickMultiImage();
-    if (pickedFiles != null) {
-      if (selectedPhotos.length + pickedFiles.length > 5) {
+    final picked = await _picker.pickMultiImage();
+    if (picked != null) {
+      if (selectedPhotos.length + picked.length > 5) {
         setState(() {
           errorMessage = tr("max_photos_error");
           fieldErrors['photos'] = tr("max_photos_error");
@@ -965,19 +842,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
         return;
       }
       setState(() {
-        errorMessage = '';
+        selectedPhotos.addAll(picked.map((e) => File(e.path)));
         fieldErrors.remove('photos');
-        selectedPhotos.addAll(pickedFiles.map((x) => File(x.path)));
+        errorMessage = '';
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final double progress = (_currentStep + 1) / _totalSteps;
-
+    final progress = (_currentStep + 1) / _totalSteps;
     return Scaffold(
-      backgroundColor: const Color.fromRGBO(34, 34, 34, 0.0),
+      backgroundColor: const Color.fromRGBO(34, 34, 34, 0),
       body: SafeArea(
         child: Column(
           children: [
@@ -986,27 +862,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: LinearProgressIndicator(
                 value: progress,
                 backgroundColor: Colors.white54,
-                valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                valueColor: const AlwaysStoppedAnimation(Colors.white),
               ),
             ),
             Expanded(
               child: PageView(
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  _buildStep0(),
-                  _buildStepEmailVerification(),
-                  _buildStep1(),
-                  _buildStep2(),
-                  _buildStep3(),
-                  _buildStep4(),
-                  _buildStep5(),
-                  _buildStep6(),
-                  _buildStep7(),
-                  _buildStep8Lifts(),
-                  _buildStepProfilePicture(),
-                  _buildStep8(),
-                ],
+                children: _steps,
               ),
             ),
             _buildBottomBar(),
@@ -1017,42 +880,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Widget _buildBottomBar() {
+    final isVerifyStep = !widget.fromGoogle && _currentStep == 1;
+    final canGoBack = _currentStep > 0;
+    final canGoNext = _currentStep < _totalSteps - 1 && !isVerifyStep;
+
     return Container(
-      color: const Color.fromRGBO(20, 20, 20, 0.0),
+      color: const Color.fromRGBO(20, 20, 20, 0),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          if (_currentStep > 0 && !(widget.fromGoogle && _currentStep == 2))
+          if (canGoBack)
             ElevatedButton(
               onPressed: _previousStep,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
               child: const Icon(Icons.arrow_back, color: Colors.black),
             ),
           const Spacer(),
-          if (_currentStep < _totalSteps - 1)
+          if (canGoNext)
             ElevatedButton(
               onPressed: _nextStep,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
               child: const Icon(Icons.arrow_forward, color: Colors.black),
             )
-          else
+          else if (_currentStep == _totalSteps - 1)
             ElevatedButton(
               onPressed: isLoading ? null : _submitRegister,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
               child: isLoading
                   ? const CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-                    )
-                  : Text(
-                      tr("finalize"),
-                      style: const TextStyle(color: Colors.black),
-                    ),
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.black))
+                  : Text(tr("finalize"),
+                      style: const TextStyle(color: Colors.black)),
             ),
         ],
       ),
@@ -1068,8 +926,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const SizedBox(height: 20),
           TextFormField(
             style: const TextStyle(color: Colors.white),
-            decoration:
-                _inputDecoration(tr("email_only"), fieldName: 'email'),
+            decoration: _inputDecoration(tr("email_only"), fieldName: 'email'),
             keyboardType: TextInputType.emailAddress,
             onChanged: (value) => email = value,
             onEditingComplete: () {
@@ -1120,7 +977,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   children: [
                     Text(
                       tr("accept_terms"),
-                      style: const TextStyle(color: Colors.white70, fontSize: 14),
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 14),
                     ),
                     const SizedBox(width: 5),
                     GestureDetector(
@@ -1144,7 +1002,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const SizedBox(width: 5),
                     Text(
                       tr("and"),
-                      style: const TextStyle(color: Colors.white70, fontSize: 14),
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 14),
                     ),
                     const SizedBox(width: 5),
                     GestureDetector(
@@ -1305,10 +1164,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 final now = DateTime.now();
                 int calculatedAge = now.year - pickedDate.year;
                 if (now.month < pickedDate.month ||
-                    (now.month == pickedDate.month && now.day < pickedDate.day)) {
+                    (now.month == pickedDate.month &&
+                        now.day < pickedDate.day)) {
                   calculatedAge--;
                 }
-                
+
                 setState(() {
                   birthDate = pickedDate;
                   age = calculatedAge;
@@ -1542,48 +1402,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
       isLoadingLocation = true;
       errorMessage = '';
     });
-
     try {
-      LocationPermission permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
+      LocationPermission perm = await Geolocator.requestPermission();
+      if (perm == LocationPermission.denied ||
+          perm == LocationPermission.deniedForever) {
         setState(() {
-          errorMessage = tr("location_permission_denied");
           isLoadingLocation = false;
+          errorMessage = tr("location_permission_denied");
         });
         return;
       }
-
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-      );
-
+      Position pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+      final placemarks =
+          await placemarkFromCoordinates(pos.latitude, pos.longitude);
       if (placemarks.isNotEmpty) {
-        Placemark placemark = placemarks.first;
-        String ciudad = placemark.locality ?? '';
-        String pais = placemark.country ?? '';
-
+        final pm = placemarks.first;
         setState(() {
-          location = '$ciudad, $pais';
-          userLatitude = position.latitude;
-          userLongitude = position.longitude;
+          location = '${pm.locality}, ${pm.country}';
+          userLatitude = pos.latitude;
+          userLongitude = pos.longitude;
           isLoadingLocation = false;
         });
       } else {
-        setState(() {
-          errorMessage = tr("could_not_determine_city");
-          isLoadingLocation = false;
-        });
+        throw Exception('No placemarks');
       }
     } catch (e) {
       setState(() {
-        errorMessage = tr("error_getting_location") + ": $e";
         isLoadingLocation = false;
+        errorMessage = '${tr("error_getting_location")}: $e';
       });
     }
   }
@@ -1662,28 +1509,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
         children: [
           TextFormField(
             style: const TextStyle(color: Colors.white),
-            decoration: _inputDecoration(tr("squat_kg"), fieldName: 'squatWeight'),
+            decoration:
+                _inputDecoration(tr("squat_kg"), fieldName: 'squatWeight'),
             keyboardType: TextInputType.number,
             onChanged: (v) => squatWeight = double.tryParse(v),
           ),
           const SizedBox(height: 20),
           TextFormField(
             style: const TextStyle(color: Colors.white),
-            decoration: _inputDecoration(tr("bench_press_kg"), fieldName: 'benchPressWeight'),
+            decoration: _inputDecoration(tr("bench_press_kg"),
+                fieldName: 'benchPressWeight'),
             keyboardType: TextInputType.number,
             onChanged: (v) => benchPressWeight = double.tryParse(v),
           ),
           const SizedBox(height: 20),
           TextFormField(
             style: const TextStyle(color: Colors.white),
-            decoration: _inputDecoration(tr("deadlift_kg"), fieldName: 'deadliftWeight'),
+            decoration: _inputDecoration(tr("deadlift_kg"),
+                fieldName: 'deadliftWeight'),
             keyboardType: TextInputType.number,
             onChanged: (v) => deadliftWeight = double.tryParse(v),
           ),
           if (errorMessage.isNotEmpty && _currentStep == 8)
             Padding(
               padding: const EdgeInsets.only(top: 16),
-              child: Text(errorMessage, style: const TextStyle(color: Colors.redAccent)),
+              child: Text(errorMessage,
+                  style: const TextStyle(color: Colors.redAccent)),
             ),
         ],
       ),
@@ -1703,8 +1554,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ? FileImage(profilePictureFile!)
                 : (widget.fromGoogle && googleProfilePictureUrl != null
                     ? NetworkImage(googleProfilePictureUrl!) as ImageProvider
-                    : const AssetImage('assets/images/default_profile.png')
-                  ),
+                    : const AssetImage('assets/images/default_profile.png')),
           ),
           const SizedBox(height: 20),
           ElevatedButton(
@@ -1840,8 +1690,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child:
                 Text(tr("verify"), style: const TextStyle(color: Colors.black)),
           ),
-          if (errorMessage.isNotEmpty &&
-              _currentStep == emailVerificationStepIndex)
+          if (errorMessage.isNotEmpty && _currentStep == 1)
             Padding(
               padding: const EdgeInsets.only(top: 16),
               child: Text(errorMessage,

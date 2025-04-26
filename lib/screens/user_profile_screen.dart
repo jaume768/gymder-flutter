@@ -186,7 +186,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     required String content,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         border: Border.all(color: Colors.white),
@@ -352,7 +352,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             content: _displayFor(user!.gender, 'gender'),
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: _buildInfoBox(
                             title: tr('goal_title'),

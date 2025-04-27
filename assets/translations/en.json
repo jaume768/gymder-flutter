@@ -355,7 +355,7 @@
   "cannot_open_url": "Cannot open URL",
   "cannot_open_email": "Cannot open email",
   "basic_information": "Basic Information",
-  "biography_location": "Biography and Location",
+  "biography_location": "Biography",
   "photo_deleted_successfully": "Photo deleted successfully",
   "biography_label": "Biography",
   "characters_count": "{count}/{max} characters",

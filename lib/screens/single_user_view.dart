@@ -181,6 +181,7 @@ class _SingleUserViewState extends State<SingleUserView>
             ),
 
           // ─── Nombre, meta y biografía ──────────────────
+          // ─── Nombre, meta, biografía y ubicación ──────────────────
           Positioned(
             left: 20,
             right: 20,
@@ -242,6 +243,36 @@ class _SingleUserViewState extends State<SingleUserView>
                             Shadow(blurRadius: 10, color: Colors.black)
                           ],
                         ),
+                      ),
+                    ),
+
+                  // Ubicación (si existe ciudad o país)
+                  if ((user.city != null && user.city!.isNotEmpty) ||
+                      (user.country != null && user.country!.isNotEmpty))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.location_on,
+                            color: Colors.white,
+                            size: 16,
+                            shadows: [
+                              Shadow(blurRadius: 10, color: Colors.black)
+                            ],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${user.city ?? ''}${user.country != null && user.country!.isNotEmpty ? ', ${user.country}' : ''}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              shadows: [
+                                Shadow(blurRadius: 10, color: Colors.black)
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                 ],

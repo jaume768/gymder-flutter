@@ -1809,8 +1809,8 @@ class _FilterModalContentState extends State<FilterModalContent> {
               label: tr("weight_range"),
               values: weightRange,
               min: 40,
-              max: 200,
-              divisions: 160,
+              max: 120,
+              divisions: 80,
               onChanged: (v) => setState(() => weightRange = v),
             ),
 

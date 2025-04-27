@@ -429,23 +429,31 @@ class PersonalInfoForm extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // Edad, Altura, Peso
-            _buildNumericField(
-              label: tr('age_label'),
-              initialValue: age,
-              onChanged: onAgeChanged,
-              validatorMsg: tr('please_enter_age_error'),
-              min: 18,
-              max: 100,
-            ),
-            const SizedBox(height: 16),
-            _buildNumericField(
-              label: tr('height_label'),
-              initialValue: height,
-              onChanged: onHeightChanged,
-              validatorMsg: tr('please_enter_height_error'),
-              min: 120,
-              max: 250,
+            // Edad y Altura en la misma línea
+            Row(
+              children: [
+                Expanded(
+                  child: _buildNumericField(
+                    label: tr('age_label'),
+                    initialValue: age,
+                    onChanged: onAgeChanged,
+                    validatorMsg: tr('please_enter_age_error'),
+                    min: 18,
+                    max: 100,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildNumericField(
+                    label: tr('height_label'),
+                    initialValue: height,
+                    onChanged: onHeightChanged,
+                    validatorMsg: tr('please_enter_height_error'),
+                    min: 120,
+                    max: 250,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             _buildNumericField(
@@ -456,6 +464,7 @@ class PersonalInfoForm extends StatelessWidget {
               min: 30,
               max: 250,
             ),
+
             const SizedBox(height: 16),
 
             // Biografía

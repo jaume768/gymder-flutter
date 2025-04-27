@@ -47,31 +47,43 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   @override
   void initState() {
     super.initState();
-    // Fuerza refrescar el usuario al entrar
     Provider.of<AuthProvider>(context, listen: false).refreshUser();
   }
 
-  Widget _buildInfoBox({required String title, required String content}) {
+  /// Caja de opción con icono, título a la izquierda y valor a la derecha
+  Widget _buildOptionBox({
+    required IconData icon,
+    required String title,
+    required String content,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.white),
+        color: Colors.black.withOpacity(0.3),
+        border: Border.all(color: Colors.white24),
         borderRadius: BorderRadius.circular(8),
       ),
-      width: double.infinity,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-                color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          Icon(icon, color: Colors.white70),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-          const SizedBox(height: 8),
           Text(
             content,
-            style: const TextStyle(color: Colors.white70, fontSize: 16),
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 16,
+            ),
           ),
         ],
       ),
@@ -89,7 +101,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       );
     }
 
-    // Resuelve contenido traducido dinámico:
+    // Traducciones dinámicas
     final genderKey = _genderKeyMap[user.gender] ?? 'pending';
     final fitnessGoalKey = _fitnessGoalKeyMap[user.goal] ?? 'pending';
     final relationshipGoalKey =
@@ -126,11 +138,11 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             )
           ],
         ),
-        backgroundColor: const Color.fromRGBO(20, 20, 20, 0.0),
+        backgroundColor: const Color.fromRGBO(20, 20, 20, 0.8),
         body: Column(
           children: [
             const SizedBox(height: 16),
-            // Foto de perfil + editar
+            // Foto de perfil + botón editar
             Center(
               child: SizedBox(
                 width: 140,
@@ -159,7 +171,9 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                         },
                         child: Container(
                           decoration: const BoxDecoration(
-                              color: Colors.black54, shape: BoxShape.circle),
+                            color: Colors.black54,
+                            shape: BoxShape.circle,
+                          ),
                           padding: const EdgeInsets.all(8),
                           child: Icon(
                             Icons.edit,
@@ -175,13 +189,14 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            // Username
+            // Nombre de usuario
             Text(
               user.username ?? '',
               style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white),
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
             // Biografía
             if (user.biography != null && user.biography!.isNotEmpty)
@@ -193,7 +208,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                   textAlign: TextAlign.center,
                 ),
               ),
-
             const SizedBox(height: 16),
             // Pestañas
             TabBar(
@@ -205,41 +219,39 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                 Tab(text: tr('photos_profile')),
               ],
             ),
-            // Contenido
+            // Contenido de cada pestaña
             Expanded(
               child: TabBarView(
                 children: [
+                  // === SOBRE MÍ ===
                   ListView(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(16),
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildInfoBox(
-                              title: tr('gender_display'),
-                              content: tr('gender.$genderKey'),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: _buildInfoBox(
-                              title: tr('goal_title'),
-                              content: tr('fitness_goal.$fitnessGoalKey'),
-                            ),
-                          ),
-                        ],
+                      _buildOptionBox(
+                        icon: Icons.person,
+                        title: tr('gender_display'),
+                        content: tr('gender.$genderKey'),
                       ),
-                      _buildInfoBox(
+                      _buildOptionBox(
+                        icon: Icons.track_changes,
+                        title: tr('goal_title'),
+                        content: tr('fitness_goal.$fitnessGoalKey'),
+                      ),
+                      _buildOptionBox(
+                        icon: Icons.chat_bubble_outline,
                         title: tr('what_are_you_looking_for'),
-                        content: tr('relationship_goal_map.$relationshipGoalKey'),
+                        content:
+                            tr('relationship_goal_map.$relationshipGoalKey'),
                       ),
-                      _buildInfoBox(
+                      _buildOptionBox(
+                        icon: Icons.place,
                         title: tr('location'),
                         content: (user.city != null && user.city!.isNotEmpty)
                             ? '${user.city}, ${user.country}'
                             : tr('location_not_defined'),
                       ),
-                      _buildInfoBox(
+                      _buildOptionBox(
+                        icon: Icons.fitness_center,
                         title: tr('basic_lifts_profile'),
                         content:
                             "${tr('squat')}: ${user.squatWeight != null ? '${user.squatWeight} kg' : tr('not_defined')}\n"
@@ -248,7 +260,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                       ),
                     ],
                   ),
-                  // Fotos
+
+                  // === FOTOS ===
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: (user.photos != null && user.photos!.isNotEmpty)
@@ -281,11 +294,11 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                 child: CachedNetworkImage(
                                   imageUrl: photo.url,
                                   fit: BoxFit.cover,
-                                  placeholder: (context, url) =>
+                                  placeholder: (ctx, url) =>
                                       Container(color: Colors.grey[800]),
-                                  errorWidget: (context, url, error) =>
-                                      const Icon(Icons.error,
-                                          color: Colors.white),
+                                  errorWidget: (ctx, url, error) => const Icon(
+                                      Icons.error,
+                                      color: Colors.white),
                                 ),
                               );
                             },

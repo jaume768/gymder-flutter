@@ -404,6 +404,7 @@
   "biography_location": "Biographie",
   "photo_deleted_successfully": "Photo supprimée avec succès",
   "enter_username": "Entrez un nom d'utilisateur",
+  "must_have_minimum_photos": "Vous devez avoir au moins 2 photos.",
   "biography_label": "Biographie",
   "characters_count": "{count}/{max} caractères",
   "please_enter_valid_number": "Veuillez entrer un nombre valide",

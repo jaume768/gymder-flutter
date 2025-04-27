@@ -114,7 +114,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     goal = originalGoal = user.goal ?? '';
     gender = originalGender = user.gender ?? '';
     originalSeeking = List<String>.from(user.seeking ?? []);
-    seeking         = List<String>.from(originalSeeking);
+    seeking = List<String>.from(originalSeeking);
     relationshipGoal = originalRelationshipGoal = user.relationshipGoal ?? '';
     biography = originalBiography = user.biography ?? '';
     age = originalAge = user.age ?? 18;
@@ -383,11 +383,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _deletePhoto(String publicId) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final currentPhotos = auth.user?.photos ?? [];
+
+    // 1) Si sólo quedan 2 o menos fotos, no permitimos borrar
+    if (currentPhotos.length <= 2) {
+      final msg =
+          tr("must_have_minimum_photos");
+      setState(() => errorMessage = msg);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    // 2) Si hay más de 2, procedemos con la eliminación
     setState(() {
       isUploading = true;
       errorMessage = '';
     });
-    final auth = Provider.of<AuthProvider>(context, listen: false);
+
     final token = await auth.getToken();
     if (token == null) {
       setState(() {
@@ -396,6 +414,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       });
       return;
     }
+
     final res = await UserService(token: token).deletePhoto(publicId);
     if (res['success']) {
       await auth.refreshUser();
@@ -404,8 +423,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
     } else {
       setState(
-          () => errorMessage = res['message'] ?? tr('error_deleting_photo'));
+        () => errorMessage = res['message'] ?? tr('error_deleting_photo'),
+      );
     }
+
     setState(() {
       isUploading = false;
     });

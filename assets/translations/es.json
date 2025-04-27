@@ -402,6 +402,7 @@
   "remove_filter": "Quitar filtro",
   "basic_information": "Información Básica",
   "biography_location": "Biografía",
+  "must_have_minimum_photos": "Debes tener al menos 2 fotos.",
   "photo_deleted_successfully": "Foto eliminada correctamente",
   "enter_username": "Introduce un nombre de usuario",
   "biography_label": "Biografía",

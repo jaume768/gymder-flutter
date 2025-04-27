@@ -383,6 +383,7 @@
   "photo_deleted_successfully": "Foto erfolgreich gelöscht",
   "enter_username": "Benutzername eingeben",
   "biography_label": "Biografie",
+  "must_have_minimum_photos": "Du musst mindestens 2 Fotos haben.",
   "characters_count": "{count}/{max} Zeichen",
   "please_enter_valid_number": "Bitte geben Sie eine gültige Nummer ein",
   "value_between_range": "Wert zwischen {min} und {max}",

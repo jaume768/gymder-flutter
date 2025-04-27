@@ -356,6 +356,7 @@
   "cannot_open_email": "Cannot open email",
   "basic_information": "Basic Information",
   "biography_location": "Biography",
+  "must_have_minimum_photos": "You must have at least 2 photos.",
   "photo_deleted_successfully": "Photo deleted successfully",
   "biography_label": "Biography",
   "characters_count": "{count}/{max} characters",

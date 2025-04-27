@@ -409,6 +409,7 @@
   "please_enter_valid_number": "Per favore inserisci un numero valido",
   "value_between_range": "Valore tra {min} e {max}",
   "first_name_label": "Nome",
+  "must_have_minimum_photos": "Devi avere almeno 2 foto.",
   "last_name_label": "Cognome",
   "please_enter_first_name_error": "Per favore inserisci il tuo nome",
   "please_enter_last_name_error": "Per favore inserisci il tuo cognome",

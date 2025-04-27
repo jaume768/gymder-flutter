@@ -254,6 +254,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
           if (lastName.isEmpty)
             fieldErrors['lastName'] = tr("last_name_required");
           errorMessage = tr("enter_username_first_last");
+          if (username.contains(' ')) {
+            fieldErrors['username'] = tr("username_no_spaces");
+            errorMessage = tr("username_no_spaces");
+            return false;
+          }
           return false;
         }
         final digit = RegExp(r'\d');
@@ -431,6 +436,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _submitRegister() async {
+    // Validar la etapa actual antes de continuar
     if (!_validateCurrentStep()) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -441,13 +447,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      // Validar imágenes primero, independientemente de si es registro desde Google o normal
+      // 1) Validar imágenes si hay seleccionadas
       if (selectedPhotos.isNotEmpty) {
-        // Usar UserService sin token para validar imágenes (no requiere autenticación)
-        final userService = UserService(token: '');
+        final userServiceNoAuth = UserService(token: '');
         final validationResult =
-            await userService.validateImages(selectedPhotos);
-
+            await userServiceNoAuth.validateImages(selectedPhotos);
         if (validationResult['success'] != true) {
           setState(() {
             isLoading = false;
@@ -455,24 +459,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 validationResult['message'] ?? tr("explicit_content_detected");
             fieldErrors['photos'] = tr("explicit_content_detected");
           });
-
-          // Mostrar diálogo con error de imágenes explícitas
+          // Mostrar diálogo de error
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
               title: Text(tr("image_validation_error"),
                   style: const TextStyle(color: Colors.red)),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(errorMessage),
-                    const SizedBox(height: 16),
-                    Text(tr("cannot_proceed_with_explicit")),
-                  ],
-                ),
-              ),
+              content: Text(errorMessage),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
@@ -485,8 +478,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
       }
 
-      // Continuar con el registro normal o actualización desde Google
+      // 2) Flujo si viene de Google
       if (widget.fromGoogle) {
+        // Obtener token y servicio
         final token = await authProvider.getToken();
         if (token == null) {
           setState(() {
@@ -496,8 +490,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
           return;
         }
         final userService = UserService(token: token);
+
+        // **Nuevo paso**: primero actualizar el username usando el endpoint dedicado
+        final usernameResult = await userService.updateUsername(username);
+        if (usernameResult['success'] != true) {
+          setState(() {
+            isLoading = false;
+            errorMessage =
+                usernameResult['message'] ?? tr("error_updating_username");
+            fieldErrors['username'] = errorMessage;
+          });
+          return;
+        }
+
+        // Luego actualizamos el resto del perfil
         final updateData = {
-          'username': username,
           'firstName': firstName,
           'lastName': lastName,
           'gender': gender,
@@ -505,27 +512,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'relationshipGoal': relationshipGoal,
           'height': height,
           'weight': weight,
-          'goal': gymStage,
-          if (squatWeight != null) 'squatWeight': squatWeight,
-          if (benchPressWeight != null) 'benchPressWeight': benchPressWeight,
-          if (deadliftWeight != null) 'deadliftWeight': deadliftWeight,
           if (age != null) 'age': age,
           if (location.isNotEmpty)
             'location': {
               'type': 'Point',
               'coordinates': [userLongitude, userLatitude],
             },
+          if (squatWeight != null) 'squatWeight': squatWeight,
+          if (benchPressWeight != null) 'benchPressWeight': benchPressWeight,
+          if (deadliftWeight != null) 'deadliftWeight': deadliftWeight,
         };
 
         final updateResult = await userService.updateProfile(updateData);
-
         if (!(updateResult['success'] ?? false)) {
           setState(() {
             isLoading = false;
             errorMessage =
                 updateResult['message'] ?? tr("error_updating_profile");
-
-            // Procesar errores específicos de campo si existen
             if (updateResult.containsKey('fieldErrors')) {
               updateResult['fieldErrors'].forEach((key, value) {
                 fieldErrors[key] = value.toString();
@@ -535,8 +538,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           return;
         }
 
+        // Subir foto de perfil si cambió
         if (profilePictureFile != null) {
-          final userService = UserService(token: token);
           final profileResult =
               await userService.uploadProfilePicture(profilePictureFile!);
           if (profileResult['success'] != true) {
@@ -549,12 +552,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
           }
         }
 
+        // Subir fotos adicionales
         final uploadResult = await userService.uploadPhotos(selectedPhotos);
         if (uploadResult['success'] == true) {
           await authProvider.refreshUser();
-          setState(() {
-            isLoading = false;
-          });
+          setState(() => isLoading = false);
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -566,7 +568,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 uploadResult['message'] ?? tr("error_uploading_photos");
           });
         }
-      } else {
+      }
+      // 3) Flujo de registro normal (email + contraseña)
+      else {
         print(
             "Enviando => age: $age, height: $height, weight: $weight, gymStage: $gymStage");
         final result = await authProvider.register(
@@ -578,7 +582,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           gender: gender,
           seeking: seeking,
           relationshipGoal: relationshipGoal,
-          age: age, // Añadimos la edad
+          age: age,
           height: height,
           weight: weight,
           squatWeight: squatWeight,
@@ -589,7 +593,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           longitude: location.isEmpty ? null : userLongitude,
         );
 
-        // Actualizar field errors desde el provider
+        // Actualizar errores de campos
         setState(() {
           fieldErrors = Map.from(authProvider.fieldErrors);
         });
@@ -610,12 +614,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 return;
               }
             }
-
             final uploadResult = await userService.uploadPhotos(selectedPhotos);
             if (uploadResult['success'] == true) {
-              setState(() {
-                isLoading = false;
-              });
+              setState(() => isLoading = false);
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -634,19 +635,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
             });
           }
         } else {
+          // Mostrar diálogo con error de registro
           setState(() {
             isLoading = false;
             errorMessage = result['message'] ?? tr("error_register");
-
-            // Si hay errores de campo específicos, actualizarlos desde el resultado
-            if (result.containsKey('fieldErrors')) {
-              result['fieldErrors'].forEach((key, value) {
-                fieldErrors[key] = value.toString();
-              });
-            }
           });
-
-          // Mostrar diálogo de error con los detalles específicos
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
@@ -654,7 +647,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   style: const TextStyle(color: Colors.red)),
               content: SingleChildScrollView(
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(errorMessage),
@@ -663,11 +655,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       Text(tr("field_specific_errors"),
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
-                      ...fieldErrors.entries.map((entry) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Text(
-                                "• ${_getFieldDisplayName(entry.key)}: ${entry.value}"),
-                          )),
+                      ...fieldErrors.entries.map((entry) => Text(
+                          "• ${_getFieldDisplayName(entry.key)}: ${entry.value}")),
                     ],
                   ],
                 ),
@@ -683,11 +672,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
       }
     } catch (e) {
+      // Capturar errores inesperados
       setState(() {
         isLoading = false;
         errorMessage = tr("unexpected_error") + ": $e";
       });
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMessage),
@@ -1083,6 +1072,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           TextFormField(
             style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration("Username", fieldName: 'username'),
+            inputFormatters: [
+              FilteringTextInputFormatter.deny(RegExp(r'\s')),
+            ],
             onChanged: (value) {
               setState(() {
                 username = value;

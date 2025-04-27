@@ -201,7 +201,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             // Biografía
             if (user.biography != null && user.biography!.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: 8.0),
+                padding: const EdgeInsets.only(top: 8.0, left: 24.0, right: 24.0),
                 child: Text(
                   user.biography!,
                   style: const TextStyle(fontSize: 16, color: Colors.white70),

@@ -25,6 +25,31 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   String errorMessage = '';
   User? user;
 
+  // Mapas que convierten el texto del API a claves para tr(...)
+  static const Map<String, String> _genderKeyMap = {
+    'Masculino': 'male',
+    'Femenino': 'female',
+    'No Binario': 'non_binary',
+    'Prefiero no decirlo': 'prefer_not_to_say',
+    'Otro': 'other',
+    'Pendiente': 'pending',
+  };
+  static const Map<String, String> _fitnessGoalKeyMap = {
+    'Volumen': 'volume',
+    'Definición': 'definition',
+    'Mantenimiento': 'maintenance',
+    'Otro': 'other',
+    'Pendiente': 'pending',
+  };
+  static const Map<String, String> _relationshipGoalKeyMap = {
+    'Amistad': 'friendship',
+    'Citas': 'casual',
+    'Relación seria': 'relationship',
+    'Casual': 'casual',
+    'Otro': 'other',
+    'Pendiente': 'pending',
+  };
+
   @override
   void initState() {
     super.initState();
@@ -181,68 +206,43 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     if (result['success'] == true) Navigator.pop(context);
   }
 
-  Widget _buildInfoBox({
+  Widget _buildOptionBox({
+    required IconData icon,
     required String title,
     required String content,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.white),
+        color: Colors.black.withOpacity(0.3),
+        border: Border.all(color: Colors.white24),
         borderRadius: BorderRadius.circular(8),
       ),
-      width: double.infinity,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text(title,
+          Icon(icon, color: Colors.white70),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              title,
               style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text(content,
-              style: const TextStyle(color: Colors.white70, fontSize: 16)),
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Text(
+            content,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 16,
+            ),
+          ),
         ],
       ),
     );
-  }
-
-  // ———— MAPPING INTERNO → DISPLAY ————
-
-  static Map<String, String> _mapFor(String type) {
-    if (type == 'fitness') {
-      return {
-        'General': tr('general_option'),
-        'Definición': tr('definition_option'),
-        'Volumen': tr('volume_option'),
-        'Mantenimiento': tr('maintenance_option'),
-      };
-    } else if (type == 'relationship') {
-      return {
-        'Amistad': tr('friendship_option'),
-        'Citas': tr('dating_option'),
-        'Relación seria': tr('serious_relationship_option'),
-        'Casual': tr('casual_option'),
-        'No estoy seguro': tr('not_sure_option'),
-      };
-    } else if (type == 'gender') {
-      return {
-        'Masculino': tr('male_option'),
-        'Femenino': tr('female_option'),
-        'No Binario': tr('non_binary_option'),
-        'Prefiero no decirlo': tr('prefer_not_to_say_option'),
-        'Otro': tr('other_gender_option'),
-      };
-    }
-    return {};
-  }
-
-  String _displayFor(String? internal, String type) {
-    if (internal == null || internal.isEmpty) return tr('not_specified');
-    final map = _mapFor(type);
-    return map[internal] ?? internal;
   }
 
   @override
@@ -281,11 +281,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Widget _buildProfileContent() {
     // Muestras básicos de levantamientos
-    final basicsContent = [
-      "${tr('squat')}: ${user!.squatWeight != null ? '${user!.squatWeight} kg' : tr('not_defined')}",
-      "${tr('bench_press')}: ${user!.benchPressWeight != null ? '${user!.benchPressWeight} kg' : tr('not_defined')}",
-      "${tr('deadlift')}: ${user!.deadliftWeight != null ? '${user!.deadliftWeight} kg' : tr('not_defined')}",
-    ].join('\n');
+    final basicsContent =
+        "${tr('squat')}: ${user!.squatWeight != null ? '${user!.squatWeight} kg' : tr('not_defined')}\n"
+        "${tr('bench_press')}: ${user!.benchPressWeight != null ? '${user!.benchPressWeight} kg' : tr('not_defined')}\n"
+        "${tr('deadlift')}: ${user!.deadliftWeight != null ? '${user!.deadliftWeight} kg' : tr('not_defined')}";
+
+    // Claves dinámicas para traducción
+    final genderKey = _genderKeyMap[user!.gender ?? 'Pendiente'] ?? 'pending';
+    final fitnessGoalKey =
+        _fitnessGoalKeyMap[user!.goal ?? 'Pendiente'] ?? 'pending';
+    final relationshipGoalKey =
+        _relationshipGoalKeyMap[user!.relationshipGoal ?? 'Pendiente'] ??
+            'pending';
 
     return DefaultTabController(
       length: 2,
@@ -342,39 +349,36 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               children: [
                 // ─── SOBRE MÍ ───
                 ListView(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(16),
+                  physics:
+                      const NeverScrollableScrollPhysics(), // desactiva el scroll
+                  shrinkWrap: true,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildInfoBox(
-                            title: tr('gender_display'),
-                            content: _displayFor(user!.gender, 'gender'),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _buildInfoBox(
-                            title: tr('goal_title'),
-                            content: _displayFor(user!.goal, 'fitness'),
-                          ),
-                        ),
-                      ],
+                    _buildOptionBox(
+                      icon: Icons.person,
+                      title: tr('gender_display'),
+                      content: tr('gender.$genderKey'),
                     ),
-                    const SizedBox(height: 16),
-                    _buildInfoBox(
+                    _buildOptionBox(
+                      icon: Icons.track_changes,
+                      title: tr('goal_title'),
+                      content: tr('fitness_goal.$fitnessGoalKey'),
+                    ),
+                    _buildOptionBox(
+                      icon: Icons.chat_bubble_outline,
                       title: tr('what_are_you_looking_for'),
-                      content:
-                          _displayFor(user!.relationshipGoal, 'relationship'),
+                      content: tr('relationship_goal_map.$relationshipGoalKey'),
                     ),
-                    _buildInfoBox(
+                    _buildOptionBox(
+                      icon: Icons.place,
                       title: tr('location'),
-                      content: (user!.city?.isNotEmpty ?? false)
+                      content: (user!.city != null && user!.city!.isNotEmpty)
                           ? '${user!.city}, ${user!.country}'
                           : tr("location_not_defined"),
                     ),
-                    _buildInfoBox(
-                      title: tr("basic_lifts_profile"),
+                    _buildOptionBox(
+                      icon: Icons.fitness_center,
+                      title: tr('basic_lifts_profile'),
                       content: basicsContent,
                     ),
                   ],

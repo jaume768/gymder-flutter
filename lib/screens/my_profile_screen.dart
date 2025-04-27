@@ -226,6 +226,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                   // === SOBRE MÍ ===
                   ListView(
                     padding: const EdgeInsets.all(16),
+                    physics: const NeverScrollableScrollPhysics(), // desactiva el scroll
+                    shrinkWrap: true,
                     children: [
                       _buildOptionBox(
                         icon: Icons.person,

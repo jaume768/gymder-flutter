@@ -249,7 +249,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                       ),
                       _buildOptionBox(
                         icon: Icons.people,
-                        title: tr('what_are_you_looki<ng_for'),
+                        title: tr('what_are_you_looking_for'),
                         content:
                             tr('relationship_goal_map.$relationshipGoalKey'),
                       ),

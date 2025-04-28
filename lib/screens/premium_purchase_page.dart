@@ -100,6 +100,9 @@ class _PremiumPurchasePageState extends State<PremiumPurchasePage> {
   }
 
   Widget _buildPremiumContent() {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final user = authProvider.user;
+    final bool esPremium = user?.isPremium ?? false;
     return Stack(
       children: [
         // Imagen de fondo
@@ -147,7 +150,7 @@ class _PremiumPurchasePageState extends State<PremiumPurchasePage> {
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.2)),
+                    border: Border.all(color: esPremium ? Colors.amber : Colors.white.withOpacity(0.2), width: esPremium ? 3 : 1),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -168,24 +171,17 @@ class _PremiumPurchasePageState extends State<PremiumPurchasePage> {
                   ),
                 ),
                 const SizedBox(height: 40),
-                // Botón para comprar premium
+                // Botón para comprar o cancelar premium
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 50, vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                   ),
-                  onPressed: _buyPremium,
+                  onPressed: esPremium ? _confirmCancelSubscription : _buyPremium,
                   child: Text(
-                    "buy_premium".tr(),
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    esPremium ? tr("cancel_subscription") : tr("buy_premium"),
+                    style: const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -220,5 +216,77 @@ class _PremiumPurchasePageState extends State<PremiumPurchasePage> {
         style: const TextStyle(color: Colors.white),
       ),
     );
+  }
+
+  // Confirmar cancelación de Premium
+  Future<void> _confirmCancelSubscription() async {
+    final bool? result = await showDialog<bool>(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.grey[900],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.subscriptions, size: 48, color: Colors.redAccent),
+              const SizedBox(height: 12),
+              Text(
+                tr("confirm_cancel_subscription"),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                tr("confirm_cancel_subscription_message"),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70, fontSize: 16, height: 1.4),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.redAccent),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text(tr("no"), style: const TextStyle(color: Colors.white)),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text(tr("yes"), style: const TextStyle(color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (result == true) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = await authProvider.getToken();
+      if (token == null) return;
+      final userService = UserService(token: token);
+      final res = await userService.cancelPremium();
+      if (res['success'] == true) {
+        await authProvider.refreshUser();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? tr("subscription_cancelled"))));
+      }
+    }
   }
 }

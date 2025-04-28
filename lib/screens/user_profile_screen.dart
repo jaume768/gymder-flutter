@@ -3,6 +3,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:http/http.dart' as http;
 import 'package:easy_localization/easy_localization.dart';
@@ -207,7 +209,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Widget _buildOptionBox({
-    required IconData icon,
+    IconData? icon,
+    Widget? customIcon,
     required String title,
     required String content,
   }) {
@@ -221,7 +224,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       ),
       child: Row(
         children: [
-          Icon(icon, color: Colors.white70),
+          // si pasas customIcon lo usa, si no usa el Icon clásico
+          customIcon ?? Icon(icon, color: Colors.white70),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -360,12 +364,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       content: tr('gender.$genderKey'),
                     ),
                     _buildOptionBox(
-                      icon: Icons.track_changes,
+                      customIcon: SvgPicture.asset(
+                        'assets/images/muscle.svg',
+                        width: 24,
+                        height: 24,
+                        color: Colors.white70,
+                      ),
                       title: tr('goal_title'),
                       content: tr('fitness_goal.$fitnessGoalKey'),
                     ),
                     _buildOptionBox(
-                      icon: Icons.chat_bubble_outline,
+                      customIcon: Icon(Icons.people, color: Colors.white70),
                       title: tr('what_are_you_looking_for'),
                       content: tr('relationship_goal_map.$relationshipGoalKey'),
                     ),

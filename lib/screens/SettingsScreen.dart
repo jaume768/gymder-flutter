@@ -1,6 +1,7 @@
 // lib/screens/settingsScreen.dart
 import 'package:app/screens/splash_screen.dart';
 import 'package:app/screens/suscripciones_pagos_screen.dart';
+import 'package:app/screens/premium_purchase_page.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -39,7 +40,7 @@ class SettingsScreen extends StatelessWidget {
     } else if (option == tr("subscriptions_payments")) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const SuscripcionesPagosScreen()),
+        MaterialPageRoute(builder: (_) => const PremiumPurchasePage()),
       );
     } else if (option == tr("security")) {
       Navigator.push(
@@ -615,29 +616,6 @@ class PermisosAppScreen extends StatelessWidget {
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-/// PLACEHOLDER PARA PREMIUM PURCHASE
-class PremiumPurchasePage extends StatelessWidget {
-  const PremiumPurchasePage({Key? key}) : super(key: key);
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(tr("become_premium"),
-            style: const TextStyle(color: Colors.white)),
-        backgroundColor: Colors.black,
-      ),
-      backgroundColor: Colors.black,
-      body: Center(
-        child: Text(
-          tr("premium_screen_text"),
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.white),
-        ),
       ),
     );
   }

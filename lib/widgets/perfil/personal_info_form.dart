@@ -467,6 +467,8 @@ class PersonalInfoForm extends StatelessWidget {
 
             const SizedBox(height: 16),
 
+            Text(tr('biography_location'), style: sectionHeaderStyle),
+            const SizedBox(height: 8),
             // Biografía
             BiographyTextField(
               initialValue: biography,

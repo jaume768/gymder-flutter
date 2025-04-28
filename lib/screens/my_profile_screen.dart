@@ -1,6 +1,8 @@
 // lib/screens/MyProfileScreen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -52,7 +54,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
 
   /// Caja de opción con icono, título a la izquierda y valor a la derecha
   Widget _buildOptionBox({
-    required IconData icon,
+    IconData? icon,
+    Widget? customIcon,
     required String title,
     required String content,
   }) {
@@ -66,7 +69,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       ),
       child: Row(
         children: [
-          Icon(icon, color: Colors.white70),
+          customIcon ?? Icon(icon, color: Colors.white70),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -235,13 +238,18 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                         content: tr('gender.$genderKey'),
                       ),
                       _buildOptionBox(
-                        icon: Icons.track_changes,
+                        customIcon: SvgPicture.asset(
+                          'assets/images/muscle.svg',
+                          width: 24,
+                          height: 24,
+                          color: Colors.white70,
+                        ),
                         title: tr('goal_title'),
                         content: tr('fitness_goal.$fitnessGoalKey'),
                       ),
                       _buildOptionBox(
-                        icon: Icons.chat_bubble_outline,
-                        title: tr('what_are_you_looking_for'),
+                        icon: Icons.people,
+                        title: tr('what_are_you_looki<ng_for'),
                         content:
                             tr('relationship_goal_map.$relationshipGoalKey'),
                       ),

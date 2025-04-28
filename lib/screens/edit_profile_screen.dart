@@ -573,7 +573,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 _checkChanges();
               },
             ),
-            Text(tr('biography_location'), style: sectionHeaderStyle),
+            Text(tr('location_edit'), style: sectionHeaderStyle),
             const SizedBox(height: 8),
             TextFormField(
               controller: _locationController,

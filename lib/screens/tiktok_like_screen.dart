@@ -1885,7 +1885,7 @@ class _FilterModalContentState extends State<FilterModalContent> {
                 values: benchRange,
                 min: 0,
                 max: _maxBench,
-                divisions: (_maxBench ~/ 5),
+                divisions: (100),
                 onChanged: (v) => setState(() => benchRange = v),
               ),
               _buildRangeSlider(

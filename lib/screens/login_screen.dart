@@ -95,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     return Scaffold(
-      backgroundColor: const Color.fromRGBO(34, 34, 34, 1),
+      backgroundColor: Colors.black,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -105,9 +105,9 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 Image.asset(
                   'assets/images/logo.png',
-                  height: 220,
+                  height: 270,
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 20),
                 Text(
                   "login_title".tr(),
                   style: const TextStyle(

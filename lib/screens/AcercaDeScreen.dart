@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'terms_conditions_screen.dart';
@@ -69,27 +70,19 @@ class _AcercaDeScreenState extends State<AcercaDeScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Center(
+                  const Center(
                     child: Text(
-                      'GYMswipe',
-                      style: const TextStyle(
+                      'GymSwipe',
+                      style: TextStyle(
                         color: Colors.white,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  Center(
-                    child: Text(
-                      tr("version"),
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
                   const SizedBox(height: 30),
-                  _buildSection(tr("app_description"), tr("app_description_text")),
+                  _buildSection(
+                      tr("app_description"), tr("app_description_text")),
                   const SizedBox(height: 20),
                   _buildSectionTitle(tr("legal_information")),
                   _buildClickableItem(
@@ -136,20 +129,19 @@ class _AcercaDeScreenState extends State<AcercaDeScreen> {
                   _buildSectionTitle(tr("social_media")),
                   _buildClickableItem(
                     'Instagram',
-                    Icons.camera_alt,
-                    () {
-                      _launchURL('https://instagram.com/gymswipe');
-                    },
+                    FontAwesomeIcons.instagram,
+                        () => _launchURL('https://instagram.com/gymswipe_official'),
                   ),
                   _buildClickableItem(
                     'TikTok',
-                    Icons.chat,
-                    () => _launchURL('https://tiktok.com/gymswipe'),
+                    FontAwesomeIcons.tiktok,
+                        () => _launchURL('https://www.tiktok.com/@gymswipe'),
                   ),
                   const SizedBox(height: 30),
                   Center(
                     child: Text(
-                      '© ${DateTime.now().year} GYMswipe - ' + tr("all_rights_reserved"),
+                      '© ${DateTime.now().year} GYMswipe - ' +
+                          tr("all_rights_reserved"),
                       style: const TextStyle(
                         color: Colors.white54,
                         fontSize: 14,
@@ -202,14 +194,15 @@ class _AcercaDeScreenState extends State<AcercaDeScreen> {
     );
   }
 
-  Widget _buildClickableItem(String text, IconData icon, VoidCallback onTap) {
+  Widget _buildClickableItem(
+      String text, IconData iconData, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
           children: [
-            Icon(icon, color: Colors.blueAccent, size: 24),
+            FaIcon(iconData, color: Colors.blueAccent, size: 24),
             const SizedBox(width: 16),
             Text(
               text,
@@ -219,7 +212,8 @@ class _AcercaDeScreenState extends State<AcercaDeScreen> {
               ),
             ),
             const Spacer(),
-            const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 16),
+            const Icon(Icons.arrow_forward_ios,
+                color: Colors.white54, size: 16),
           ],
         ),
       ),

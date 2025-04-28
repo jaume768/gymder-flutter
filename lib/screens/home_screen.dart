@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -263,42 +264,70 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        ListTile(
-                          leading: const Icon(Icons.flash_on,
-                              color: Colors.blueAccent),
-                          title: Text(
-                            tr('buy_more_quick_likes'),
-                            style: const TextStyle(color: Colors.white),
-                          ),
+                        InkWell(
                           onTap: () {
                             Navigator.pop(context);
                             _buyTopLike();
                           },
-                        ),
-                        ListTile(
-                          leading: const Icon(Icons.thumb_up_alt,
-                              color: Colors.blueAccent),
-                          title: Text(
-                            tr('use_quick_like'),
-                            style: const TextStyle(color: Colors.white),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: Colors.black,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Row(
+                              children: [
+                                Icon(Icons.credit_card, color: Colors.white, size: 24),
+                                const SizedBox(width: 12),
+                                Text(
+                                  tr('buy_more_quick_likes'),
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 16),
+                                ),
+                              ],
+                            ),
                           ),
+                        ),
+                        const SizedBox(height: 8),
+                        InkWell(
                           onTap: () async {
                             Navigator.pop(context);
                             await _tikTokKey.currentState?.useSuperLike();
                           },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: Colors.blueAccent,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Row(
+                              children: [
+                                SvgPicture.asset(
+                                  'assets/images/rayo.svg',
+                                  width: 34,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  tr('use_quick_like'),
+                                  style: TextStyle(
+                                      color: Colors.white, fontSize: 16),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 16),
-                        OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.white38),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30)),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
+
+                        TextButton(
                           onPressed: () => Navigator.pop(context),
                           child: Text(
                             tr('cancel'),
-                            style: const TextStyle(color: Colors.white70),
+                            style: const TextStyle(color: Colors.white70, fontSize: 16),
                           ),
                         ),
                       ],

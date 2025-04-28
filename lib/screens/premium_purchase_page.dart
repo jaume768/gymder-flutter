@@ -152,12 +152,10 @@ class _PremiumPurchasePageState extends State<PremiumPurchasePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        "premium_screen_text".tr(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                      Center(
+                        child: Image.asset(
+                          'assets/images/gymswipe_premium.png',
+                          width: 350,
                         ),
                       ),
                       const Divider(color: Colors.white70),

@@ -231,7 +231,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             return false; // Si el código promocional no es válido, no continuar
           }
         }
-        
+
         // Luego validar el email y la contraseña
         if (email.isEmpty ||
             password.isEmpty ||
@@ -612,7 +612,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           gymStage: gymStage,
           latitude: location.isEmpty ? null : userLatitude,
           longitude: location.isEmpty ? null : userLongitude,
-          promoCode: isValidPromoCode ? promoCode : null, // Incluir código promocional si es válido
+          promoCode: isValidPromoCode
+              ? promoCode
+              : null, // Incluir código promocional si es válido
         );
 
         // Actualizar errores de campos
@@ -818,7 +820,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // Método para validar el código promocional
   Future<void> _validatePromoCode(String code) async {
     if (code.isEmpty) return;
-    
+
     setState(() {
       isValidatingPromoCode = true;
       fieldErrors.remove('promoCode');
@@ -829,11 +831,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'https://gymder-api-production.up.railway.app/api/promo-codes/validate/$code');
       final response = await http.get(url);
       final data = jsonDecode(response.body);
-      
+
       setState(() {
         isValidatingPromoCode = false;
       });
-      
+
       if (response.statusCode == 200 && data['valid'] == true) {
         setState(() {
           isValidPromoCode = true;
@@ -848,7 +850,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       } else {
         setState(() {
           isValidPromoCode = false;
-          fieldErrors['promoCode'] = data['message'] ?? tr("invalid_promo_code");
+          fieldErrors['promoCode'] =
+              data['message'] ?? tr("invalid_promo_code");
           errorMessage = data['message'] ?? tr("invalid_promo_code");
         });
       }
@@ -1033,14 +1036,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(Colors.white70),
                       ),
                     )
                   : isValidPromoCode
                       ? const Icon(Icons.check_circle, color: Colors.green)
                       : promoCode.isNotEmpty
                           ? IconButton(
-                              icon: const Icon(Icons.check, color: Colors.white),
+                              icon:
+                                  const Icon(Icons.check, color: Colors.white),
                               onPressed: () => _validatePromoCode(promoCode),
                             )
                           : null,
@@ -1242,8 +1247,49 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 40),
             TextFormField(
               style: const TextStyle(color: Colors.white),
-              decoration: _inputDecoration(tr("promo_code"), fieldName: 'promoCode'),
-              onChanged: (value) => promoCode = value,
+              decoration: InputDecoration(
+                labelText: tr("promo_code") + " (" + tr("optional") + ")",
+                labelStyle: const TextStyle(color: Colors.white70),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Colors.white54),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Colors.white54),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Colors.blueAccent),
+                ),
+                errorText: getFieldError('promoCode'),
+                suffixIcon: isValidatingPromoCode
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white70),
+                        ),
+                      )
+                    : isValidPromoCode
+                        ? const Icon(Icons.check_circle, color: Colors.green)
+                        : promoCode.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.check,
+                                    color: Colors.white),
+                                onPressed: () => _validatePromoCode(promoCode),
+                              )
+                            : null,
+              ),
+              onChanged: (value) {
+                setState(() {
+                  promoCode = value;
+                  isValidPromoCode = false;
+                  fieldErrors.remove('promoCode');
+                });
+              },
             ),
           ],
           if (errorMessage.isNotEmpty && _currentStep == 1)

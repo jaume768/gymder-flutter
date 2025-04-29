@@ -468,5 +468,10 @@
   "squat_required": "Inserisci il peso dello squat",
   "bench_required": "Inserisci il peso della panca",
   "deadlift_required": "Inserisci il peso dello stacco",
-  "confirm_report_button": "Conferma"
+  "confirm_report_button": "Conferma",
+  "error_validating_code": "Errore durante la convalida del codice promozionale",
+  "invalid_promo_code":    "Codice promozionale non valido",
+  "optional":              "Facoltativo",
+  "promo_code":            "Codice promozionale",
+  "promo_code_valid":      "Codice promozionale valido"
 }

@@ -468,5 +468,10 @@
   "squat_required": "Bitte geben Sie Ihr Kniebeuge-Gewicht ein",
   "bench_required": "Bitte geben Sie Ihr Bankdrück-Gewicht ein",
   "deadlift_required": "Bitte geben Sie Ihr Kreuzheben-Gewicht ein",
-  "confirm_report_button": "Bestätigen"
+  "confirm_report_button": "Bestätigen",
+  "error_validating_code": "Fehler bei der Validierung des Aktionscodes",
+  "invalid_promo_code":    "Ungültiger Aktionscode",
+  "optional":              "Optional",
+  "promo_code":            "Aktionscode",
+  "promo_code_valid":      "Aktionscode gültig"
 }

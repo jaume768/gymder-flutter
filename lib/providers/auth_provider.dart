@@ -78,6 +78,7 @@ class AuthProvider with ChangeNotifier {
 
   // Registrar usuario
   // Agregamos latitude/longitude opcionales para mandar ubicación
+  // Añadimos código promocional opcional
   Future<Map<String, dynamic>> register({
     required String email,
     required String password,
@@ -96,10 +97,11 @@ class AuthProvider with ChangeNotifier {
     double? deadliftWeight,
     double? latitude,
     double? longitude,
+    String? promoCode, // Añadido nuevo campo para código promocional
   }) async {
     _fieldErrors = {};
     try {
-      // Llamamos a AuthService.register y le pasamos la ubicación
+      // Llamamos a AuthService.register y le pasamos la ubicación y el código promocional
       final result = await _authService.register(
         email: email,
         password: password,
@@ -118,6 +120,7 @@ class AuthProvider with ChangeNotifier {
         deadliftWeight: deadliftWeight,
         latitude: latitude,
         longitude: longitude,
+        promoCode: promoCode, // Pasamos el código promocional
       );
 
       if (result['success'] == true) {

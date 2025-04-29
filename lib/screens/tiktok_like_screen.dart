@@ -650,7 +650,20 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
       if (result['matchedUser'] != null) {
         _mostrarModalMatch(context, auth.user!, user);
       }
-      // Y elimino el perfil de la lista
+
+      if (_isScrollLimitReached && userIndex == _currentPageIndex) {
+        String? nextProfileId;
+        if (_randomUsers.length > userIndex + 1) {
+          nextProfileId = _randomUsers[userIndex + 1].id;
+        } else if (userIndex > 0) {
+          nextProfileId = _randomUsers[userIndex - 1].id;
+        }
+
+        if (nextProfileId != null) {
+          final matchService = MatchService(token: token);
+          await matchService.updateScrollCount(nextProfileId);
+        }
+      }
       setState(() => _randomUsers.removeAt(userIndex));
     } else if (result['limitReached'] == true) {
       // Actualizo estado y muestro diálogo, pero NO lo quito de la lista

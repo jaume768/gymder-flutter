@@ -51,6 +51,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // Campos de registro
   String email = '', password = '', username = '';
   String firstName = '', lastName = '';
+  String promoCode = ''; // Nuevo campo para código promocional
+  bool isValidatingPromoCode = false;
+  bool isValidPromoCode = false;
   DateTime? birthDate;
   int? age;
   String gender = '';
@@ -199,7 +202,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await _sendVerificationEmail();
     }
 
-    if (!_validateCurrentStep()) return;
+    if (!await _validateCurrentStep()) return;
 
     if (_currentStep < _totalSteps - 1) {
       setState(() {
@@ -211,7 +214,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  bool _validateCurrentStep() {
+  Future<bool> _validateCurrentStep() async {
     setState(() {
       errorMessage = '';
       fieldErrors.clear();
@@ -220,7 +223,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
     // manual index mapping if fromGoogle: originalIndex = s + 2
     int idx = widget.fromGoogle ? s + 2 : s;
     switch (idx) {
-      case 0: // email + pw
+      case 0: // email + pw y código promocional
+        // Primero validar el código promocional si fue ingresado
+        if (promoCode.isNotEmpty && !isValidPromoCode) {
+          await _validatePromoCode(promoCode);
+          if (!isValidPromoCode) {
+            return false; // Si el código promocional no es válido, no continuar
+          }
+        }
+        
+        // Luego validar el email y la contraseña
         if (email.isEmpty ||
             password.isEmpty ||
             !acceptedTerms ||
@@ -437,7 +449,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _submitRegister() async {
     // Validar la etapa actual antes de continuar
-    if (!_validateCurrentStep()) return;
+    if (!await _validateCurrentStep()) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     setState(() {
@@ -591,6 +603,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           gymStage: gymStage,
           latitude: location.isEmpty ? null : userLatitude,
           longitude: location.isEmpty ? null : userLongitude,
+          promoCode: isValidPromoCode ? promoCode : null, // Incluir código promocional si es válido
         );
 
         // Actualizar errores de campos
@@ -793,6 +806,52 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  // Método para validar el código promocional
+  Future<void> _validatePromoCode(String code) async {
+    if (code.isEmpty) return;
+    
+    setState(() {
+      isValidatingPromoCode = true;
+      fieldErrors.remove('promoCode');
+    });
+
+    try {
+      final url = Uri.parse(
+          'https://gymder-api-production.up.railway.app/api/promo-codes/validate/$code');
+      final response = await http.get(url);
+      final data = jsonDecode(response.body);
+      
+      setState(() {
+        isValidatingPromoCode = false;
+      });
+      
+      if (response.statusCode == 200 && data['valid'] == true) {
+        setState(() {
+          isValidPromoCode = true;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(tr("promo_code_valid")),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        });
+      } else {
+        setState(() {
+          isValidPromoCode = false;
+          fieldErrors['promoCode'] = data['message'] ?? tr("invalid_promo_code");
+          errorMessage = data['message'] ?? tr("invalid_promo_code");
+        });
+      }
+    } catch (e) {
+      setState(() {
+        isValidatingPromoCode = false;
+        fieldErrors['promoCode'] = tr("error_validating_code");
+        errorMessage = tr("error_validating_code");
+      });
+    }
+  }
+
   Future<void> _previousStep() async {
     if (_currentStep > 0) {
       setState(() {
@@ -938,6 +997,52 @@ class _RegisterScreenState extends State<RegisterScreen> {
             decoration: _inputDecoration(tr("password"), fieldName: 'password'),
             obscureText: true,
             onChanged: (value) => password = value,
+          ),
+          const SizedBox(height: 20),
+          // Campo de código promocional
+          TextFormField(
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              labelText: tr("promo_code") + " (" + tr("optional") + ")",
+              labelStyle: const TextStyle(color: Colors.white70),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Colors.white54),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Colors.white54),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Colors.blueAccent),
+              ),
+              errorText: getFieldError('promoCode'),
+              suffixIcon: isValidatingPromoCode
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
+                      ),
+                    )
+                  : isValidPromoCode
+                      ? const Icon(Icons.check_circle, color: Colors.green)
+                      : promoCode.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.check, color: Colors.white),
+                              onPressed: () => _validatePromoCode(promoCode),
+                            )
+                          : null,
+            ),
+            onChanged: (value) {
+              setState(() {
+                promoCode = value;
+                isValidPromoCode = false;
+                fieldErrors.remove('promoCode');
+              });
+            },
           ),
           const SizedBox(height: 30),
           Row(

@@ -420,5 +420,10 @@
   "squat_required": "Enter your squat weight",
   "bench_required": "Enter your bench press weight",
   "deadlift_required": "Enter your deadlift weight",
-  "confirm_report_button": "Confirm"
+  "confirm_report_button": "Confirm",
+  "error_validating_code": "Error validating promotional code",
+  "invalid_promo_code": "Invalid promotional code",
+  "optional": "Optional",
+  "promo_code": "Promotional Code",
+  "promo_code_valid": "Promotional code valid"
 }

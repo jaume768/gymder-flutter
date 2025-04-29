@@ -29,6 +29,7 @@ class AuthService {
     double? squatWeight,
     double? benchPressWeight,
     double? deadliftWeight,
+    String? promoCode, // Nuevo campo para código promocional
   }) async {
     final url = Uri.parse('$baseUrl/register');
 
@@ -48,6 +49,7 @@ class AuthService {
       'squatWeight': squatWeight,
       'benchPressWeight': benchPressWeight,
       'deadliftWeight': deadliftWeight,
+      if (promoCode != null && promoCode.isNotEmpty) 'promoCode': promoCode,
     };
 
     if (latitude != null && longitude != null) {

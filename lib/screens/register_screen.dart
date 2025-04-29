@@ -258,6 +258,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
         break;
       case 2: // username + names
+        // Añadido: validar código promocional en flujo Google
+        if (widget.fromGoogle && promoCode.isNotEmpty && !isValidPromoCode) {
+          await _validatePromoCode(promoCode);
+          if (!isValidPromoCode) {
+            fieldErrors['promoCode'] = tr("invalid_promo_code");
+            errorMessage = tr("invalid_promo_code");
+            return false;
+          }
+        }
         if (username.isEmpty || firstName.isEmpty || lastName.isEmpty) {
           if (username.isEmpty)
             fieldErrors['username'] = tr("username_required");
@@ -1229,6 +1238,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 fieldName: 'lastName'),
             onChanged: (value) => lastName = value,
           ),
+          if (widget.fromGoogle) ...[
+            const SizedBox(height: 40),
+            TextFormField(
+              style: const TextStyle(color: Colors.white),
+              decoration: _inputDecoration(tr("promo_code"), fieldName: 'promoCode'),
+              onChanged: (value) => promoCode = value,
+            ),
+          ],
           if (errorMessage.isNotEmpty && _currentStep == 1)
             Padding(
               padding: const EdgeInsets.only(top: 16),

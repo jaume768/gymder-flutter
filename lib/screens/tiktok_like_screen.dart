@@ -170,120 +170,227 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
     if (_isProcessing) return;
     setState(() => _isProcessing = true);
 
-    // 1) Preguntar confirmación con showModalBottomSheet
-    final confirmed = await showModalBottomSheet<bool>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      barrierColor: Colors.black54,
-      isScrollControlled: false,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
+    try {
+      // 1) Confirmación
+      final confirmed = await showModalBottomSheet<bool>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        barrierColor: Colors.black54,
+        shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              tr("confirm_quicklike_title"),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+        builder: (_) => Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
-            const SizedBox(height: 12),
-            Text(
-              tr("confirm_quicklike_message"),
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70, fontSize: 16),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.white38),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: Text(
-                      tr("cancel"),
-                      style: const TextStyle(color: Colors.white70),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(tr("confirm_quicklike_title"),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              Text(tr("confirm_quicklike_message"),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70, fontSize: 16)),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.white38),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: Text(tr("cancel"),
+                          style: const TextStyle(color: Colors.white70)),
                     ),
                   ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: Text(tr("yes"),
+                          style: const TextStyle(color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      if (confirmed != true) return;
+
+      // 2) Llamada al servicio
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final token = await auth.getToken();
+      if (token == null) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(tr("token_not_found"))));
+        return;
+      }
+      final service = UserService(token: token);
+      final target = _randomUsers[_currentPageIndex];
+      final res = await service.superLikeUser(target.id);
+
+      if (res['success'] == true) {
+        await auth.refreshUser();
+
+        // 3) Procesar posible match
+        final matched = res['matchedUser'] as Map<String, dynamic>?;
+        if (matched != null) {
+          // mostramos modal de match
+          await showModalBottomSheet(
+            context: context,
+            isDismissible: false,
+            enableDrag: false,
+            backgroundColor: Colors.transparent,
+            barrierColor: Colors.black54,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            builder: (_) => Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(tr("match_title"),
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+                  Text(
+                    tr("match_message",
+                        namedArgs: {"username": matched['username'] as String}),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white70, fontSize: 16),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildMatchAvatar(auth.user?.profilePicture?.url,
+                          radius: 50),
+                      const SizedBox(width: 20),
+                      _buildMatchAvatar(
+                        (matched['profilePicture']
+                            as Map<String, dynamic>)['url'] as String?,
+                        radius: 50,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blueAccent,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 30, vertical: 15),
                     ),
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: Text(
-                      tr("yes"),
-                      style: const TextStyle(color: Colors.white),
-                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ChatScreen(
+                            currentUserId: auth.user!.id,
+                            matchedUserId: matched['id'] as String,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Text(tr("send_message"),
+                        style: const TextStyle(color: Colors.white)),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 10),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.white38),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 30, vertical: 15),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(tr("continue_browsing"),
+                        style: const TextStyle(color: Colors.white70)),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
-      ),
-    );
-    if (confirmed != true) {
-      setState(() => _isProcessing = false);
-      return;
-    }
+          );
+        } else {
+          // 4) Si no hubo match, mostramos snackbar
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(tr("superlike_sent"))),
+          );
+        }
 
-    // 2) Llamar al servicio
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final token = await auth.getToken();
-    if (token == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(tr("token_not_found"))));
-      setState(() => _isProcessing = false);
-      return;
-    }
-    final service = UserService(token: token);
-    final target = _randomUsers[_currentPageIndex];
-    final res = await service.superLikeUser(target.id);
+        if (_isScrollLimitReached) {
+          // Averigua el id de B
+          String? nextProfileId;
+          if (_randomUsers.length > _currentPageIndex + 1) {
+            nextProfileId = _randomUsers[_currentPageIndex + 1].id;
+          } else if (_currentPageIndex > 0) {
+            nextProfileId = _randomUsers[_currentPageIndex - 1].id;
+          }
+          if (nextProfileId != null) {
+            final matchService = MatchService(token: token);
+            await matchService.updateScrollCount(nextProfileId);
+          }
+        }
 
-    // 3) Procesar respuesta
-    if (res['success'] == true) {
-      await auth.refreshUser();
-      // si el backend ya considera match directo, te lo devuelve en res['matchedUser']
-      if (res['matchedUser'] != null) {
-        _mostrarModalMatch(context, auth.user!, target);
+        // 5) Quitamos el perfil de la lista y navegamos al siguiente
+        setState(() => _randomUsers.removeAt(_currentPageIndex));
+        if (_randomUsers.isNotEmpty) {
+          final next = _currentPageIndex.clamp(0, _randomUsers.length - 1);
+          _verticalPageController.animateToPage(
+            next,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeIn,
+          );
+        }
       } else {
+        // error del backend
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(tr("superlike_sent"))),
+          SnackBar(content: Text(res['message'] ?? tr("error"))),
         );
       }
-      // quitar perfil de la lista (igual que un like normal)
-      setState(() => _randomUsers.removeAt(_currentPageIndex));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res['message'] ?? tr("error"))),
-      );
+    } catch (e) {
+      print("Error en useSuperLike: $e");
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(tr("error"))));
+    } finally {
+      setState(() => _isProcessing = false);
     }
-
-    setState(() => _isProcessing = false);
   }
 
   Future<void> _checkLikeLimitStatus() async {

@@ -166,21 +166,58 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  void _showProgressDialog() {
-    showDialog(
+  Future<void> _showCenteredLoadingDialog() {
+    return showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            Text('Registrando, por favor espera...'),
-            SizedBox(height: 20),
-            LinearProgressIndicator(),
-          ],
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            borderRadius: BorderRadius.all(Radius.circular(16)),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(
+                width: 48,
+                height: 48,
+                child: CircularProgressIndicator(
+                  strokeWidth: 4,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blueAccent),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                tr("registering"), // “Registrando tu cuenta…”
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                tr("please_wait"), // “Esto puede tardar unos segundos”
+                style: const TextStyle(color: Colors.white70),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  void _showProgressDialog() {
+    _showCenteredLoadingDialog();
   }
 
   Future<bool> _checkEmailAvailability(String e) async {

@@ -141,7 +141,7 @@ class WelcomeScreen extends StatelessWidget {
                     tr('GymSwipe'), // asegúrate de tener esta clave en tus archivos .json
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 25,
+                      fontSize: 35,
                       fontWeight: FontWeight.bold,
                     ),
                     textAlign: TextAlign.center,
@@ -156,7 +156,7 @@ class WelcomeScreen extends StatelessWidget {
                     tr('banner_text'),
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
                     textAlign: TextAlign.center,

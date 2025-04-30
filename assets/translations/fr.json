@@ -427,6 +427,8 @@
   "optional":              "Facultatif",
   "promo_code":            "Code promotionnel",
   "promo_code_valid":      "Code promotionnel valide",
+  "registering": "Enregistrement de votre compte…",
+  "please_wait": "Cela peut prendre quelques secondes",
   "maintenance_option": "Maintenance",
   "friendship_option": "Amitié",
   "dating_option": "Rencontres",

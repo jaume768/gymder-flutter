@@ -424,6 +424,8 @@
   "error_validating_code": "Error validating promotional code",
   "invalid_promo_code": "Invalid promotional code",
   "optional": "Optional",
+  "registering": "Registering your account…",
+  "please_wait": "This may take a few seconds",
   "promo_code": "Promotional Code",
   "promo_code_valid": "Promotional code valid"
 }

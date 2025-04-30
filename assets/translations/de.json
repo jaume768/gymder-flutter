@@ -473,5 +473,7 @@
   "invalid_promo_code":    "Ungültiger Aktionscode",
   "optional":              "Optional",
   "promo_code":            "Aktionscode",
+  "registering": "Registriere dein Konto…",
+  "please_wait": "Das kann ein paar Sekunden dauern",
   "promo_code_valid":      "Aktionscode gültig"
 }

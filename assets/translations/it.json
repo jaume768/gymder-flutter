@@ -473,5 +473,7 @@
   "invalid_promo_code":    "Codice promozionale non valido",
   "optional":              "Facoltativo",
   "promo_code":            "Codice promozionale",
-  "promo_code_valid":      "Codice promozionale valido"
+  "promo_code_valid":      "Codice promozionale valido",
+  "registering": "Registrazione in corso…",
+  "please_wait": "Potrebbe richiedere qualche secondo"
 }

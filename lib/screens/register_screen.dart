@@ -278,16 +278,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     // manual index mapping if fromGoogle: originalIndex = s + 2
     int idx = widget.fromGoogle ? s + 2 : s;
     switch (idx) {
-      case 0: // email + pw y código promocional
-        // Primero validar el código promocional si fue ingresado
-        if (promoCode.isNotEmpty && !isValidPromoCode) {
-          await _validatePromoCode(promoCode);
-          if (!isValidPromoCode) {
-            return false; // Si el código promocional no es válido, no continuar
-          }
-        }
-
-        // Luego validar el email y la contraseña
+      case 0: // email + pw
+        // Validar el email y la contraseña
         if (email.isEmpty ||
             password.isEmpty ||
             !acceptedTerms ||
@@ -313,15 +305,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
         break;
       case 2: // username + names
-        // Añadido: validar código promocional en flujo Google
-        if (widget.fromGoogle && promoCode.isNotEmpty && !isValidPromoCode) {
-          await _validatePromoCode(promoCode);
-          if (!isValidPromoCode) {
-            fieldErrors['promoCode'] = tr("invalid_promo_code");
-            errorMessage = tr("invalid_promo_code");
-            return false;
-          }
-        }
         if (username.isEmpty || firstName.isEmpty || lastName.isEmpty) {
           if (username.isEmpty)
             fieldErrors['username'] = tr("username_required");
@@ -1081,54 +1064,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             obscureText: true,
             onChanged: (value) => password = value,
           ),
-          const SizedBox(height: 20),
-          // Campo de código promocional
-          TextFormField(
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              labelText: tr("promo_code") + " (" + tr("optional") + ")",
-              labelStyle: const TextStyle(color: Colors.white70),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Colors.white54),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Colors.white54),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Colors.blueAccent),
-              ),
-              errorText: getFieldError('promoCode'),
-              suffixIcon: isValidatingPromoCode
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(Colors.white70),
-                      ),
-                    )
-                  : isValidPromoCode
-                      ? const Icon(Icons.check_circle, color: Colors.green)
-                      : promoCode.isNotEmpty
-                          ? IconButton(
-                              icon:
-                                  const Icon(Icons.check, color: Colors.white),
-                              onPressed: () => _validatePromoCode(promoCode),
-                            )
-                          : null,
-            ),
-            onChanged: (value) {
-              setState(() {
-                promoCode = value;
-                isValidPromoCode = false;
-                fieldErrors.remove('promoCode');
-              });
-            },
-          ),
+
           const SizedBox(height: 30),
           Row(
             children: [
@@ -1314,55 +1250,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 fieldName: 'lastName'),
             onChanged: (value) => lastName = value,
           ),
-          if (widget.fromGoogle) ...[
-            const SizedBox(height: 40),
-            TextFormField(
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: tr("promo_code") + " (" + tr("optional") + ")",
-                labelStyle: const TextStyle(color: Colors.white70),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Colors.white54),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Colors.white54),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Colors.blueAccent),
-                ),
-                errorText: getFieldError('promoCode'),
-                suffixIcon: isValidatingPromoCode
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white70),
-                        ),
-                      )
-                    : isValidPromoCode
-                        ? const Icon(Icons.check_circle, color: Colors.green)
-                        : promoCode.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.check,
-                                    color: Colors.white),
-                                onPressed: () => _validatePromoCode(promoCode),
-                              )
-                            : null,
-              ),
-              onChanged: (value) {
-                setState(() {
-                  promoCode = value;
-                  isValidPromoCode = false;
-                  fieldErrors.remove('promoCode');
-                });
-              },
-            ),
-          ],
+
           if (errorMessage.isNotEmpty && _currentStep == 1)
             Padding(
               padding: const EdgeInsets.only(top: 16),

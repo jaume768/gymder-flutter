@@ -596,4 +596,33 @@ class UserService {
       };
     }
   }
+  
+  // Método para aplicar código promocional
+  Future<Map<String, dynamic>> applyPromoCode(String code) async {
+    final url = Uri.parse('$baseUrl/users/promo-code/apply');
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'code': code}),
+    );
+
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return {
+        'success': true,
+        'message': data['message'] ?? 'Código promocional aplicado correctamente',
+        'topLikesGranted': data['topLikesGranted'],
+        'promoCode': data['promoCode'],
+      };
+    } else {
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Error al aplicar código promocional',
+        'usedCode': data['usedCode'], // Si ya se aplicó un código anteriormente
+      };
+    }
+  }
 }

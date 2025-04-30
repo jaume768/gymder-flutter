@@ -80,6 +80,7 @@ class User {
   final String? scrollLimitProfileId;
   final DateTime? scrollLimitReachedAt;
   final DateTime? likeLimitReachedAt;
+  final String? promoCode;
 
   User({
     required this.id,
@@ -115,6 +116,7 @@ class User {
     this.scrollLimitProfileId,
     this.scrollLimitReachedAt,
     this.likeLimitReachedAt,
+    this.promoCode,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -188,6 +190,7 @@ class User {
       likeLimitReachedAt: json['likeLimitReachedAt'] != null
           ? DateTime.parse(json['likeLimitReachedAt'])
           : null,
+      promoCode: json['promoCode'],
     );
   }
 }

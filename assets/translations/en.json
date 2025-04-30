@@ -343,6 +343,16 @@
   "privacy_contact_title": "11. Contact",
   "privacy_contact_content": "If you have questions about this Privacy Policy, contact us at privacy@gymswipe.app.",
   "must_accept_terms": "You must accept the terms and conditions to continue.",
+  "promo_code": "Promotional Code",
+  "enter_promo_code": "Please enter a promotional code",
+  "session_expired": "Session expired. Please login again",
+  "enter_promo_code_below": "Enter your promotional code below to get Quick Likes and more benefits",
+  "apply_code": "Apply Code",
+  "promo_code_applied": "Promotional Code Applied",
+  "promo_code_already_used": "You have already used a promotional code",
+  "about_promo_codes": "About Promotional Codes",
+  "promo_code_info": "Apply a promotional code to get Quick Likes and additional benefits to enhance your experience in the app.",
+  "promo_code_limitation": "Note: You can only use one promotional code per month. Use it wisely!",
   "and": "and",
   "location_edit": "Location",
   "version": "Version",
@@ -426,6 +436,5 @@
   "optional": "Optional",
   "registering": "Registering your account…",
   "please_wait": "This may take a few seconds",
-  "promo_code": "Promotional Code",
   "promo_code_valid": "Promotional code valid"
 }

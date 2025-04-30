@@ -162,15 +162,6 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
     });
   }
 
-  void _showScrollLimitDialogOnce() {
-    if (_hasShownScrollLimitDialog) return;
-    _hasShownScrollLimitDialog = true;
-    _showPremiumDialog(
-      tr("premium_function"),
-      tr("scroll_limit_message", args: [_remainingHours.toString()]),
-    );
-  }
-
   void _resetScrollLimitDialogFlag() {
     _hasShownScrollLimitDialog = false;
   }
@@ -523,14 +514,11 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
 
   // Mostrar diálogo cuando se alcanza el límite de scroll
   void _showScrollLimitDialog() {
-    if (_remainingHours <= 0) return;
-
-    final hours = _remainingHours;
-    final minutes = 0; // No tenemos minutos detallados en esta implementación
-
+    if (_hasShownScrollLimitDialog) return;
+    _hasShownScrollLimitDialog = true;
     _showPremiumDialog(
       tr("premium_function"),
-      tr("scroll_limit_message", args: [hours.toString()]),
+      tr("scroll_limit_message", args: [_remainingHours.toString()]),
     );
   }
 
@@ -1433,7 +1421,7 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
                         // Bloquear scroll hacia adelante si llegaste al límite
                         if (dy < 0 && _isScrollLimitReached) {
                           _verticalPageController.jumpToPage(currentPage);
-                          _showScrollLimitDialogOnce();
+                          _showScrollLimitDialog();
                           return true;
                         }
                         return false;
@@ -1463,7 +1451,8 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
                           return;
                         }
 
-                        if (!(newPage > previousPageIndex && _isScrollLimitReached)) {
+                        if (!(newPage > previousPageIndex &&
+                            _isScrollLimitReached)) {
                           _resetScrollLimitDialogFlag();
                         }
 

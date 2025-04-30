@@ -9,6 +9,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/user_service.dart';
+import 'PromoCodeScreen.dart';
 import 'login_screen.dart';
 import 'AcercaDeScreen.dart';
 
@@ -46,6 +47,11 @@ class SettingsScreen extends StatelessWidget {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const SeguridadScreen()),
+      );
+    } else if (option == tr("promo_code")) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const PromoCodeScreen()),
       );
     } else if (option == tr("app_permissions")) {
       Navigator.push(
@@ -162,6 +168,7 @@ class SettingsScreen extends StatelessWidget {
       {"title": tr("languages"), "icon": Icons.language},
       {"title": tr("subscriptions_payments"), "icon": Icons.payment},
       {"title": tr("security"), "icon": Icons.security},
+      {"title": tr("promo_code"), "icon": Icons.card_giftcard},
       {"title": tr("app_permissions"), "icon": Icons.apps},
       {"title": tr("about"), "icon": Icons.info},
       {"title": tr("logout"), "icon": Icons.logout},

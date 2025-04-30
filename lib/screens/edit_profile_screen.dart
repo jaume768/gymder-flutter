@@ -153,6 +153,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           benchPressWeight != originalBenchPressWeight ||
           deadliftWeight != originalDeadliftWeight ||
           locationUpdated ||
+          _imageFile != null ||
+          _photoOrderChanged ||
           seeking.length != originalSeeking.length ||
           !seeking.every(originalSeeking.contains));
     });
@@ -207,8 +209,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final picked = await _picker.pickImage(
         source: ImageSource.gallery, maxWidth: 800, maxHeight: 800);
     if (picked != null) {
-      setState(() => _imageFile = File(picked.path));
-      await _uploadProfilePicture();
+      setState(() {
+        _imageFile = File(picked.path);
+        _checkChanges(); // ¡marcamos que hay cambios!
+      });
     }
   }
 
@@ -316,6 +320,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final auth = Provider.of<AuthProvider>(context, listen: false);
       final token = await auth.getToken();
       if (token == null) throw Exception(tr('token_not_found_login'));
+
+      if (_imageFile != null) {
+        final resPic = await UserService(token: token)
+            .uploadProfilePicture(_imageFile!);
+        if (!resPic['success']) {
+          throw Exception(resPic['message'] 
+              ?? tr('error_uploading_profile_picture'));
+        }
+      }
 
       // 1) Actualizar username si cambió
       if (username != auth.user?.username) {

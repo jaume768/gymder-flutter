@@ -38,6 +38,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   double? squatWeight;
   double? benchPressWeight;
   double? deadliftWeight;
+  bool _registrationStarted = false;
 
   // Verificación de email
   String verificationCode = '';
@@ -163,6 +164,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
         usernameCheckMessage = tr("connection_error");
       });
     }
+  }
+
+  void _showProgressDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Text('Registrando, por favor espera...'),
+            SizedBox(height: 20),
+            LinearProgressIndicator(),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<bool> _checkEmailAvailability(String e) async {
@@ -460,6 +478,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     // Validar la etapa actual antes de continuar
     if (!await _validateCurrentStep()) return;
 
+    setState(() => _registrationStarted = true);
+    _showProgressDialog();
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     setState(() {
       isLoading = true;
@@ -640,12 +661,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
             }
             final uploadResult = await userService.uploadPhotos(selectedPhotos);
             if (uploadResult['success'] == true) {
+              if (_registrationStarted) {
+                Navigator.pop(context);
+                _registrationStarted = false;
+              }
               setState(() => isLoading = false);
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (_) => const HomeScreen()),
               );
             } else {
+              if (_registrationStarted) {
+                Navigator.pop(context);
+                _registrationStarted = false;
+              }
               setState(() {
                 isLoading = false;
                 errorMessage =
@@ -653,6 +682,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               });
             }
           } else {
+            if (_registrationStarted) {
+              Navigator.pop(context);
+              _registrationStarted = false;
+            }
             setState(() {
               isLoading = false;
               errorMessage = tr("no_token_received_after_register");
@@ -660,6 +693,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
           }
         } else {
           // Mostrar diálogo con error de registro
+          if (_registrationStarted) {
+            Navigator.pop(context);
+            _registrationStarted = false;
+          }
           setState(() {
             isLoading = false;
             errorMessage = result['message'] ?? tr("error_register");
@@ -941,7 +978,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Widget _buildBottomBar() {
     final isVerifyStep = !widget.fromGoogle && _currentStep == 1;
-    final canGoBack = _currentStep > 0;
+    final canGoBack = _currentStep > 0 && !(_currentStep == _totalSteps - 1 && _registrationStarted);
     final canGoNext = _currentStep < _totalSteps - 1 && !isVerifyStep;
 
     return Container(
@@ -966,10 +1003,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ElevatedButton(
               onPressed: isLoading ? null : _submitRegister,
               style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
-              child: isLoading
-                  ? const CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.black))
-                  : Text(tr("finalize"),
+              child: Text(tr("finalize"),
                       style: const TextStyle(color: Colors.black)),
             ),
         ],

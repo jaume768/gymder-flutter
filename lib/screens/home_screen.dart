@@ -353,17 +353,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   right: -2,
                   top: -8,
                   child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.lightBlueAccent,
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.black),
+                      gradient: LinearGradient(
+                        colors: [
+                          Color(0xFF00C6FF),
+                          Color(0xFF0072FF),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                     ),
                     child: Text(
                       user.topLikeCount > 0 ? '${user.topLikeCount}' : '+',
                       style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 18,
+                        color: Colors.black,     // texto en blanco para buen contraste
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

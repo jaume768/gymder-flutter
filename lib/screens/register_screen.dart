@@ -1246,7 +1246,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           TextFormField(
             style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration(
-                tr("name_prompt").replaceAll('¿Cómo te llamas?', 'Apellido'),
+                tr("second_name_prompt").replaceAll('¿Cómo te llamas?', 'Apellido'),
                 fieldName: 'lastName'),
             onChanged: (value) => lastName = value,
           ),

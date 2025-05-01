@@ -347,6 +347,7 @@
   "image_validation_error": "Bildvalidierungsfehler",
   "cannot_proceed_with_explicit": "Registrierung kann mit explizitem Inhalt nicht fortgesetzt werden. Bitte wählen Sie andere Bilder.",
   "profile_picture_required": "Profilbild ist erforderlich",
+  "second_name_prompt": "Wie lautet Ihr zweiter Vorname?",
   "must_select_profile_picture": "Sie müssen ein Profilbild auswählen, um fortzufahren",
   "random": "Zufällig",
   "le_gustas_button": "Er mag dich ({count})",

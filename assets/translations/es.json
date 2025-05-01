@@ -66,6 +66,7 @@
   "verify_your_email": "Verifica tu correo",
   "enter_verification_code": "Ingresa el código enviado a tu correo",
   "verification_code": "Código de Verificación",
+  "second_name_prompt": "¿Cuál es tu segundo nombre?",
   "verify": "Verificar",
   "goal_title": "Objetivo",
   "invalid_code": "Código inválido",

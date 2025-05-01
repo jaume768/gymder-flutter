@@ -379,6 +379,7 @@
   "typing": "en train d’écrire...",
   "email_only": "Email",
   "username": "Nom d'utilisateur",
+  "second_name_prompt": "Quel est votre deuxième prénom ?",
   "first_name": "Prénom",
   "last_name": "Nom",
   "relationship_goal": "Objectif de relation",

@@ -172,68 +172,73 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
 
     try {
       // 1) Confirmación
-      final confirmed = await showModalBottomSheet<bool>(
+      final confirmed = await showDialog<bool>(
         context: context,
-        backgroundColor: Colors.transparent,
+        barrierDismissible: true,
         barrierColor: Colors.black54,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        builder: (_) => Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(tr("confirm_quicklike_title"),
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
-              Text(tr("confirm_quicklike_message"),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white70, fontSize: 16)),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.white38),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30)),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: Text(tr("cancel"),
-                          style: const TextStyle(color: Colors.white70)),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueAccent,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30)),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: () => Navigator.of(context).pop(true),
-                      child: Text(tr("yes"),
-                          style: const TextStyle(color: Colors.white)),
-                    ),
-                  ),
-                ],
+        builder: (ctx) => Dialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 40, vertical: 80),
+          backgroundColor: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
               ),
-            ],
+              borderRadius: BorderRadius.circular(20),
+            ),
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(tr("confirm_quicklike_title"),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                Text(tr("confirm_quicklike_message"),
+                    textAlign: TextAlign.center,
+                    style:
+                        const TextStyle(color: Colors.white70, fontSize: 16)),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.white38),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        child: Text(tr("cancel"),
+                            style: const TextStyle(color: Colors.white70)),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueAccent,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        child: Text(tr("yes"),
+                            style: const TextStyle(color: Colors.white)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -258,92 +263,94 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
         final matched = res['matchedUser'] as Map<String, dynamic>?;
         if (matched != null) {
           // mostramos modal de match
-          await showModalBottomSheet(
+          await showDialog(
             context: context,
-            isDismissible: false,
-            enableDrag: false,
-            backgroundColor: Colors.transparent,
-            barrierColor: Colors.black54,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            builder: (_) => Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+            barrierDismissible: false, // igual que tu `isDismissible: false`
+            barrierColor: Colors.black54, // tu color de fondo
+            builder: (_) => Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding:
+                  const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(tr("match_title"),
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 10),
-                  Text(
-                    tr("match_message",
-                        namedArgs: {"username": matched['username'] as String}),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white70, fontSize: 16),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildMatchAvatar(auth.user?.profilePicture?.url,
-                          radius: 50),
-                      const SizedBox(width: 20),
-                      _buildMatchAvatar(
-                        (matched['profilePicture']
-                            as Map<String, dynamic>)['url'] as String?,
-                        radius: 50,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30)),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 30, vertical: 15),
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(tr("match_title"),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                    Text(
+                      tr("match_message", namedArgs: {
+                        "username": matched['username'] as String
+                      }),
+                      textAlign: TextAlign.center,
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 16),
                     ),
-                    onPressed: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ChatScreen(
-                            currentUserId: auth.user!.id,
-                            matchedUserId: matched['id'] as String,
-                          ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildMatchAvatar(auth.user?.profilePicture?.url,
+                            radius: 50),
+                        const SizedBox(width: 20),
+                        _buildMatchAvatar(
+                          (matched['profilePicture']
+                              as Map<String, dynamic>)['url'] as String?,
+                          radius: 50,
                         ),
-                      );
-                    },
-                    child: Text(tr("send_message"),
-                        style: const TextStyle(color: Colors.white)),
-                  ),
-                  const SizedBox(height: 10),
-                  OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.white38),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30)),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 30, vertical: 15),
+                      ],
                     ),
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(tr("continue_browsing"),
-                        style: const TextStyle(color: Colors.white70)),
-                  ),
-                ],
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 30, vertical: 15),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ChatScreen(
+                              currentUserId: auth.user!.id,
+                              matchedUserId: matched['id'] as String,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Text(tr("send_message"),
+                          style: const TextStyle(color: Colors.white)),
+                    ),
+                    const SizedBox(height: 10),
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.white38),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 30, vertical: 15),
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(tr("continue_browsing"),
+                          style: const TextStyle(color: Colors.white70)),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -962,93 +969,112 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
   }
 
   void _mostrarModalMatch(
-      BuildContext context, User usuarioActual, User matchedUser) {
-    showModalBottomSheet(
+    BuildContext context,
+    User usuarioActual,
+    User matchedUser,
+  ) {
+    showGeneralDialog(
       context: context,
-      isDismissible: false,
-      enableDrag: false,
-      backgroundColor: Colors.transparent,
+      barrierDismissible: false,
+      barrierLabel: "MatchDialog",
       barrierColor: Colors.black54,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              tr("match_title"),
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              tr("match_message",
-                  namedArgs: {"username": matchedUser.username ?? ""}),
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70, fontSize: 16),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildMatchAvatar(usuarioActual.profilePicture?.url,
-                    radius: 50),
-                const SizedBox(width: 20),
-                _buildMatchAvatar(matchedUser.profilePicture?.url, radius: 50),
-              ],
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueAccent,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30)),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (ctx, anim1, anim2) {
+        // El child se centra por defecto
+        return Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.8,
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                borderRadius: BorderRadius.circular(20),
               ),
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ChatScreen(
-                      currentUserId: usuarioActual.id,
-                      matchedUserId: matchedUser.id,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    tr("match_title"),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                );
-              },
-              child: Text(tr("send_message"),
-                  style: const TextStyle(color: Colors.white)),
-            ),
-            const SizedBox(height: 10),
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.white38),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30)),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                  const SizedBox(height: 10),
+                  Text(
+                    tr("match_message",
+                        namedArgs: {"username": matchedUser.username ?? ""}),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white70, fontSize: 16),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildMatchAvatar(usuarioActual.profilePicture?.url,
+                          radius: 50),
+                      const SizedBox(width: 20),
+                      _buildMatchAvatar(matchedUser.profilePicture?.url,
+                          radius: 50),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 30, vertical: 15),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ChatScreen(
+                            currentUserId: usuarioActual.id,
+                            matchedUserId: matchedUser.id,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Text(tr("send_message"),
+                        style: const TextStyle(color: Colors.white)),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.white38),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 30, vertical: 15),
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text(tr("continue_browsing"),
+                        style: const TextStyle(color: Colors.white70)),
+                  ),
+                ],
               ),
-              onPressed: () => Navigator.pop(context),
-              child: Text(tr("continue_browsing"),
-                  style: const TextStyle(color: Colors.white70)),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
+      transitionBuilder: (ctx, anim1, anim2, child) {
+        // Opcional: animación de fade + scale
+        return FadeTransition(
+          opacity: anim1,
+          child: ScaleTransition(
+              scale: CurvedAnimation(parent: anim1, curve: Curves.easeOutBack),
+              child: child),
+        );
+      },
     );
   }
 

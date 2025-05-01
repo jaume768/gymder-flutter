@@ -951,7 +951,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _pickImages() async {
     final picked = await _picker.pickMultiImage();
     if (picked != null) {
-      if (selectedPhotos.length + picked.length > 5) {
+      if (selectedPhotos.length + picked.length > 6) {
         setState(() {
           errorMessage = tr("max_photos_error");
           fieldErrors['photos'] = tr("max_photos_error");

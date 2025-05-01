@@ -382,10 +382,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             content: Text(tr('profile_updated_successfully')),
             backgroundColor: Colors.green),
       );
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const MyProfileScreen()),
-      );
+      Navigator.pop(context);
     } catch (e) {
       setState(() => errorMessage = e.toString());
     } finally {

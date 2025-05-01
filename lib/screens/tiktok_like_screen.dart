@@ -115,10 +115,13 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
   String _currentRelationshipType = 'Todos';
   bool _currentUseLocation = false;
   RangeValues _currentDistanceRange = const RangeValues(5, 50);
-  final bool _currentFilterByBasics = false;
-  final RangeValues _currentSquatRange = const RangeValues(0, 300);
-  final RangeValues _currentBenchRange = const RangeValues(0, 200);
-  final RangeValues _currentDeadliftRange = const RangeValues(0, 400);
+  bool _currentFilterByBasics = false;
+  RangeValues _currentSquatRange = const RangeValues(0, 300);
+  RangeValues _currentBenchRange = const RangeValues(0, 200);
+  RangeValues _currentDeadliftRange = const RangeValues(0, 400);
+  
+  // Variable para almacenar los filtros activos que se usarán en la paginación
+  Map<String, String> _activeFilters = {};
 
   @override
   bool get wantKeepAlive => true;
@@ -667,11 +670,11 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
       await matchService.updateSeenProfiles(loadedIds);
 
       // Preparar los filtros para la solicitud
-      final Map<String, String> filters = {
-        'limit': _limit.toString(),
-        'skip':
-            '0', // Siempre pedir desde el inicio, el backend filtrará los ya vistos
-      };
+      final Map<String, String> filters = Map<String, String>.from(_activeFilters);
+      
+      // Añadir parámetros de paginación
+      filters['limit'] = _limit.toString();
+      filters['skip'] = _randomUsers.length.toString(); // Usar el número actual de usuarios como skip
 
       print("Solicitando usuarios con filtros: $filters");
       final result = await matchService.getSuggestedMatchesWithFilters(filters);
@@ -697,6 +700,11 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
               // Registrar los nuevos IDs
               for (var user in uniqueNewUsers) {
                 _loadedProfileIds.add(user.id);
+              }
+
+              // Si hay filtros activos, NO hacer shuffle para mantener el orden de relevancia
+              if (_activeFilters.isEmpty && _randomUsers.isNotEmpty) {
+                _randomUsers.shuffle();
               }
 
               print(
@@ -1780,6 +1788,13 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
                           _currentRelationshipType = 'Todos';
                           _currentUseLocation = false;
                           _currentDistanceRange = const RangeValues(5, 50);
+                          _currentFilterByBasics = false;
+                          _currentSquatRange = const RangeValues(0, 300);
+                          _currentBenchRange = const RangeValues(0, 200);
+                          _currentDeadliftRange = const RangeValues(0, 400);
+
+                          // Limpiar los filtros activos cuando se quitan filtros
+                          _activeFilters = {};
                         });
 
                         var allUsers = await _fetchAllUsersWithoutFilter();
@@ -1809,9 +1824,51 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
                           _currentRelationshipType = result['relationshipType'];
                           _currentUseLocation = result['useLocation'];
                           _currentDistanceRange = result['distanceRange'];
-
+                          _currentFilterByBasics = result['filterByBasics'] as bool;
+                          _currentSquatRange = result['squatRange'] as RangeValues;
+                          _currentBenchRange = result['benchRange'] as RangeValues;
+                          _currentDeadliftRange = result['deadliftRange'] as RangeValues;
+                          
+                          // Guardar los filtros activos en el mapa para usarlos en paginación
+                          _activeFilters = {
+                            'ageMin': _currentAgeRange.start.round().toString(),
+                            'ageMax': _currentAgeRange.end.round().toString(),
+                            'weightMin': _currentWeightRange.start.round().toString(),
+                            'weightMax': _currentWeightRange.end.round().toString(),
+                            'heightMin': _currentHeightRange.start.round().toString(),
+                            'heightMax': _currentHeightRange.end.round().toString(),
+                          };
+                          
+                          // Añadir gymStage si no es "Todos"
+                          if (_currentGymStage != 'Todos') {
+                            _activeFilters['gymStage'] = _currentGymStage;
+                          }
+                          
+                          // Añadir relationshipType si no es "Todos"
+                          if (_currentRelationshipType != 'Todos') {
+                            _activeFilters['relationshipType'] = _currentRelationshipType;
+                          }
+                          
+                          // Añadir filtros de localización si están activos
+                          if (_currentUseLocation) {
+                            _activeFilters['useLocation'] = 'true';
+                            _activeFilters['distanceMin'] = _currentDistanceRange.start.round().toString();
+                            _activeFilters['distanceMax'] = _currentDistanceRange.end.round().toString();
+                          }
+                          
+                          // Añadir filtros de básicos si están activos
+                          if (_currentFilterByBasics) {
+                            _activeFilters['filterByBasics'] = 'true';
+                            _activeFilters['squatMin'] = _currentSquatRange.start.round().toString();
+                            _activeFilters['squatMax'] = _currentSquatRange.end.round().toString();
+                            _activeFilters['benchMin'] = _currentBenchRange.start.round().toString();
+                            _activeFilters['benchMax'] = _currentBenchRange.end.round().toString();
+                            _activeFilters['deadliftMin'] = _currentDeadliftRange.start.round().toString();
+                            _activeFilters['deadliftMax'] = _currentDeadliftRange.end.round().toString();
+                          }
                           _randomUsers = matches;
-                          if (_randomUsers.isNotEmpty) {
+                          // Si hay filtros activos, NO hacer shuffle para mantener el orden de relevancia
+                          if (_randomUsers.isNotEmpty && _activeFilters.isEmpty) {
                             _randomUsers.shuffle();
                           }
                           showRandom = true;

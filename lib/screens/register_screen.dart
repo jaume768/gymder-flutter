@@ -120,6 +120,47 @@ class _RegisterScreenState extends State<RegisterScreen> {
   List<Widget> get _steps => widget.fromGoogle ? _googleSteps : _manualSteps;
 
   int get _totalSteps => _steps.length;
+  
+  // Mapeos de traducción para opciones de selección
+  Map<String, String> getGenderTranslations() {
+    return {
+      'Masculino': tr('male'),
+      'Femenino': tr('female'),
+      'No Binario': tr('non_binary'),
+      'Prefiero no decirlo': tr('prefer_not_to_say'),
+      'Otro': tr('other'),
+    };
+  }
+
+  // Para objetivos de relación
+  Map<String, String> getRelationshipGoalTranslations() {
+    return {
+      'Amistad': tr('friendship'),
+      'Relación': tr('relationship'),
+      'Casual': tr('casual'),
+      'Otro': tr('other'),
+    };
+  }
+
+  // Para etapas de gimnasio
+  Map<String, String> getGymStageTranslations() {
+    return {
+      'Volumen': tr('volume'),
+      'Definición': tr('definition'),
+      'Mantenimiento': tr('maintenance'),
+    };
+  }
+
+  // Función auxiliar para obtener la clave española a partir del valor traducido
+  String getOriginalValue(Map<String, String> translationMap, String translatedValue) {
+    for (var entry in translationMap.entries) {
+      if (entry.value == translatedValue) {
+        return entry.key;
+      }
+    }
+    // Si no se encuentra, devuelve el valor original (caso fallback)
+    return translatedValue;
+  }
 
   void clearErrors() {
     setState(() {
@@ -1324,6 +1365,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       'Prefiero no decirlo',
       'Otro',
     ];
+    final translationMap = getGenderTranslations();
 
     return _buildStepTemplate(
       title: tr("select_gender"),
@@ -1335,13 +1377,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         style: const TextStyle(color: Colors.white),
         selectedItemBuilder: (context) {
           return genders.map((item) {
-            return Text(item, style: const TextStyle(color: Colors.white));
+            return Text(translationMap[item] ?? item, style: const TextStyle(color: Colors.white));
           }).toList();
         },
         items: genders.map((g) {
           return DropdownMenuItem(
-            value: g,
-            child: Text(g, style: const TextStyle(color: Colors.white)),
+            value: g, // El valor sigue siendo la opción en español
+            child: Text(translationMap[g] ?? g, style: const TextStyle(color: Colors.white)),
           );
         }).toList(),
         onChanged: (value) {
@@ -1361,6 +1403,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       'Prefiero no decirlo',
       'Otro'
     ];
+    final translationMap = getGenderTranslations(); // Usamos el mismo que el género
 
     return _buildStepTemplate(
       title: tr("whom_to_meet"),
@@ -1375,7 +1418,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               final isSelected = seeking.contains(option);
               return FilterChip(
                 label: Text(
-                  option,
+                  translationMap[option] ?? option,
                   style: TextStyle(
                     color: isSelected ? Colors.black : Colors.white,
                   ),
@@ -1386,7 +1429,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 onSelected: (bool selected) {
                   setState(() {
                     if (selected) {
-                      seeking.add(option);
+                      seeking.add(option); // Guardamos el valor en español
                     } else {
                       seeking.remove(option);
                     }
@@ -1402,6 +1445,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Widget _buildStep5() {
     final goals = ['Amistad', 'Relación', 'Casual', 'Otro'];
+    final translationMap = getRelationshipGoalTranslations();
 
     return _buildStepTemplate(
       title: tr("what_are_you_looking_for"),
@@ -1416,14 +1460,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         selectedItemBuilder: (context) {
           return goals.map((item) {
-            return Text(item, style: const TextStyle(color: Colors.white));
+            return Text(translationMap[item] ?? item, style: const TextStyle(color: Colors.white));
           }).toList();
         },
         value: relationshipGoal.isEmpty ? null : relationshipGoal,
         items: goals.map((g) {
           return DropdownMenuItem(
-            value: g,
-            child: Text(g, style: const TextStyle(color: Colors.white)),
+            value: g, // El valor sigue siendo la opción en español
+            child: Text(translationMap[g] ?? g, style: const TextStyle(color: Colors.white)),
           );
         }).toList(),
         onChanged: (value) {
@@ -1556,6 +1600,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Widget _buildStep7() {
     final gymStages = ['Volumen', 'Definición', 'Mantenimiento'];
+    final translationMap = getGymStageTranslations();
 
     return _buildStepTemplate(
       title: tr("gym_stage_height_weight"),
@@ -1567,14 +1612,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
             style: const TextStyle(color: Colors.white),
             selectedItemBuilder: (context) {
               return gymStages.map((stage) {
-                return Text(stage, style: const TextStyle(color: Colors.white));
+                return Text(translationMap[stage] ?? stage, style: const TextStyle(color: Colors.white));
               }).toList();
             },
             value: gymStage.isEmpty ? null : gymStage,
             items: gymStages.map((stage) {
               return DropdownMenuItem(
-                value: stage,
-                child: Text(stage, style: const TextStyle(color: Colors.white)),
+                value: stage, // El valor sigue siendo la etapa en español
+                child: Text(translationMap[stage] ?? stage, style: const TextStyle(color: Colors.white)),
               );
             }).toList(),
             onChanged: (value) {

@@ -1,0 +1,26 @@
+# Uncomment this line to define a global platform for your project
+platform :ios, '11.0'
+
+# Evita estadísticas de CocoaPods (opcional)
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+# Fuerza a CocoaPods a usar frameworks estáticos
+use_frameworks! :linkage => :static
+
+# Permite que todas las cabeceras se importen como módulos
+use_modular_headers!
+
+target 'Runner' do
+  # Instala los pods de Flutter (incluye firebase_messaging, etc)
+  flutter_install_all_ios_pods(File.dirname(File.realpath(__FILE__)))
+
+  # Si necesitas otros pods manuales, ponlos aquí:
+  # pod 'MyCustomPod'
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    # Ajustes adicionales que Flutter requiere
+    flutter_additional_ios_build_settings(target)
+  end
+end

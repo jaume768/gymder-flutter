@@ -3,26 +3,37 @@
 platform :ios, '12.0'
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
-# Helper de Flutter
+# Carga el podhelper de Flutter
 require File.join(ENV['FLUTTER_ROOT'], 'packages', 'flutter_tools', 'bin', 'podhelper')
 
-# Frameworks dinámicos + cabeceras modulares
+# Integramos los plugins de Flutter como frameworks
 use_frameworks!
 use_modular_headers!
 
 target 'Runner' do
-  # Instala TODOS los pods que declara Flutter
+  # Instala todos los pods que Flutter necesita (fire_base_core, etc)
   flutter_install_all_ios_pods(__dir__)
 end
 
 post_install do |installer|
+  # 1) Ajustes en el proyecto Pods (ya lo tienes)
   installer.pods_project.targets.each do |target|
-    # Ajustes estándar de Flutter
     flutter_additional_ios_build_settings(target)
+    target.build_configurations.each do |config|
+      # Permite “non-modular includes” en TODOS los pods
+      config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+    end
+  end
 
-    # Permitir non-modular includes en todos los pods
+  # 2) Ahora también parcheamos el proyecto Runner para aceptar non-modular includes
+  require 'xcodeproj'
+  runner_proj_path = File.join(__dir__, 'Runner.xcodeproj')
+  runner_proj = Xcodeproj::Project.open(runner_proj_path)
+  runner_proj.targets.each do |target|
+    # Aplica a todos los build configurations (Debug/Release)
     target.build_configurations.each do |config|
       config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
     end
   end
+  runner_proj.save
 end

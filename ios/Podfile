@@ -3,23 +3,27 @@
 platform :ios, '12.0'
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
-# Carga el helper de Flutter
+# Carga el podhelper del SDK de Flutter
 require File.join(ENV['FLUTTER_ROOT'], 'packages', 'flutter_tools', 'bin', 'podhelper')
 
-target 'Runner' do
-  use_frameworks!        # para Swift pods
-  use_modular_headers!   # permite módulos
+# Usamos frameworks estáticos para Swift
+use_frameworks! :linkage => :static
 
-  # Instala todos los pods que Flutter declara
+target 'Runner' do
+  # Necesario para que los plugins Flutter se instalen
   flutter_install_all_ios_pods(__dir__)
+
+  # Fuerza módulos (modular headers) solo en los pods de Firebase
+  pod 'FirebaseCore',      :modular_headers => true
+  pod 'FirebaseMessaging', :modular_headers => true
 end
 
 post_install do |installer|
   installer.pods_project.targets.each do |target|
-    # Ajustes estándar de Flutter
+    # Ajustes estándar que Flutter requiere
     flutter_additional_ios_build_settings(target)
 
-    # Permite incluir headers no-modulares (como Firebase/Firebase.h)
+    # Aceptar includes no‐modulares dentro de módulos/frameworks
     target.build_configurations.each do |config|
       config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
     end

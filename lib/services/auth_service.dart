@@ -8,7 +8,8 @@ import '../utils/error_handler.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class AuthService {
-  final String baseUrl = 'https://gymder-api-production.up.railway.app/api/users';
+  final String baseUrl =
+      'https://gymder-api-production.up.railway.app/api/users';
   final FlutterSecureStorage storage = FlutterSecureStorage();
 
   Future<Map<String, dynamic>> register({
@@ -101,12 +102,61 @@ class AuthService {
     }
   }
 
+  Future<Map<String, dynamic>> requestPasswordReset({
+    required String email,
+  }) async {
+    final url = Uri.parse('$baseUrl/password-reset/request');
+    try {
+      final resp = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email.trim().toLowerCase()}),
+      );
+      final data = jsonDecode(resp.body);
+      if (resp.statusCode == 200) {
+        return {'success': true, 'message': data['message']};
+      } else {
+        return {'success': false, 'message': data['message']};
+      }
+    } catch (e) {
+      return {'success': false, 'message': tr('connection_error')};
+    }
+  }
+
+  /// Confirma el código y restablece la contraseña
+  Future<Map<String, dynamic>> confirmPasswordReset({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    final url = Uri.parse('$baseUrl/password-reset/confirm');
+    try {
+      final resp = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email.trim().toLowerCase(),
+          'code': code.trim(),
+          'newPassword': newPassword,
+        }),
+      );
+      final data = jsonDecode(resp.body);
+      if (resp.statusCode == 200) {
+        return {'success': true, 'message': data['message']};
+      } else {
+        return {'success': false, 'message': data['message']};
+      }
+    } catch (e) {
+      return {'success': false, 'message': tr('connection_error')};
+    }
+  }
+
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
   }) async {
     final url = Uri.parse('$baseUrl/login');
-    
+
     try {
       final response = await http.post(
         url,
@@ -155,7 +205,7 @@ class AuthService {
 
   Future<User?> fetchUserData(String token) async {
     final url = Uri.parse('$baseUrl/profile');
-    
+
     try {
       final response = await http.get(
         url,

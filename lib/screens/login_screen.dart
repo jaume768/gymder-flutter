@@ -4,6 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import 'forgot_password_screen.dart';
 import 'home_screen.dart';
 import 'dart:io' show Platform;
 import 'register_screen.dart';
@@ -286,6 +287,21 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ],
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ForgotPasswordScreen(),
+                          ),
+                        ),
+                        child: Text(
+                          'forgot_password'.tr(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
                       ),
                     ],
                   ),

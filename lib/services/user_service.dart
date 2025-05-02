@@ -25,6 +25,53 @@ class UserService {
     return jsonDecode(response.body);
   }
 
+  Future<Map<String, dynamic>> requestPasswordReset(String email) async {
+    final url = Uri.parse('$baseUrl/send-verification-email');
+    final resp = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email}),
+    );
+    final data = jsonDecode(resp.body);
+    if (resp.statusCode == 200) {
+      return {'success': true, 'message': data['message']};
+    } else {
+      return {'success': false, 'message': data['message'] ?? tr('error')};
+    }
+  }
+
+  /// 2) Confirmar código + nueva contraseña
+  Future<Map<String, dynamic>> confirmPasswordReset(
+      String email, String code, String newPassword) async {
+    // Primero comprobamos el código
+    final verifyUrl = Uri.parse('$baseUrl/reset-password');
+    final verifyResp = await http.post(
+      verifyUrl,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'code': code}),
+    );
+    if (verifyResp.statusCode != 200) {
+      final err = jsonDecode(verifyResp.body);
+      return {'success': false, 'message': err['message'] ?? tr('error')};
+    }
+    // Si OK, actualizamos la contraseña (aquí reutilizamos change-password o creamos endpoint nuevo)
+    final resetUrl = Uri.parse('$baseUrl/change-password');
+    final resetResp = await http.patch(
+      resetUrl,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'currentPassword': code, // backend ignora currentPassword en reset
+        'newPassword': newPassword,
+      }),
+    );
+    final resetData = jsonDecode(resetResp.body);
+    if (resetResp.statusCode == 200) {
+      return {'success': true, 'message': resetData['message']};
+    } else {
+      return {'success': false, 'message': resetData['message'] ?? tr('error')};
+    }
+  }
+
   Future<Map<String, dynamic>> getLikeLimitStatus() async {
     final url = Uri.parse('$baseUrl/users/like/status');
     final response = await http.get(url, headers: {
@@ -90,20 +137,26 @@ class UserService {
 
   Future<Map<String, dynamic>> purchaseTopLike() async {
     final url = Uri.parse('$baseUrl/users/top_like/purchase');
-    final resp = await http.post(url, headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    },);
+    final resp = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
     final data = jsonDecode(resp.body);
     return data;
   }
 
   Future<Map<String, dynamic>> superLikeUser(String targetUserId) async {
     final url = Uri.parse('$baseUrl/users/top_like/$targetUserId');
-    final resp = await http.post(url, headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    },);
+    final resp = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
     final data = jsonDecode(resp.body);
     return data;
   }
@@ -596,7 +649,7 @@ class UserService {
       };
     }
   }
-  
+
   // Método para aplicar código promocional
   Future<Map<String, dynamic>> applyPromoCode(String code) async {
     final url = Uri.parse('$baseUrl/users/promo-code/apply');
@@ -613,7 +666,8 @@ class UserService {
     if (response.statusCode == 200) {
       return {
         'success': true,
-        'message': data['message'] ?? 'Código promocional aplicado correctamente',
+        'message':
+            data['message'] ?? 'Código promocional aplicado correctamente',
         'topLikesGranted': data['topLikesGranted'],
         'promoCode': data['promoCode'],
       };

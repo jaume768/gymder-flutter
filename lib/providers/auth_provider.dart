@@ -37,6 +37,19 @@ class AuthProvider with ChangeNotifier {
     _checkAuthStatus();
   }
 
+  Future<Map<String, dynamic>> requestPasswordReset(String email) {
+    return _authService.requestPasswordReset(email: email);
+  }
+
+  Future<Map<String, dynamic>> confirmPasswordReset({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) {
+    return _authService.confirmPasswordReset(
+        email: email, code: code, newPassword: newPassword);
+  }
+
   // Verifica si hay token en storage y obtiene datos de usuario
   Future<void> _checkAuthStatus() async {
     String? token = await _authService.getToken();

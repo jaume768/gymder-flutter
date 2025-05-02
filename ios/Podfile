@@ -3,35 +3,19 @@
 platform :ios, '12.0'
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
-# localiza tu instalación de Flutter y carga el podhelper que trae el SDK
-def flutter_root
-  # hallamos la ruta a Generated.xcconfig para deducir dónde está flutter/bin
-  generated_cfg = File.expand_path('Runner/Generated.xcconfig', __dir__)
-  unless File.exist?(generated_cfg)
-    abort("❌ Generated.xcconfig no encontrado en #{generated_cfg}")
-  end
-  # ../../flutter porque
-  # ios/Runner/Generated.xcconfig → ios/Runner → ios → <flutter repo root>/flutter
-  File.expand_path('../../flutter', File.dirname(generated_cfg))
-end
+# Carga el helper oficial de Flutter desde tu SDK
+require File.join(ENV['FLUTTER_ROOT'], 'packages', 'flutter_tools', 'bin', 'podhelper')
 
-require File.expand_path(
-  File.join('packages', 'flutter_tools', 'bin', 'podhelper'),
-  flutter_root
-)
-
-# fuerza frameworks estáticos y headers modulares
+# Forzamos frameworks estáticos y cabeceras modulares
 use_frameworks! :linkage => :static
 use_modular_headers!
 
 target 'Runner' do
-  # instala todos los pods de Flutter (incluye firebase_messaging)
+  # Instala todos los pods que Flutter necesita (incluye firebase_messaging, etc)
   flutter_install_all_ios_pods(__dir__)
 end
 
 post_install do |installer|
-  installer.pods_project.targets.each do |target|
-    # ajustes extra que Flutter necesita
-    flutter_additional_ios_build_settings(target)
-  end
+  # Ajustes adicionales que Flutter requiere
+  flutter_additional_ios_build_settings(installer)
 end

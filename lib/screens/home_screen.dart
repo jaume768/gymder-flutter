@@ -14,6 +14,7 @@ import 'register_screen.dart';
 import 'tiktok_like_screen.dart';
 import 'login_screen.dart';
 import 'matches_chats_screen.dart';
+import 'dart:io' show Platform;
 import 'my_profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -36,7 +37,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // In-App Purchase
   final InAppPurchase _iap = InAppPurchase.instance;
-  final String _topLikeId = 'top_like';
+  String get _topLikeId => Platform.isIOS
+      ? 'quicklike768'
+      : 'top_like';
   bool _iapAvailable = false;
   List<ProductDetails> _products = [];
   late StreamSubscription<List<PurchaseDetails>> _sub;

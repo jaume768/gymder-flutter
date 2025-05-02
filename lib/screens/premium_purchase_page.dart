@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:provider/provider.dart';
+import 'dart:io' show Platform;
 import '../providers/auth_provider.dart';
 import '../services/user_service.dart';
 
@@ -15,7 +16,10 @@ class PremiumPurchasePage extends StatefulWidget {
 
 class _PremiumPurchasePageState extends State<PremiumPurchasePage> {
   final InAppPurchase _iap = InAppPurchase.instance;
-  final String _premiumProductId = 'gymswipe_premium';
+  String get _premiumProductId =>
+      Platform.isIOS
+          ? 'gymswipepremium768'
+          : 'gymswipe_premium';
   bool _available = false;
   List<ProductDetails> _products = [];
   late Stream<List<PurchaseDetails>> _subscription;

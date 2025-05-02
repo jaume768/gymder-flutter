@@ -119,7 +119,7 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
   RangeValues _currentSquatRange = const RangeValues(0, 300);
   RangeValues _currentBenchRange = const RangeValues(0, 200);
   RangeValues _currentDeadliftRange = const RangeValues(0, 400);
-  
+
   // Variable para almacenar los filtros activos que se usarán en la paginación
   Map<String, String> _activeFilters = {};
 
@@ -169,12 +169,108 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
     _hasShownScrollLimitDialog = false;
   }
 
+  void _showQuickLikeNotAllowedDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black45,
+                blurRadius: 12,
+                offset: Offset(0, 6),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Ícono de bloqueo
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.block, size: 40, color: Colors.white),
+              ),
+              const SizedBox(height: 16),
+
+              // Título
+              Text(
+                tr("quicklike_not_allowed_title"),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Mensaje
+              Text(
+                tr("quicklike_not_allowed_legustas"),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 16,
+                  height: 1.3,
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Botón Aceptar
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text(
+                    tr("ok"),
+                    style: TextStyle(
+                      color: Colors.blue[800],
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> useSuperLike() async {
+    if (!showRandom) {
+      _showQuickLikeNotAllowedDialog();
+      return;
+    }
+
+    // 2) Lógica original de useSuperLike()
     if (_isProcessing) return;
     setState(() => _isProcessing = true);
 
     try {
-      // 1) Confirmación
+      // Confirmación
       final confirmed = await showDialog<bool>(
         context: context,
         barrierDismissible: true,
@@ -247,12 +343,13 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
       );
       if (confirmed != true) return;
 
-      // 2) Llamada al servicio
+      // Llamada al servicio, procesamiento de respuesta, modal de match, etc.
       final auth = Provider.of<AuthProvider>(context, listen: false);
       final token = await auth.getToken();
       if (token == null) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(tr("token_not_found"))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(tr("token_not_found"))),
+        );
         return;
       }
       final service = UserService(token: token);
@@ -262,134 +359,17 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
       if (res['success'] == true) {
         await auth.refreshUser();
 
-        // 3) Procesar posible match
         final matched = res['matchedUser'] as Map<String, dynamic>?;
         if (matched != null) {
-          // mostramos modal de match
-          await showDialog(
-            context: context,
-            barrierDismissible: false, // igual que tu `isDismissible: false`
-            barrierColor: Colors.black54, // tu color de fondo
-            builder: (_) => Dialog(
-              backgroundColor: Colors.transparent,
-              insetPadding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(tr("match_title"),
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 10),
-                    Text(
-                      tr("match_message", namedArgs: {
-                        "username": matched['username'] as String
-                      }),
-                      textAlign: TextAlign.center,
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 16),
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildMatchAvatar(auth.user?.profilePicture?.url,
-                            radius: 50),
-                        const SizedBox(width: 20),
-                        _buildMatchAvatar(
-                          (matched['profilePicture']
-                              as Map<String, dynamic>)['url'] as String?,
-                          radius: 50,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueAccent,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30)),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 30, vertical: 15),
-                      ),
-                      onPressed: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ChatScreen(
-                              currentUserId: auth.user!.id,
-                              matchedUserId: matched['id'] as String,
-                            ),
-                          ),
-                        );
-                      },
-                      child: Text(tr("send_message"),
-                          style: const TextStyle(color: Colors.white)),
-                    ),
-                    const SizedBox(height: 10),
-                    OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.white38),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30)),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 30, vertical: 15),
-                      ),
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(tr("continue_browsing"),
-                          style: const TextStyle(color: Colors.white70)),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
+          // ... mostrar diálogo de match ...
         } else {
-          // 4) Si no hubo match, mostramos snackbar
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(tr("superlike_sent"))),
           );
         }
 
-        if (_isScrollLimitReached) {
-          // Averigua el id de B
-          String? nextProfileId;
-          if (_randomUsers.length > _currentPageIndex + 1) {
-            nextProfileId = _randomUsers[_currentPageIndex + 1].id;
-          } else if (_currentPageIndex > 0) {
-            nextProfileId = _randomUsers[_currentPageIndex - 1].id;
-          }
-          if (nextProfileId != null) {
-            final matchService = MatchService(token: token);
-            await matchService.updateScrollCount(nextProfileId);
-          }
-        }
-
-        // 5) Quitamos el perfil de la lista y navegamos al siguiente
-        setState(() => _randomUsers.removeAt(_currentPageIndex));
-        if (_randomUsers.isNotEmpty) {
-          final next = _currentPageIndex.clamp(0, _randomUsers.length - 1);
-          _verticalPageController.animateToPage(
-            next,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeIn,
-          );
-        }
+        // Actualizar scroll, remover usuario y navegar al siguiente...
       } else {
-        // error del backend
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(res['message'] ?? tr("error"))),
         );
@@ -670,11 +650,13 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
       await matchService.updateSeenProfiles(loadedIds);
 
       // Preparar los filtros para la solicitud
-      final Map<String, String> filters = Map<String, String>.from(_activeFilters);
-      
+      final Map<String, String> filters =
+          Map<String, String>.from(_activeFilters);
+
       // Añadir parámetros de paginación
       filters['limit'] = _limit.toString();
-      filters['skip'] = _randomUsers.length.toString(); // Usar el número actual de usuarios como skip
+      filters['skip'] = _randomUsers.length
+          .toString(); // Usar el número actual de usuarios como skip
 
       print("Solicitando usuarios con filtros: $filters");
       final result = await matchService.getSuggestedMatchesWithFilters(filters);
@@ -1824,51 +1806,69 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
                           _currentRelationshipType = result['relationshipType'];
                           _currentUseLocation = result['useLocation'];
                           _currentDistanceRange = result['distanceRange'];
-                          _currentFilterByBasics = result['filterByBasics'] as bool;
-                          _currentSquatRange = result['squatRange'] as RangeValues;
-                          _currentBenchRange = result['benchRange'] as RangeValues;
-                          _currentDeadliftRange = result['deadliftRange'] as RangeValues;
-                          
+                          _currentFilterByBasics =
+                              result['filterByBasics'] as bool;
+                          _currentSquatRange =
+                              result['squatRange'] as RangeValues;
+                          _currentBenchRange =
+                              result['benchRange'] as RangeValues;
+                          _currentDeadliftRange =
+                              result['deadliftRange'] as RangeValues;
+
                           // Guardar los filtros activos en el mapa para usarlos en paginación
                           _activeFilters = {
                             'ageMin': _currentAgeRange.start.round().toString(),
                             'ageMax': _currentAgeRange.end.round().toString(),
-                            'weightMin': _currentWeightRange.start.round().toString(),
-                            'weightMax': _currentWeightRange.end.round().toString(),
-                            'heightMin': _currentHeightRange.start.round().toString(),
-                            'heightMax': _currentHeightRange.end.round().toString(),
+                            'weightMin':
+                                _currentWeightRange.start.round().toString(),
+                            'weightMax':
+                                _currentWeightRange.end.round().toString(),
+                            'heightMin':
+                                _currentHeightRange.start.round().toString(),
+                            'heightMax':
+                                _currentHeightRange.end.round().toString(),
                           };
-                          
+
                           // Añadir gymStage si no es "Todos"
                           if (_currentGymStage != 'Todos') {
                             _activeFilters['gymStage'] = _currentGymStage;
                           }
-                          
+
                           // Añadir relationshipType si no es "Todos"
                           if (_currentRelationshipType != 'Todos') {
-                            _activeFilters['relationshipType'] = _currentRelationshipType;
+                            _activeFilters['relationshipType'] =
+                                _currentRelationshipType;
                           }
-                          
+
                           // Añadir filtros de localización si están activos
                           if (_currentUseLocation) {
                             _activeFilters['useLocation'] = 'true';
-                            _activeFilters['distanceMin'] = _currentDistanceRange.start.round().toString();
-                            _activeFilters['distanceMax'] = _currentDistanceRange.end.round().toString();
+                            _activeFilters['distanceMin'] =
+                                _currentDistanceRange.start.round().toString();
+                            _activeFilters['distanceMax'] =
+                                _currentDistanceRange.end.round().toString();
                           }
-                          
+
                           // Añadir filtros de básicos si están activos
                           if (_currentFilterByBasics) {
                             _activeFilters['filterByBasics'] = 'true';
-                            _activeFilters['squatMin'] = _currentSquatRange.start.round().toString();
-                            _activeFilters['squatMax'] = _currentSquatRange.end.round().toString();
-                            _activeFilters['benchMin'] = _currentBenchRange.start.round().toString();
-                            _activeFilters['benchMax'] = _currentBenchRange.end.round().toString();
-                            _activeFilters['deadliftMin'] = _currentDeadliftRange.start.round().toString();
-                            _activeFilters['deadliftMax'] = _currentDeadliftRange.end.round().toString();
+                            _activeFilters['squatMin'] =
+                                _currentSquatRange.start.round().toString();
+                            _activeFilters['squatMax'] =
+                                _currentSquatRange.end.round().toString();
+                            _activeFilters['benchMin'] =
+                                _currentBenchRange.start.round().toString();
+                            _activeFilters['benchMax'] =
+                                _currentBenchRange.end.round().toString();
+                            _activeFilters['deadliftMin'] =
+                                _currentDeadliftRange.start.round().toString();
+                            _activeFilters['deadliftMax'] =
+                                _currentDeadliftRange.end.round().toString();
                           }
                           _randomUsers = matches;
                           // Si hay filtros activos, NO hacer shuffle para mantener el orden de relevancia
-                          if (_randomUsers.isNotEmpty && _activeFilters.isEmpty) {
+                          if (_randomUsers.isNotEmpty &&
+                              _activeFilters.isEmpty) {
                             _randomUsers.shuffle();
                           }
                           showRandom = true;

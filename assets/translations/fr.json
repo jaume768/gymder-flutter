@@ -372,6 +372,8 @@
   "liked_users_count": "Utilisateurs qui vous ont liké : {0}",
   "height_out_of_range": "La taille est hors de portée",
   "weight_out_of_range": "Le poids est hors de portée",
+  "quicklike_not_allowed_title": "Fonction non disponible",
+  "quicklike_not_allowed_legustas": "Vous ne pouvez pas utiliser Quick Like dans l’onglet « J’aime ».",
   "height_must_be_between_100_250": "La taille doit être comprise entre 100 et 250 cm",
   "weight_must_be_between_40_200": "Le poids doit être compris entre 40 et 200 kg",
   "ok": "Accepter",

@@ -66,6 +66,8 @@
   "invalid_code": "Invalid code",
   "name_prompt": "What's your name?",
   "second_name_prompt": "What's your second name?",
+  "quicklike_not_allowed_title": "Function not available",
+  "quicklike_not_allowed_legustas": "You can’t use Quick Like in the Likes tab.",
   "enter_username_first_last": "Enter your username, first name, and last name",
   "select_birthdate": "When is your birthday?",
   "male": "Male",

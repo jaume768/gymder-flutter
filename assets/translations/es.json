@@ -69,6 +69,8 @@
   "name_prompt": "¿Cuál es tu nombre?",
   "second_name_prompt": "¿Cuál es tu segundo nombre?",
   "verify": "Verificar",
+  "quicklike_not_allowed_title": "Función no disponible",
+  "quicklike_not_allowed_legustas": "No puedes usar Quick Like en 'Le gustas'.",
   "goal_title": "Objetivo",
   "invalid_code": "Código inválido",
   "male": "Masculino",

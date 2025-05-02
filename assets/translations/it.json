@@ -372,6 +372,8 @@
   "online": "Online",
   "image": "Immagine",
   "error_unblocking_user": "Errore sblocco utente",
+  "quicklike_not_allowed_title": "Funzione non disponibile",
+  "quicklike_not_allowed_legustas": "Non puoi usare Quick Like nella scheda \"Mi piace\".",
   "second_name_prompt": "Qual è il tuo secondo nome?",
   "explicit_content_detected": "Contenuto esplicito o inappropriato rilevato",
   "image_validation_error": "Errore di validazione immagine",

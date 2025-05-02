@@ -348,6 +348,8 @@
   "cannot_proceed_with_explicit": "Registrierung kann mit explizitem Inhalt nicht fortgesetzt werden. Bitte wählen Sie andere Bilder.",
   "profile_picture_required": "Profilbild ist erforderlich",
   "second_name_prompt": "Wie lautet Ihr zweiter Vorname?",
+  "quicklike_not_allowed_title": "Funktion nicht verfügbar",
+  "quicklike_not_allowed_legustas": "Du kannst Quick Like nicht im Tab „Gefällt dir“ verwenden.",
   "must_select_profile_picture": "Sie müssen ein Profilbild auswählen, um fortzufahren",
   "random": "Zufällig",
   "le_gustas_button": "Er mag dich ({count})",

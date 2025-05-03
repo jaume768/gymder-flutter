@@ -6,6 +6,12 @@
     <string>Necesitamos acceder a tu ubicación para mostrar eventos cercanos.</string>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
     <string>Necesitamos acceder a tu ubicación para actualizar tu estado.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>Necesitamos acceso a la cámara para tomar fotos para tu perfil y enviar imágenes en el chat</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Necesitamos acceso a tu galería para seleccionar fotos para tu perfil y enviar imágenes en el chat</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Necesitamos acceso al micrófono para grabar mensajes de audio en el chat</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

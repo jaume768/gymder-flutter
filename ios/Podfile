@@ -3,46 +3,38 @@
 platform :ios, '13.0'
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
-# Carga el podhelper de Flutter
 require File.join(ENV['FLUTTER_ROOT'], 'packages', 'flutter_tools', 'bin', 'podhelper')
 
-# Integramos los plugins de Flutter como frameworks
+# Usamos frameworks dinámicos para que los plugins Swift (como flutter_local_notifications) expongan un módulo
 use_frameworks!
-use_modular_headers!
 
 target 'Runner' do
-  # Instala todos los pods que Flutter necesita (fire_base_core, etc)
+  # Instala todos los pods necesarios para tus plugins de Flutter
   flutter_install_all_ios_pods(__dir__)
+
+  # Si tienes tests, hereda los search_paths en el target de tests
+  target 'RunnerTests' do
+    inherit! :search_paths
+  end
 end
 
 post_install do |installer|
-  # 1) Ajustes en el proyecto Pods (ya lo tienes)
+  # Aplica ajustes adicionales para iOS
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
-    target.build_configurations.each do |config|
-      # Permite “non-modular includes” en TODOS los pods
-      config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
-    end
-  end
 
-  # 2) Ahora también parcheamos el proyecto Runner para aceptar non-modular includes
-  require 'xcodeproj'
-  runner_proj_path = File.join(__dir__, 'Runner.xcodeproj')
-  runner_proj = Xcodeproj::Project.open(runner_proj_path)
-  runner_proj.targets.each do |target|
-    # Aplica a todos los build configurations (Debug/Release)
+    # Si tienes includes no modulares en algunos pods, permite que Xcode los acepte
     target.build_configurations.each do |config|
       config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
     end
   end
-  runner_proj.save
 
-  # 3️⃣ Incluir GoogleService-Info.plist en los recursos de la app
+  # (Opcional) Si necesitas copiar automáticamente tu GoogleService-Info.plist al bundle
   require 'xcodeproj'
   project_path = File.join(__dir__, 'Runner.xcodeproj')
-  project = Xcodeproj::Project.open(project_path)
+  project      = Xcodeproj::Project.open(project_path)
   runner_target = project.targets.find { |t| t.name == 'Runner' }
-  plist_ref = project.new_file('Runner/GoogleService-Info.plist')
+  plist_ref    = project.new_file('Runner/GoogleService-Info.plist')
   runner_target.resources_build_phase.add_file_reference(plist_ref)
   project.save
 end

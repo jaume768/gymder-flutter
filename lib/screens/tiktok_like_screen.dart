@@ -1244,118 +1244,112 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
   void _showCustomReasonDialog() {
     String customText = '';
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      barrierColor: Colors.black54,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (rootContext) {
-        return StatefulBuilder(
-          builder: (sheetContext, setModalState) {
-            return Container(
-              padding: EdgeInsets.only(
-                  left: 24,
-                  right: 24,
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-                  top: 16),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: SingleChildScrollView(
+            child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 0),
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    tr('other_reason'),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white12,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: TextField(
-                      maxLines: 4,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: tr('describe_reason'),
-                        hintStyle: const TextStyle(color: Colors.white38),
-                        border: InputBorder.none,
-                      ),
-                      onChanged: (val) {
-                        // <- Aquí llamamos al setState local
-                        setModalState(() {
-                          customText = val;
-                        });
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
+              child: StatefulBuilder(
+                builder: (ctx2, setState) {
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.white38),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          onPressed: () => Navigator.of(sheetContext).pop(),
-                          child: Text(
-                            tr('cancel'),
-                            style: const TextStyle(color: Colors.white70),
-                          ),
+                      Text(
+                        tr('other_reason'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blueAccent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          // ahora el onPressed depende del estado actualizado
-                          onPressed: customText.trim().isEmpty
-                              ? null
-                              : () {
-                                  // primero cerramos este modal
-                                  Navigator.of(sheetContext).pop();
-                                  // después, mostramos el de confirmación
-                                  _showConfirmReportDialog(
-                                    'other',
-                                    details: customText.trim(),
-                                  );
-                                },
-                          child: Text(
-                            tr('send'),
-                            style: const TextStyle(color: Colors.white),
-                          ),
+                      const SizedBox(height: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white12,
+                          borderRadius: BorderRadius.circular(12),
                         ),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: TextField(
+                          maxLines: 4,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: tr('describe_reason'),
+                            hintStyle: const TextStyle(color: Colors.white38),
+                            border: InputBorder.none,
+                          ),
+                          onChanged: (val) {
+                            setState(() => customText = val);
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Colors.white38),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              onPressed: () => Navigator.of(ctx).pop(),
+                              child: Text(
+                                tr('cancel'),
+                                style: const TextStyle(color: Colors.white70),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blueAccent,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              onPressed: customText.trim().isEmpty
+                                  ? null
+                                  : () {
+                                      Navigator.of(ctx).pop();
+                                      _showConfirmReportDialog(
+                                        'other',
+                                        details: customText.trim(),
+                                      );
+                                    },
+                              child: Text(
+                                tr('send'),
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
-                  ),
-                ],
+                  );
+                },
               ),
-            );
-          },
+            ),
+          ),
         );
       },
     );

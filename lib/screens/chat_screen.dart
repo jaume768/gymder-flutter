@@ -919,7 +919,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   Widget _buildInputArea() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      padding: const EdgeInsets.only(
+        top: 10,
+        bottom: 23,
+        left: 8,
+        right: 8,
+      ),
       color: const Color(0xFF1E1E1E),
       child: Row(
         children: [

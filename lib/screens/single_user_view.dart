@@ -159,7 +159,7 @@ class _SingleUserViewState extends State<SingleUserView>
           // ─── Paginación ─────────────────────────────────
           if (photos.isNotEmpty)
             Positioned(
-              bottom: 92,
+              bottom: 120,
               left: 0,
               right: 0,
               child: Row(
@@ -185,7 +185,7 @@ class _SingleUserViewState extends State<SingleUserView>
           Positioned(
             left: 20,
             right: 20,
-            bottom: 120,
+            bottom: 160,
             child: GestureDetector(
               onTap: () {
                 Navigator.push(

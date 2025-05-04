@@ -211,7 +211,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildBottomBar(AuthProvider auth, User user) {
     return Container(
       color: Colors.transparent,
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 25),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [

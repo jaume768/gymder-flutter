@@ -1,40 +1,25 @@
-# ios/Podfile
-
-platform :ios, '13.0'
+platform :ios, '14.0'
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
 require File.join(ENV['FLUTTER_ROOT'], 'packages', 'flutter_tools', 'bin', 'podhelper')
 
-# Usamos frameworks dinámicos para que los plugins Swift (como flutter_local_notifications) expongan un módulo
 use_frameworks!
 
 target 'Runner' do
-  # Instala todos los pods necesarios para tus plugins de Flutter
   flutter_install_all_ios_pods(__dir__)
 
-  # Si tienes tests, hereda los search_paths en el target de tests
   target 'RunnerTests' do
     inherit! :search_paths
   end
 end
 
 post_install do |installer|
-  # Aplica ajustes adicionales para iOS
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
-
-    # Si tienes includes no modulares en algunos pods, permite que Xcode los acepte
     target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '12.0'
       config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
     end
   end
-
-  # (Opcional) Si necesitas copiar automáticamente tu GoogleService-Info.plist al bundle
-  require 'xcodeproj'
-  project_path = File.join(__dir__, 'Runner.xcodeproj')
-  project      = Xcodeproj::Project.open(project_path)
-  runner_target = project.targets.find { |t| t.name == 'Runner' }
-  plist_ref    = project.new_file('Runner/GoogleService-Info.plist')
-  runner_target.resources_build_phase.add_file_reference(plist_ref)
-  project.save
 end
+

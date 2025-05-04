@@ -5,65 +5,80 @@ import FirebaseMessaging
 import UserNotifications
 
 @main
-@objc class AppDelegate: FlutterAppDelegate {
+@objc class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
   
-  override func application(
+  var window: UIWindow?
+  var flutterEngine: FlutterEngine!
+
+  func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     // 1️⃣ Configura Firebase
     FirebaseApp.configure()
-    
-    // 2️⃣ Delegado de notificaciones (iOS 10+)
+
+    // 2️⃣ Configura delegado de notificaciones
     if #available(iOS 10.0, *) {
       UNUserNotificationCenter.current().delegate = self
     }
-    
-    // 3️⃣ Pide permiso de notificaciones (alert, badge, sound)
+
+    // 3️⃣ Solicita permisos y registra APNs
     UNUserNotificationCenter.current().requestAuthorization(
       options: [.alert, .badge, .sound]
     ) { granted, error in
       if let error = error {
-        print("Error al solicitar permisos de notificaciones: \(error)")
+        print("Error solicitando permisos de notificaciones: \(error)")
       }
     }
-    
-    // 4️⃣ Registra APNs para notificaciones remotas
     application.registerForRemoteNotifications()
-    
-    // 5️⃣ Registra todos los plugins de Flutter
-    GeneratedPluginRegistrant.register(with: self)
-    
-    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+
+    // 4️⃣ Crea y arranca tu propio FlutterEngine
+    flutterEngine = FlutterEngine(name: "my_engine")
+    flutterEngine.run()
+
+    // 5️⃣ Monta un FlutterViewController con ese engine
+    let flutterViewController = FlutterViewController(
+      engine: flutterEngine,
+      nibName: nil,
+      bundle: nil
+    )
+
+    window = UIWindow(frame: UIScreen.main.bounds)
+    window?.rootViewController = flutterViewController
+    window?.makeKeyAndVisible()
+
+    // 6️⃣ Registra todos los plugins contra tu engine
+    GeneratedPluginRegistrant.register(with: flutterEngine)
+
+    return true
   }
-  
-  // 6️⃣ APNs device token → FCM
-  override func application(
+
+  // MARK: – APNs token → FCM
+  func application(
     _ application: UIApplication,
     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
   ) {
     Messaging.messaging().apnsToken = deviceToken
-    super.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
   }
-  
-  // 7️⃣ Mostrar notificación en foreground
-  override func userNotificationCenter(
+
+  // MARK: – Mostrar notificación en foreground (iOS 10+)
+  func userNotificationCenter(
     _ center: UNUserNotificationCenter,
     willPresent notification: UNNotification,
-    withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    withCompletionHandler completionHandler:
+      @escaping (UNNotificationPresentationOptions) -> Void
   ) {
     completionHandler([.alert, .badge, .sound])
   }
-  
-  // 8️⃣ Responder al tap en notificación
-  override func userNotificationCenter(
+
+  // MARK: – Tap en notificación
+  func userNotificationCenter(
     _ center: UNUserNotificationCenter,
     didReceive response: UNNotificationResponse,
     withCompletionHandler completionHandler: @escaping () -> Void
   ) {
-    let userInfo = response.notification.request.content.userInfo
-    // Aquí puedes procesar userInfo["type"], etc., y comunicarte con Flutter si lo necesitas.
-    
+    // Si necesitas procesar payload:
+    // let userInfo = response.notification.request.content.userInfo
     completionHandler()
   }
 }

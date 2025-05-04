@@ -40,12 +40,9 @@ dependencies:
   in_app_purchase: ^3.2.0
   google_sign_in: ^5.4.0
   reorderables: ^0.4.2
-  flutter_sound: ^9.25.4
   path_provider: ^2.1.5
   chewie: ^1.4.0
   flutter_image_compress: ^2.4.0
-  audioplayers: ^5.2.1
-  record: ^5.2.1
   dio: ^5.3.0
   video_player: ^2.5.1
 

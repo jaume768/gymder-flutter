@@ -8,16 +8,12 @@ import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 // Importa el paquete record, que ahora expone la clase AudioRecorder en lugar de Record.
-import 'package:record/record.dart';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_sound/flutter_sound.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../providers/auth_provider.dart';
 import '../models/user.dart';
 import '../models/message.dart';
-import '../widgets/audio_bubble.dart';
 import '../services/socket_service.dart';
 import 'package:dio/dio.dart';
 import 'package:video_player/video_player.dart';
@@ -43,9 +39,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _picker = ImagePicker();
-  // Cambiado: se usa AudioRecorder (clase concreta) en lugar de Record (abstracta)
-  final AudioRecorder _audioRecorder = AudioRecorder();
-  final AudioPlayer _audioPlayer = AudioPlayer();
 
   SocketService? _socketService;
   List<Message> messages = [];
@@ -100,8 +93,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
-    _audioPlayer.dispose();
-    _audioRecorder.dispose();
     // Desconectar socket al salir de la pantalla
     if (_socketService != null) {
       _socketService!.disconnect();
@@ -857,12 +848,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                           fit: BoxFit.cover,
                         ),
                       ),
-                    )
-                  else if (message.type == 'audio')
-                    AudioBubble(
-                      audioUrl: message.audioUrl,
-                      duration: message.audioDuration,
-                      isMe: isMe,
                     )
                   else if (message.type == 'video')
                     GestureDetector(

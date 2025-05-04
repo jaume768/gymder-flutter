@@ -52,6 +52,8 @@
 		68092DF52DC67B1B00F79964 /* Debug 3.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Debug 3.xcconfig"; sourceTree = "<group>"; };
 		68092DF72DC6809400F79964 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		68092DFA2DC6827C00F79964 /* audioplayers_darwin.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = audioplayers_darwin.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		68BD06DD2DC7CC7900855D7A /* Release 2.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Release 2.xcconfig"; sourceTree = "<group>"; };
+		68BD06DE2DC7E29900855D7A /* Release 3.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Release 3.xcconfig"; sourceTree = "<group>"; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		97C146EE1CF9000F007C117D /* Runner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Runner.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -135,6 +137,8 @@
 				68092DF42DC67B1100F79964 /* Debug 2.xcconfig */,
 				68092DF52DC67B1B00F79964 /* Debug 3.xcconfig */,
 				D5659AFF27966BBC4C0E7470 /* Frameworks */,
+				68BD06DD2DC7CC7900855D7A /* Release 2.xcconfig */,
+				68BD06DE2DC7E29900855D7A /* Release 3.xcconfig */,
 			);
 			sourceTree = "<group>";
 		};
@@ -499,7 +503,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 2ZP34S5V2U;
 				ENABLE_BITCODE = NO;
 				FLUTTER_ROOT = /Users/user277763/development/flutter;
 				INFOPLIST_FILE = Runner/Info.plist;
@@ -509,6 +518,8 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.gymswipe.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "GymSwipe-connect";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -535,7 +546,7 @@
 		};
 		331C8089294A63A400263BE5 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 4580D4AC47CC146C840AA236 /* Pods-RunnerTests.release.xcconfig */;
+			baseConfigurationReference = 68BD06DE2DC7E29900855D7A /* Release 3.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
@@ -625,6 +636,7 @@
 		};
 		97C147041CF9000F007C117D /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 68BD06DE2DC7E29900855D7A /* Release 3.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -683,7 +695,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 2ZP34S5V2U;
 				ENABLE_BITCODE = NO;
 				FLUTTER_ROOT = /Users/user277763/development/flutter;
 				INFOPLIST_FILE = Runner/Info.plist;
@@ -693,6 +710,8 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.gymswipe.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "GymSwipe-connect";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -702,11 +721,16 @@
 		};
 		97C147071CF9000F007C117D /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 9A925A24EBB8D93330D0213C /* Pods-Runner.release.xcconfig */;
+			baseConfigurationReference = 68BD06DE2DC7E29900855D7A /* Release 3.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 2ZP34S5V2U;
 				ENABLE_BITCODE = NO;
 				FLUTTER_ROOT = /Users/user277763/development/flutter;
 				INFOPLIST_FILE = Runner/Info.plist;
@@ -716,6 +740,8 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.gymswipe.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "GymSwipe-connect";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -733,7 +759,7 @@
 				331C808A294A63A400263BE5 /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
+			defaultConfigurationName = Release;
 		};
 		97C146E91CF9000F007C117D /* Build configuration list for PBXProject "Runner" */ = {
 			isa = XCConfigurationList;
@@ -743,7 +769,7 @@
 				249021D3217E4FDB00AE95B9 /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
+			defaultConfigurationName = Release;
 		};
 		97C147051CF9000F007C117D /* Build configuration list for PBXNativeTarget "Runner" */ = {
 			isa = XCConfigurationList;
@@ -753,7 +779,7 @@
 				249021D4217E4FDB00AE95B9 /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

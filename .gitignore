@@ -10,6 +10,7 @@
 .history
 .svn/
 .swiftpm/
+/ios/Flutter/*.sh
 migrate_working_dir/
 
 /Gymder-api/

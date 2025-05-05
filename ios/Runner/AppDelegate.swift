@@ -4,12 +4,13 @@ import Firebase
 import FirebaseMessaging
 import UserNotifications
 
-@main
-@objc class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+@UIApplicationMain
+@objc class AppDelegate: UIResponder, UIApplicationDelegate {
   
   var window: UIWindow?
   var flutterEngine: FlutterEngine!
 
+  // MARK: – UIApplicationDelegate
   func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -17,38 +18,37 @@ import UserNotifications
     // 1️⃣ Configura Firebase
     FirebaseApp.configure()
 
-    // 2️⃣ Configura delegado de notificaciones
-    if #available(iOS 10.0, *) {
-      UNUserNotificationCenter.current().delegate = self
-    }
-
-    // 3️⃣ Solicita permisos y registra APNs
-    UNUserNotificationCenter.current().requestAuthorization(
-      options: [.alert, .badge, .sound]
-    ) { granted, error in
-      if let error = error {
-        print("Error solicitando permisos de notificaciones: \(error)")
+    // 2️⃣ Configura notificaciones y FCM delegate
+    UNUserNotificationCenter.current().delegate = self
+    let authOptions: UNAuthorizationOptions = [.alert, .badge, .sound]
+    UNUserNotificationCenter
+      .current()
+      .requestAuthorization(options: authOptions) { granted, error in
+        if let error = error {
+          print("❌ Error solicitando permisos de notificaciones:", error)
+        } else {
+          print("✅ Permisos de notificaciones:", granted)
+        }
       }
-    }
     application.registerForRemoteNotifications()
+    Messaging.messaging().delegate = self
 
-    // 4️⃣ Crea y arranca tu propio FlutterEngine
+    // 3️⃣ Arranca tu FlutterEngine
     flutterEngine = FlutterEngine(name: "my_engine")
     flutterEngine.run()
 
-    // 5️⃣ Monta un FlutterViewController con ese engine
-    let flutterViewController = FlutterViewController(
+    // 4️⃣ Registra todos los plugins con ese engine
+    GeneratedPluginRegistrant.register(with: flutterEngine)
+
+    // 5️⃣ Monta un FlutterViewController
+    window = UIWindow(frame: UIScreen.main.bounds)
+    let flutterVC = FlutterViewController(
       engine: flutterEngine,
       nibName: nil,
       bundle: nil
     )
-
-    window = UIWindow(frame: UIScreen.main.bounds)
-    window?.rootViewController = flutterViewController
+    window?.rootViewController = flutterVC
     window?.makeKeyAndVisible()
-
-    // 6️⃣ Registra todos los plugins contra tu engine
-    GeneratedPluginRegistrant.register(with: flutterEngine)
 
     return true
   }
@@ -61,7 +61,20 @@ import UserNotifications
     Messaging.messaging().apnsToken = deviceToken
   }
 
-  // MARK: – Mostrar notificación en foreground (iOS 10+)
+}
+
+// MARK: – MessagingDelegate
+extension AppDelegate: MessagingDelegate {
+  func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+    print("✨ [FirebaseMessaging] FCM registration token: \(fcmToken ?? "nil")")
+    // Aquí puedes enviar el token a tu servidor si lo necesitas.
+  }
+}
+
+// MARK: – UNUserNotificationCenterDelegate
+extension AppDelegate: UNUserNotificationCenterDelegate {
+  
+  // Mostrar notificación en foreground (iOS 10+)
   func userNotificationCenter(
     _ center: UNUserNotificationCenter,
     willPresent notification: UNNotification,
@@ -71,14 +84,12 @@ import UserNotifications
     completionHandler([.alert, .badge, .sound])
   }
 
-  // MARK: – Tap en notificación
+  // Tap en notificación (foreground, background & closed)
   func userNotificationCenter(
     _ center: UNUserNotificationCenter,
     didReceive response: UNNotificationResponse,
     withCompletionHandler completionHandler: @escaping () -> Void
   ) {
-    // Si necesitas procesar payload:
-    // let userInfo = response.notification.request.content.userInfo
     completionHandler()
   }
 }

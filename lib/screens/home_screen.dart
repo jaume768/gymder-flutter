@@ -1,6 +1,7 @@
 // lib/screens/home_screen.dart
 
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
@@ -14,7 +15,6 @@ import 'register_screen.dart';
 import 'tiktok_like_screen.dart';
 import 'login_screen.dart';
 import 'matches_chats_screen.dart';
-import 'dart:io' show Platform;
 import 'my_profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -26,23 +26,23 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Estado para sugerencias y navegación
+  // Clave para acceder al State de TikTokLikeScreen
   final _tikTokKey = GlobalKey<TikTokLikeScreenState>();
+
   List<User> suggestedMatches = [];
   bool isLoading = true;
   String errorMessage = '';
   int _selectedIndex = 1;
+
   late TikTokLikeScreen _tikTokLikeScreen;
   late Widget _matchesScreen;
 
   // In-App Purchase
   final InAppPurchase _iap = InAppPurchase.instance;
-  String get _topLikeId => Platform.isIOS
-      ? 'quicklike768'
-      : 'top_like';
   bool _iapAvailable = false;
   List<ProductDetails> _products = [];
   late StreamSubscription<List<PurchaseDetails>> _sub;
+  String get _topLikeId => Platform.isIOS ? 'quicklike768' : 'top_like';
 
   @override
   void initState() {
@@ -60,7 +60,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  // Carga sugerencias de matches
   Future<void> _fetchSuggestedMatches() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final token = await auth.getToken();
@@ -71,6 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       return;
     }
+
     final svc = UserService(token: token);
     final result = await svc.getSuggestedMatches();
     if (result['success'] == true) {
@@ -78,6 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
         suggestedMatches =
             List<User>.from(result['matches'].map((x) => User.fromJson(x)));
         isLoading = false;
+        // Creamos solo una vez el widget con la misma Key
         _tikTokLikeScreen =
             TikTokLikeScreen(key: _tikTokKey, users: suggestedMatches);
         _matchesScreen = MatchesChatsScreen(key: UniqueKey());
@@ -90,7 +91,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Inicializa el plugin IAP y consulta el producto
   Future<void> _initIAP() async {
     _iapAvailable = await _iap.isAvailable();
     if (!_iapAvailable) return;
@@ -102,43 +102,42 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Maneja actualizaciones de compra
   void _onPurchaseUpdated(List<PurchaseDetails> purchases) async {
     for (var purchase in purchases) {
-      if (purchase.productID == _topLikeId) {
-        if (purchase.status == PurchaseStatus.purchased) {
-          final auth = Provider.of<AuthProvider>(context, listen: false);
-          final token = await auth.getToken();
-          if (token != null) {
-            final svc = UserService(token: token);
-            final res = await svc.purchaseTopLike();
-            if (res['success'] == true) {
-              await auth.refreshUser();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('TopLike comprado 🎉')),
-              );
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(res['message'] ?? tr('error'))),
-              );
-            }
+      if (purchase.productID != _topLikeId) continue;
+
+      if (purchase.status == PurchaseStatus.purchased) {
+        final auth = Provider.of<AuthProvider>(context, listen: false);
+        final token = await auth.getToken();
+        if (token != null) {
+          final svc = UserService(token: token);
+          final res = await svc.purchaseTopLike();
+          if (res['success'] == true) {
+            await auth.refreshUser();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('TopLike comprado 🎉')),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(res['message'] ?? tr('error'))),
+            );
           }
-          if (purchase.pendingCompletePurchase) {
-            await _iap.completePurchase(purchase);
-          }
-        } else if (purchase.status == PurchaseStatus.error) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                  'Error de compra: ${purchase.error?.message ?? 'Unknown error'}'),
-            ),
-          );
         }
+        if (purchase.pendingCompletePurchase) {
+          await _iap.completePurchase(purchase);
+        }
+      } else if (purchase.status == PurchaseStatus.error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Error de compra: ${purchase.error?.message ?? 'Unknown error'}',
+            ),
+          ),
+        );
       }
     }
   }
 
-  // Dispara la compra consumible
   void _buyTopLike() {
     if (!_iapAvailable || _products.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -151,7 +150,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _iap.buyConsumable(purchaseParam: param);
   }
 
-  // Maneja la navegación inferior
   void _onItemTapped(int index) {
     setState(() {
       if (index == 0) {
@@ -168,7 +166,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final auth = Provider.of<AuthProvider>(context);
     final user = auth.user;
 
-    // Redirige si registro incompleto
+    // Si el registro de Google quedó incompleto, redirige
     if (!widget.fromGoogle &&
         user != null &&
         (user.gender == 'Pendiente' || user.relationshipGoal == 'Pendiente')) {
@@ -176,7 +174,8 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-              builder: (_) => const RegisterScreen(fromGoogle: true)),
+            builder: (_) => const RegisterScreen(fromGoogle: true),
+          ),
         );
       });
       return const Scaffold(
@@ -215,7 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Icono Chats
+          // Chats
           GestureDetector(
             onTap: () => _onItemTapped(0),
             child: CircleAvatar(
@@ -229,8 +228,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
+
           const SizedBox(width: 40),
-          // Icono TopLike / SuperLike
+
+          // TikTok-like / SuperLike
           GestureDetector(
             onTap: () {
               if (_selectedIndex == 0) {
@@ -244,97 +245,105 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius:
                         BorderRadius.vertical(top: Radius.circular(20)),
                   ),
-                  builder: (_) => Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
+                  builder: (_) => Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                          borderRadius:
+                              BorderRadius.vertical(top: Radius.circular(20)),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              tr('what_do_you_want'),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            InkWell(
+                              onTap: () {
+                                Navigator.pop(context);
+                                _buyTopLike();
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  color: Colors.black,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 16),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.credit_card,
+                                        color: Colors.white, size: 24),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      tr('buy_more_quick_likes'),
+                                      style: const TextStyle(
+                                          color: Colors.white, fontSize: 16),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            InkWell(
+                              onTap: () async {
+                                Navigator.pop(context);
+                                await _tikTokKey.currentState?.useSuperLike();
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  color: Colors.blueAccent,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 16),
+                                child: Row(
+                                  children: [
+                                    SvgPicture.asset(
+                                      'assets/images/rayo.svg',
+                                      width: 34,
+                                      color: Colors.white,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      tr('use_quick_like'),
+                                      style: const TextStyle(
+                                          color: Colors.white, fontSize: 16),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: Text(
+                                tr('cancel'),
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 16),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      borderRadius:
-                          BorderRadius.vertical(top: Radius.circular(20)),
-                    ),
-                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          tr('what_do_you_want'),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        InkWell(
-                          onTap: () {
-                            Navigator.pop(context);
-                            _buyTopLike();
-                          },
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            height: 56,
-                            decoration: BoxDecoration(
-                              color: Colors.black,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Row(
-                              children: [
-                                Icon(Icons.credit_card, color: Colors.white, size: 24),
-                                const SizedBox(width: 12),
-                                Text(
-                                  tr('buy_more_quick_likes'),
-                                  style: const TextStyle(
-                                      color: Colors.white, fontSize: 16),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        InkWell(
-                          onTap: () async {
-                            Navigator.pop(context);
-                            await _tikTokKey.currentState?.useSuperLike();
-                          },
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            height: 56,
-                            decoration: BoxDecoration(
-                              color: Colors.blueAccent,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Row(
-                              children: [
-                                SvgPicture.asset(
-                                  'assets/images/rayo.svg',
-                                  width: 34,
-                                  color: Colors.white,
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  tr('use_quick_like'),
-                                  style: TextStyle(
-                                      color: Colors.white, fontSize: 16),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: Text(
-                            tr('cancel'),
-                            style: const TextStyle(color: Colors.white70, fontSize: 16),
-                          ),
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
                 );
               }
@@ -360,10 +369,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
-                        colors: [
-                          Color(0xFF00C6FF),
-                          Color(0xFF004A9F),
-                        ],
+                        colors: [Color(0xFF00C6FF), Color(0xFF004A9F)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -371,7 +377,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Text(
                       user.topLikeCount > 0 ? '${user.topLikeCount}' : '+',
                       style: const TextStyle(
-                        color: Colors.black,     // texto en blanco para buen contraste
+                        color: Colors.black,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -381,14 +387,21 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
+
           const SizedBox(width: 40),
-          // Icono Perfil
+
+          // Perfil
           GestureDetector(
             onTap: () {
-              Navigator.push(
+              Navigator.push<bool>(
                 context,
                 MaterialPageRoute(builder: (_) => const MyProfileScreen()),
-              );
+              ).then((shouldRefresh) {
+                if (shouldRefresh == true) {
+                  // Llama al método público que actualiza la lista sin resetear el controller
+                  _tikTokKey.currentState?.reloadProfiles();
+                }
+              });
             },
             child: CircleAvatar(
               radius: 27,

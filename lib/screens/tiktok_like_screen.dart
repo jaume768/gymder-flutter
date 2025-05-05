@@ -165,6 +165,24 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
     });
   }
 
+  Future<void> reloadProfiles() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = await auth.getToken();
+    if (token == null) return;
+
+    final service = UserService(token: token);
+    final result = await service.getSuggestedMatches();
+    if (result['success'] == true) {
+      setState(() {
+        _randomUsers =
+            List<User>.from(result['matches'].map((j) => User.fromJson(j)));
+        _loadedProfileIds
+          ..clear()
+          ..addAll(_randomUsers.map((u) => u.id));
+      });
+    }
+  }
+
   void _resetScrollLimitDialogFlag() {
     _hasShownScrollLimitDialog = false;
   }
@@ -1250,19 +1268,20 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
       builder: (ctx) {
         return Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
           child: SingleChildScrollView(
             child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 0),
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
+              margin: const EdgeInsets.symmetric(horizontal: 0),
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
+                borderRadius: BorderRadius.circular(20),
+              ),
               child: StatefulBuilder(
                 builder: (ctx2, setState) {
                   return Column(

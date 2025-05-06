@@ -101,6 +101,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   List<Photo> _reorderedPhotos = [];
   bool _photoOrderChanged = false;
 
+  // Fotos marcadas para eliminación
+  List<String> _photosToDelete = [];
+
   @override
   void initState() {
     super.initState();
@@ -156,8 +159,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           _imageFile != null ||
           _photoOrderChanged ||
           seeking.length != originalSeeking.length ||
-          !seeking.every(originalSeeking.contains));
+          !seeking.every(originalSeeking.contains) ||
+          _photosToDelete.isNotEmpty);
     });
+  }
+
+  // Marca una foto para borrar (actualiza estado local)
+  void _markPhotoForDeletion(String publicId) {
+    setState(() {
+      _photosToDelete.add(publicId);
+    });
+    _checkChanges();
   }
 
   Future<void> _obtenerUbicacion() async {
@@ -211,7 +223,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (picked != null) {
       setState(() {
         _imageFile = File(picked.path);
-        _checkChanges(); // ¡marcamos que hay cambios!
+        _checkChanges();
       });
     }
   }
@@ -306,43 +318,50 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _saveProfile() async {
+    // 1) Validar formularios
     if (!_usernameFormKey.currentState!.validate() ||
         !_personalInfoFormKey.currentState!.validate()) return;
 
     _usernameFormKey.currentState!.save();
     _personalInfoFormKey.currentState!.save();
+
     setState(() {
       isUploading = true;
       errorMessage = '';
     });
 
     try {
+      // Obtener token y usuario
       final auth = Provider.of<AuthProvider>(context, listen: false);
       final token = await auth.getToken();
       if (token == null) throw Exception(tr('token_not_found_login'));
 
+      // 2) Subir foto de perfil si cambió
       if (_imageFile != null) {
-        final resPic = await UserService(token: token)
-            .uploadProfilePicture(_imageFile!);
+        final resPic =
+            await UserService(token: token).uploadProfilePicture(_imageFile!);
         if (!resPic['success']) {
-          throw Exception(resPic['message'] 
-              ?? tr('error_uploading_profile_picture'));
+          throw Exception(
+            resPic['message'] ?? tr('error_uploading_profile_picture'),
+          );
         }
       }
 
-      // 1) Actualizar username si cambió
+      // 3) Actualizar username si cambió
       if (username != auth.user?.username) {
         final usrRes = await UserService(token: token).updateUsername(username);
-        if (!usrRes['success']) throw Exception(usrRes['message']);
+        if (!usrRes['success']) {
+          throw Exception(usrRes['message']);
+        }
       }
 
-      // 2) Convertir display → interno en español
+      // 4) Preparar y enviar datos de perfil
       final internalGoal = _fitnessGoalKeyMap[goal] ?? goal;
       final internalGender = _genderKeyMap[gender] ?? gender;
       final internalRelGoal =
           _relationshipGoalKeyMap[relationshipGoal] ?? relationshipGoal;
       final internalSeeking =
-          seeking.map((d) => _genderKeyMap[d] ?? d).toList();
+          seeking.map((s) => _genderKeyMap[s] ?? s).toList();
 
       final profileData = {
         'firstName': firstName,
@@ -365,81 +384,57 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           },
       };
 
-      final res = await UserService(token: token).updateProfile(profileData);
-      if (!res['success']) throw Exception(res['message']);
-
-      // 3) Reordenar fotos si cambió
-      if (_photoOrderChanged) {
-        final ids = _reorderedPhotos.map((p) => p.id).toList();
-        final ordRes = await UserService(token: token).updatePhotoOrder(ids);
-        if (!ordRes['success']) throw Exception(ordRes['message']);
+      final resProfile =
+          await UserService(token: token).updateProfile(profileData);
+      if (!resProfile['success']) {
+        throw Exception(resProfile['message']);
       }
 
-      // 4) Refrescar y navegar
+      // 5) Eliminar y/o reordenar fotos en un solo PATCH
+      if (_photosToDelete.isNotEmpty || _photoOrderChanged) {
+        // a) IDs actuales del servidor
+        final currentIds = auth.user!.photos!.map((p) => p.id).toList();
+
+        // b) Si hubo reorden, tomar esa lista, sino el original
+        final baseIds = _photoOrderChanged
+            ? _reorderedPhotos.map((p) => p.id).toList()
+            : currentIds;
+
+        // c) Filtrar los IDs marcados para eliminar
+        final finalIds =
+            baseIds.where((id) => !_photosToDelete.contains(id)).toList();
+
+        // d) Un único PATCH
+        final ordRes =
+            await UserService(token: token).updatePhotoOrder(finalIds);
+        if (!ordRes['success']) {
+          throw Exception(ordRes['message'] ?? 'Error actualizando fotos');
+        }
+
+        // e) Limpieza de flags
+        _photosToDelete.clear();
+        _photoOrderChanged = false;
+        _reorderedPhotos = [];
+      }
+
+      // 6) Refrescar usuario y volver atrás
       await auth.refreshUser();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(tr('profile_updated_successfully')),
-            backgroundColor: Colors.green),
+          content: Text(tr('profile_updated_successfully')),
+          backgroundColor: Colors.green,
+        ),
       );
       Navigator.pop(context);
     } catch (e) {
-      setState(() => errorMessage = e.toString());
+      setState(() {
+        errorMessage = e.toString();
+      });
     } finally {
       setState(() {
         isUploading = false;
       });
     }
-  }
-
-  Future<void> _deletePhoto(String publicId) async {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final currentPhotos = auth.user?.photos ?? [];
-
-    // 1) Si sólo quedan 2 o menos fotos, no permitimos borrar
-    if (currentPhotos.length <= 2) {
-      final msg =
-          tr("must_have_minimum_photos");
-      setState(() => errorMessage = msg);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(msg),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-      return;
-    }
-
-    // 2) Si hay más de 2, procedemos con la eliminación
-    setState(() {
-      isUploading = true;
-      errorMessage = '';
-    });
-
-    final token = await auth.getToken();
-    if (token == null) {
-      setState(() {
-        isUploading = false;
-        errorMessage = tr('token_not_found_login');
-      });
-      return;
-    }
-
-    final res = await UserService(token: token).deletePhoto(publicId);
-    if (res['success']) {
-      await auth.refreshUser();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(tr('photo_deleted_successfully'))),
-      );
-    } else {
-      setState(
-        () => errorMessage = res['message'] ?? tr('error_deleting_photo'),
-      );
-    }
-
-    setState(() {
-      isUploading = false;
-    });
   }
 
   @override
@@ -609,10 +604,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           height: 16,
                           width: 16,
                           child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
+                              strokeWidth: 2,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white)),
                         ),
                       )
                     : IconButton(
@@ -627,7 +621,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             const SizedBox(height: 24),
             Text(tr('basic_lifts'), style: sectionHeaderStyle),
             const SizedBox(height: 8),
-            // Sentadilla
             TextFormField(
               initialValue: squatWeight?.toString() ?? '',
               style: const TextStyle(color: Colors.white),
@@ -653,7 +646,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               },
             ),
             const SizedBox(height: 16),
-            // Press de banca
             TextFormField(
               initialValue: benchPressWeight?.toString() ?? '',
               style: const TextStyle(color: Colors.white),
@@ -679,7 +671,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               },
             ),
             const SizedBox(height: 16),
-            // Peso muerto
             TextFormField(
               initialValue: deadliftWeight?.toString() ?? '',
               style: const TextStyle(color: Colors.white),
@@ -715,7 +706,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               onUploadAdditionalPhotos: _uploadAdditionalPhotos,
               onRemoveSelectedImage: (i) =>
                   setState(() => _additionalImages.removeAt(i)),
-              onDeletePhoto: _deletePhoto,
+              onDeletePhoto: _markPhotoForDeletion,
               onReorderDone: (newList) {
                 setState(() {
                   _reorderedPhotos = newList;

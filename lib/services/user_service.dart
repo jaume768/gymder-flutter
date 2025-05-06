@@ -383,9 +383,8 @@ class UserService {
   }
 
   // Método para eliminar una foto adicional
-  Future<Map<String, dynamic>> deletePhoto(String publicId) async {
-    final url = Uri.parse(
-        '$baseUrl/users/delete/photo/$publicId/photo'); // Asumiendo que el tipo es 'photo'
+  Future<Map<String, dynamic>> deletePhoto(String photoId) async {
+    final url = Uri.parse('$baseUrl/users/delete/photo/$photoId/photo');
     final response = await http.delete(
       url,
       headers: {

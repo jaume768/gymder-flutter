@@ -12,8 +12,7 @@ class AdditionalPhotosWidget extends StatefulWidget {
   final VoidCallback onPickAdditionalImages;
   final VoidCallback onUploadAdditionalPhotos;
   final Function(int) onRemoveSelectedImage;
-  final Future<void> Function(String) onDeletePhoto;
-  // Callback para notificar que se ha reordenado la lista de fotos
+  final void Function(String) onDeletePhoto;
   final ValueChanged<List<Photo>> onReorderDone;
 
   const AdditionalPhotosWidget({
@@ -99,7 +98,13 @@ class _AdditionalPhotosWidgetState extends State<AdditionalPhotosWidget> {
                 top: 4,
                 right: 4,
                 child: GestureDetector(
-                  onTap: () => widget.onDeletePhoto(photo.id),
+                  onTap: () {
+                    // 1) lo quitamos de la vista
+                    setState(
+                        () => photoList.removeWhere((p) => p.id == photo.id));
+                    // 2) avisamos al padre para que lo marque para borrar
+                    widget.onDeletePhoto(photo.id);
+                  },
                   child: const CircleAvatar(
                     radius: 12,
                     backgroundColor: Colors.redAccent,

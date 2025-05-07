@@ -12,6 +12,7 @@ import '../providers/auth_provider.dart';
 import '../services/user_service.dart';
 import '../utils/error_handler.dart';
 import 'home_screen.dart';
+import 'tutorial_screen.dart';
 import 'login_screen.dart';
 import 'package:http/http.dart' as http;
 import 'terms_conditions_screen.dart';
@@ -664,7 +665,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           setState(() => isLoading = false);
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const HomeScreen()),
+            MaterialPageRoute(builder: (_) => const TutorialScreen()),
           );
         } else {
           setState(() {
@@ -731,7 +732,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               setState(() => isLoading = false);
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (_) => const HomeScreen()),
+                MaterialPageRoute(builder: (_) => const TutorialScreen()),
               );
             } else {
               if (_registrationStarted) {

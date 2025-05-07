@@ -269,7 +269,7 @@
   "log_in":"GymSwipe Login",
   "error_fetching_matches": "Error fetching matches",
   "delete_conversation": "Delete Conversation",
-  "delete_conversation_message": "Do you want to delete the chat with {username}?",
+  "delete_conversation_message": "Do you want to delete the chat?",
   "image_preview": "Preview",
   "send_this_image": "Send this image?",
   "cancel_action": "Cancel",

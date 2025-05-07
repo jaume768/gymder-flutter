@@ -194,25 +194,81 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
                                 onLongPress: () {
                                   showDialog(
                                     context: context,
-                                    builder: (ctx) => AlertDialog(
-                                      title: Text(tr("delete_conversation")),
-                                      content: Text(tr(
-                                          "delete_conversation_message",
-                                          args: [matchedUser.username])),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(ctx).pop(),
-                                          child: Text(tr("cancel")),
+                                    builder: (ctx) => Dialog(
+                                      backgroundColor: Colors.grey[900],
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(20)),
+                                      insetPadding: const EdgeInsets.symmetric(
+                                          horizontal: 40, vertical: 24),
+                                      child: Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                            24, 16, 24, 16),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.delete,
+                                                size: 48, color: Colors.redAccent),
+                                            const SizedBox(height: 12),
+                                            Text(
+                                              tr("delete_conversation"),
+                                              textAlign: TextAlign.center,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              tr(
+                                                  "delete_conversation_message",
+                                                  args: [matchedUser.username]),
+                                              textAlign: TextAlign.center,
+                                              style: const TextStyle(
+                                                color: Colors.white70,
+                                                fontSize: 16,
+                                                height: 1.4,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 24),
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: OutlinedButton(
+                                                    onPressed: () =>
+                                                        Navigator.of(ctx).pop(),
+                                                    style: OutlinedButton.styleFrom(
+                                                      side: const BorderSide(
+                                                          color: Colors.redAccent),
+                                                    ),
+                                                    child: Text(tr("cancel"),
+                                                        style: const TextStyle(
+                                                            color: Colors.white)),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: ElevatedButton(
+                                                    onPressed: () {
+                                                      Navigator.of(ctx).pop();
+                                                      _hideConversation(
+                                                          matchedUser.id);
+                                                    },
+                                                    style: ElevatedButton.styleFrom(
+                                                      backgroundColor:
+                                                          Colors.redAccent,
+                                                    ),
+                                                    child: Text(tr("delete"),
+                                                        style: const TextStyle(
+                                                            color: Colors.white)),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
                                         ),
-                                        TextButton(
-                                          onPressed: () {
-                                            Navigator.of(ctx).pop();
-                                            _hideConversation(matchedUser.id);
-                                          },
-                                          child: Text(tr("delete")),
-                                        ),
-                                      ],
+                                      ),
                                     ),
                                   );
                                 },

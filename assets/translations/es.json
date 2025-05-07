@@ -49,6 +49,8 @@
   "tap_to_chat": "Toca para chatear",
   "delete_message": "Eliminar Mensaje",
   "delete_message_confirm": "¿Quieres eliminar este mensaje solo para ti?",
+  "delete_conversation": "Eliminar conversación",
+  "delete_conversation_message": "¿Estás seguro de que quieres eliminar la conversación",
   "delete": "Eliminar",
   "blocked_users": "Usuarios Bloqueados",
   "block": "Bloquear",

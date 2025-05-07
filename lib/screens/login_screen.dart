@@ -23,6 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   String password = '';
   bool isLoading = false;
   String errorMessage = '';
+  bool _obscurePassword = true;
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email'],
@@ -162,8 +163,15 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(12.0),
                           ),
                           errorStyle: const TextStyle(color: Colors.redAccent),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                              color: Colors.white54,
+                            ),
+                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                          ),
                         ),
-                        obscureText: true,
+                        obscureText: _obscurePassword,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return "please_enter_password".tr();

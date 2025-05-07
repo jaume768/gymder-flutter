@@ -81,6 +81,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool isLoading = false;
   Map<String, String> fieldErrors = {};
 
+  bool _obscurePassword = true;
+
   @override
   void initState() {
     super.initState();
@@ -1101,8 +1103,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const SizedBox(height: 20),
           TextFormField(
             style: const TextStyle(color: Colors.white),
-            decoration: _inputDecoration(tr("password"), fieldName: 'password'),
-            obscureText: true,
+            decoration: _inputDecoration(tr("password"), fieldName: 'password')
+                .copyWith(
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.white54,
+                ),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              ),
+            ),
+            obscureText: _obscurePassword,
             onChanged: (value) => password = value,
           ),
 

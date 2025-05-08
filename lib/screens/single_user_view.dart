@@ -218,7 +218,7 @@ class _SingleUserViewState extends State<SingleUserView>
                             text: " ($displayGoal)",
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 21,
+                              fontSize: 18,
                               fontWeight: FontWeight.normal,
                               shadows: [
                                 Shadow(blurRadius: 10, color: Colors.black)

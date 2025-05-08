@@ -330,30 +330,48 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       backgroundColor: const Color.fromRGBO(20, 20, 20, 1),
-      body: ListView(
-        children: [
-          SwitchListTile(
-            title: Text(tr("notify_new_matches"),
-                style: const TextStyle(color: Colors.white)),
-            value: _notificarMatches,
-            activeColor: Colors.blueAccent,
-            onChanged: (v) => _updatePreference('matches', v),
-          ),
-          SwitchListTile(
-            title: Text(tr("notify_messages"),
-                style: const TextStyle(color: Colors.white)),
-            value: _notificarMensajes,
-            activeColor: Colors.blueAccent,
-            onChanged: (v) => _updatePreference('messages', v),
-          ),
-          SwitchListTile(
-            title: Text(tr("notify_likes"),
-                style: const TextStyle(color: Colors.white)),
-            value: _notificarLikes,
-            activeColor: Colors.blueAccent,
-            onChanged: (v) => _updatePreference('likes', v),
-          ),
-        ],
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // Lista de items que mostraremos
+          final notificationItems = [
+            SwitchListTile(
+              title: Text(tr("notify_new_matches"),
+                  style: const TextStyle(color: Colors.white)),
+              value: _notificarMatches,
+              activeColor: Colors.blueAccent,
+              onChanged: (v) => _updatePreference('matches', v),
+            ),
+            SwitchListTile(
+              title: Text(tr("notify_messages"),
+                  style: const TextStyle(color: Colors.white)),
+              value: _notificarMensajes,
+              activeColor: Colors.blueAccent,
+              onChanged: (v) => _updatePreference('messages', v),
+            ),
+            SwitchListTile(
+              title: Text(tr("notify_likes"),
+                  style: const TextStyle(color: Colors.white)),
+              value: _notificarLikes,
+              activeColor: Colors.blueAccent,
+              onChanged: (v) => _updatePreference('likes', v),
+            ),
+          ];
+          
+          // Calculamos altura aproximada del contenido
+          final itemHeight = 60.0; // Altura estimada de cada switch
+          final totalContentHeight = notificationItems.length * itemHeight;
+          
+          // Determinamos si se necesita scroll
+          final needsScroll = totalContentHeight > constraints.maxHeight;
+          
+          return SingleChildScrollView(
+            // Física de scroll condicional
+            physics: needsScroll
+                ? const AlwaysScrollableScrollPhysics()
+                : const NeverScrollableScrollPhysics(),
+            child: Column(children: notificationItems),
+          );
+        },
       ),
     );
   }
@@ -398,31 +416,49 @@ class _IdiomasScreenState extends State<IdiomasScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       backgroundColor: const Color.fromRGBO(20, 20, 20, 1.0),
-      body: ListView(
-        children: idiomas.map((idioma) {
-          return RadioListTile(
-            title:
-                Text(idioma.tr(), style: const TextStyle(color: Colors.white)),
-            value: idioma,
-            groupValue: idiomaSeleccionado,
-            activeColor: Colors.blueAccent,
-            onChanged: (String? value) {
-              setState(() => idiomaSeleccionado = value!);
-              final newCode = {
-                'Español': 'es',
-                'English': 'en',
-                'Français': 'fr',
-                'Deutsch': 'de',
-                'Italian': 'it',
-              }[value]!;
-              context.setLocale(Locale(newCode));
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const SplashScreen()),
-              );
-            },
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // Generamos los items de idiomas
+          final languageItems = idiomas.map((idioma) {
+            return RadioListTile(
+              title:
+                  Text(idioma.tr(), style: const TextStyle(color: Colors.white)),
+              value: idioma,
+              groupValue: idiomaSeleccionado,
+              activeColor: Colors.blueAccent,
+              onChanged: (String? value) {
+                setState(() => idiomaSeleccionado = value!);
+                final newCode = {
+                  'Español': 'es',
+                  'English': 'en',
+                  'Français': 'fr',
+                  'Deutsch': 'de',
+                  'Italian': 'it',
+                }[value]!;
+                context.setLocale(Locale(newCode));
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SplashScreen()),
+                );
+              },
+            );
+          }).toList();
+          
+          // Calculamos altura aproximada del contenido
+          final itemHeight = 55.0; // Altura estimada de cada opción de idioma
+          final totalContentHeight = idiomas.length * itemHeight;
+          
+          // Determinamos si se necesita scroll
+          final needsScroll = totalContentHeight > constraints.maxHeight;
+          
+          return SingleChildScrollView(
+            // Física de scroll condicional
+            physics: needsScroll
+                ? const AlwaysScrollableScrollPhysics()
+                : const NeverScrollableScrollPhysics(),
+            child: Column(children: languageItems),
           );
-        }).toList(),
+        },
       ),
     );
   }
@@ -636,21 +672,53 @@ class PermisosAppScreen extends StatelessWidget {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       backgroundColor: const Color.fromRGBO(20, 20, 20, 1.0),
-      body: ListView.separated(
-        itemCount: permisos.length,
-        separatorBuilder: (_, __) => const Divider(color: Colors.white24),
-        itemBuilder: (context, index) {
-          final permiso = permisos[index];
-          return ListTile(
-            leading: const Icon(Icons.info, color: Colors.white70),
-            title: Text(permiso["title"]!,
-                style: const TextStyle(color: Colors.white)),
-            subtitle: Text(permiso["description"]!,
-                style: const TextStyle(color: Colors.white70)),
-            trailing: ElevatedButton(
-              style: kAppButtonStyle,
-              onPressed: _openAppSettings,
-              child: Text(tr("modify")),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // Preparamos la lista de widgets de permisos
+          final permissionItems = <Widget>[];
+          
+          for (int i = 0; i < permisos.length; i++) {
+            // Añadimos cada item de permiso
+            final permiso = permisos[i];
+            permissionItems.add(
+              ListTile(
+                leading: const Icon(Icons.info, color: Colors.white70),
+                title: Text(permiso["title"]!,
+                    style: const TextStyle(color: Colors.white)),
+                subtitle: Text(permiso["description"]!,
+                    style: const TextStyle(color: Colors.white70)),
+                trailing: ElevatedButton(
+                  style: kAppButtonStyle,
+                  onPressed: _openAppSettings,
+                  child: Text(tr("modify")),
+                ),
+              ),
+            );
+            
+            // Añadimos el separador si no es el último elemento
+            if (i < permisos.length - 1) {
+              permissionItems.add(const Divider(color: Colors.white24));
+            }
+          }
+          
+          // Calculamos altura aproximada del contenido
+          final itemHeight = 90.0; // Altura estimada de cada item de permiso
+          final dividerHeight = 16.0;
+          // Altura total: cada item + cada divisor (excepto el último) 
+          final totalContentHeight = (permisos.length * itemHeight) + 
+              ((permisos.length - 1) * dividerHeight);
+          
+          // Determinamos si se necesita scroll
+          final needsScroll = totalContentHeight > constraints.maxHeight;
+          
+          return SingleChildScrollView(
+            // Física de scroll condicional
+            physics: needsScroll
+                ? const AlwaysScrollableScrollPhysics()
+                : const NeverScrollableScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Column(children: permissionItems),
             ),
           );
         },

@@ -257,8 +257,8 @@ class UserService {
   }
 
   // En user_service.dart
-  Future<Map<String, dynamic>> getMatches() async {
-    final url = Uri.parse('$baseUrl/matches');
+  Future<Map<String, dynamic>> getMatches({int page = 0, int limit = 10}) async {
+    final url = Uri.parse('$baseUrl/matches?page=$page&limit=$limit');
     final response = await http.get(
       url,
       headers: {
@@ -272,6 +272,7 @@ class UserService {
       return {
         'success': true,
         'matches': data['matches'],
+        'pagination': data['pagination'],
       };
     } else {
       final data = jsonDecode(response.body);

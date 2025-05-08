@@ -12,6 +12,7 @@ import '../services/user_service.dart';
 import 'PromoCodeScreen.dart';
 import 'login_screen.dart';
 import 'AcercaDeScreen.dart';
+import 'my_matches_screen.dart';
 
 /// Estilo común para todos los botones "Cancelar", "Modificar", "Actualizar", etc.
 final ButtonStyle kAppButtonStyle = TextButton.styleFrom(
@@ -57,6 +58,11 @@ class SettingsScreen extends StatelessWidget {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const PermisosAppScreen()),
+      );
+    } else if (option == tr("my_matches")) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const MyMatchesScreen()),
       );
     } else if (option == tr("about")) {
       Navigator.push(
@@ -164,6 +170,7 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<Map<String, dynamic>> options = [
+      {"title": tr("my_matches"), "icon": Icons.favorite},
       {"title": tr("notifications"), "icon": Icons.notifications},
       {"title": tr("languages"), "icon": Icons.language},
       {"title": tr("subscriptions_payments"), "icon": Icons.payment},
@@ -182,18 +189,42 @@ class SettingsScreen extends StatelessWidget {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       backgroundColor: const Color.fromRGBO(20, 20, 20, 1.0),
-      body: ListView.separated(
-        itemCount: options.length,
-        separatorBuilder: (_, __) => const Divider(color: Colors.white24),
-        itemBuilder: (context, index) {
-          final option = options[index];
-          return ListTile(
-            leading: Icon(option["icon"], color: Colors.white70),
-            title: Text(option["title"],
-                style: const TextStyle(color: Colors.white)),
-            trailing: const Icon(Icons.arrow_forward_ios,
-                color: Colors.white70, size: 16),
-            onTap: () => _optionSelected(context, option["title"]),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // Calculamos la altura aproximada que necesitarán todas las opciones
+          // Altura estimada de cada elemento (ListTile + Divider)
+          final itemHeight = 72.0; // ~56 para ListTile + ~16 para Divider
+          final totalContentHeight = options.length * itemHeight;
+          
+          // Determinamos si se necesita scroll basado en si el contenido excede la altura disponible
+          final needsScroll = totalContentHeight > constraints.maxHeight;
+          
+          return SingleChildScrollView(
+            // Solo permitir scroll cuando sea necesario
+            physics: needsScroll 
+                ? const AlwaysScrollableScrollPhysics() 
+                : const NeverScrollableScrollPhysics(),
+            child: Column(
+              children: List.generate(options.length * 2 - 1, (index) {
+                // Para los índices pares, mostramos un ListTile (la opción)
+                if (index.isEven) {
+                  final optionIndex = index ~/ 2;
+                  final option = options[optionIndex];
+                  return ListTile(
+                    leading: Icon(option["icon"], color: Colors.white70),
+                    title: Text(option["title"],
+                        style: const TextStyle(color: Colors.white)),
+                    trailing: const Icon(Icons.arrow_forward_ios,
+                        color: Colors.white70, size: 16),
+                    onTap: () => _optionSelected(context, option["title"]),
+                  );
+                } 
+                // Para los índices impares, mostramos un divisor
+                else {
+                  return const Divider(color: Colors.white24);
+                }
+              }),
+            ),
           );
         },
       ),

@@ -237,8 +237,7 @@ class _SingleUserViewState extends State<SingleUserView>
                             ),
                           ),
                         ),
-                        
-                        // Logo de verificación
+
                         if (user.verificationStatus == 'true')
                           Positioned(
                             left: -23,

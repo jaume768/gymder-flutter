@@ -294,6 +294,7 @@
   "additional_photos_uploaded_successfully": "Additional photos uploaded successfully",
   "error_uploading_additional_photos": "Error uploading additional photos",
   "error_deleting_photo": "Error deleting photo",
+  "add_verification_badge": "Add verification",
   "username": "Username",
   "enter_username": "Enter a username",
   "error_updating_photo_order": "Error updating photo order",

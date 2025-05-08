@@ -12,6 +12,7 @@ import '../providers/auth_provider.dart';
 import 'SettingsScreen.dart';
 import 'edit_profile_screen.dart';
 import 'photo_gallery_screen.dart';
+import 'verification_screen.dart';
 
 class MyProfileScreen extends StatefulWidget {
   const MyProfileScreen({Key? key}) : super(key: key);
@@ -196,16 +197,77 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              // Nombre de usuario
-              Text(
-                user.username ?? '',
-                style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+              // Nombre de usuario con logo de verificación si está verificado
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    user.username ?? '',
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  // Logo de verificación
+                  if (user.verificationStatus == 'true')
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: Transform.rotate(
+                        angle: 3.14159 / 1000,
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                ],
               ),
-              // Biografía
+              
+              // Botón de verificación si la cuenta no está verificada
+              if (user.verificationStatus != 'true')
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context, 
+                        MaterialPageRoute(builder: (_) => const VerificationScreen()),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.blue, width: 1.5),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.verified_outlined,
+                            color: Colors.blue,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            tr('add_verification_badge'),
+                            style: const TextStyle(
+                              color: Colors.blue,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
               if (user.biography != null && user.biography!.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(

@@ -299,6 +299,7 @@
   "error_updating_photo_order": "Error al guardar el orden de las fotos",
   "error_deleting_photo": "Error al eliminar la foto",
   "could_not_determine_city": "No se pudo determinar la ciudad",
+  "add_verification_badge": "Añadir verificación",
   "terms_conditions": "Términos y Condiciones",
   "accept_terms": "He leído y acepto los",
   "premium_scroll_message": "Para desplazarte hacia arriba y volver al usuario anterior necesitas ser Premium. ¿Quieres suscribirte?",

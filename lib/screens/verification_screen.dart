@@ -7,6 +7,48 @@ import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../services/user_service.dart';
 
+// Widget para visualizar imágenes a pantalla completa
+class FullScreenImageView extends StatelessWidget {
+  final File imageFile;
+  final String heroTag;
+  
+  const FullScreenImageView({
+    Key? key, 
+    required this.imageFile,
+    required this.heroTag,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.white),
+        elevation: 0,
+      ),
+      body: GestureDetector(
+        onTap: () => Navigator.of(context).pop(),
+        child: Center(
+          child: Hero(
+            tag: heroTag,
+            child: InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: Image.file(
+                imageFile,
+                fit: BoxFit.contain,
+                width: double.infinity,
+                height: double.infinity,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class VerificationScreen extends StatefulWidget {
   const VerificationScreen({Key? key}) : super(key: key);
 
@@ -94,6 +136,20 @@ class _VerificationScreenState extends State<VerificationScreen> {
         SnackBar(content: Text('Error picking image: $e')),
       );
     }
+  }
+
+  // Mostrar imagen a pantalla completa
+  void _showFullScreenImage(File imageFile) {
+    final String heroTag = imageFile == _identityDocumentFile ? 'identity_document' : 'selfie_document';
+    
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => FullScreenImageView(
+          imageFile: imageFile,
+          heroTag: heroTag,
+        ),
+      ),
+    );
   }
 
   // Mostrar diálogo para elegir fuente de imagen (cámara o galería)
@@ -389,13 +445,19 @@ class _VerificationScreenState extends State<VerificationScreen> {
             if (_identityDocumentFile != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.file(
-                    _identityDocumentFile!,
-                    height: 150,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
+                child: GestureDetector(
+                  onTap: () => _showFullScreenImage(_identityDocumentFile!),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Hero(
+                      tag: 'identity_document',
+                      child: Image.file(
+                        _identityDocumentFile!,
+                        height: 150,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -480,13 +542,19 @@ class _VerificationScreenState extends State<VerificationScreen> {
             if (_selfieFile != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.file(
-                    _selfieFile!,
-                    height: 150,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
+                child: GestureDetector(
+                  onTap: () => _showFullScreenImage(_selfieFile!),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Hero(
+                      tag: 'selfie_document',
+                      child: Image.file(
+                        _selfieFile!,
+                        height: 150,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   ),
                 ),
               ),

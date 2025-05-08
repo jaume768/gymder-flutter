@@ -315,14 +315,34 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          // Username
-          Text(
-            user!.username ?? '',
-            style: const TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+          // Username con logo de verificación si está verificado
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                user!.username ?? '',
+                style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              // Logo de verificación
+              if (user!.verificationStatus == 'true')
+                Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: Transform.rotate(
+                    angle: 3.14159 / 1000,
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+            ],
           ),
           // Biografía
           if (user!.biography != null && user!.biography!.isNotEmpty)

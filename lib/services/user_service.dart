@@ -98,7 +98,7 @@ class UserService {
   Future<Map<String, dynamic>> setNotificationSetting(
       String key, bool value) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/users/notification'),
+      Uri.parse('$baseUrl/users/notifications'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -106,6 +106,129 @@ class UserService {
       body: jsonEncode({key: value}),
     );
     return jsonDecode(response.body);
+  }
+
+  // Métodos para la verificación de identidad
+
+  // Obtener el estado actual de verificación
+  Future<Map<String, dynamic>> getVerificationStatus() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/verification/status'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'success': false,
+          'message': jsonDecode(response.body)['message'] ?? tr('error_getting_verification_status'),
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': tr('error_getting_verification_status'),
+        'error': e.toString()
+      };
+    }
+  }
+
+  // Subir documento de identidad
+  Future<Map<String, dynamic>> uploadIdentityDocument(File documentFile) async {
+    try {
+      // Obtener el tipo MIME del archivo
+      final mimeType = lookupMimeType(documentFile.path);
+      if (mimeType == null) {
+        return {
+          'success': false,
+          'message': tr('invalid_file_type'),
+        };
+      }
+
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/verification/upload-identity-document'),
+      );
+
+      request.headers['Authorization'] = 'Bearer $token';
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'identityDocument',
+          documentFile.path,
+          contentType: MediaType.parse(mimeType),
+        ),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'success': false,
+          'message': jsonDecode(response.body)['message'] ?? tr('error_uploading_document'),
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': tr('error_uploading_document'),
+        'error': e.toString()
+      };
+    }
+  }
+
+  // Subir selfie con documento de identidad
+  Future<Map<String, dynamic>> uploadSelfieWithDocument(File selfieFile) async {
+    try {
+      // Obtener el tipo MIME del archivo
+      final mimeType = lookupMimeType(selfieFile.path);
+      if (mimeType == null) {
+        return {
+          'success': false,
+          'message': tr('invalid_file_type'),
+        };
+      }
+
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/verification/upload-selfie-with-document'),
+      );
+
+      request.headers['Authorization'] = 'Bearer $token';
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'selfieWithDocument',
+          selfieFile.path,
+          contentType: MediaType.parse(mimeType),
+        ),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'success': false,
+          'message': jsonDecode(response.body)['message'] ?? tr('error_uploading_selfie'),
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': tr('error_uploading_selfie'),
+        'error': e.toString()
+      };
+    }
   }
 
   Future<Map<String, dynamic>> updatePhotoOrder(List<String> photoIds) async {

@@ -81,6 +81,11 @@ class User {
   final DateTime? scrollLimitReachedAt;
   final DateTime? likeLimitReachedAt;
   final String? promoCode;
+  
+  // Campos para verificación de identidad
+  final String verificationStatus; // 'false', 'pendiente' o 'true'
+  final ProfilePicture? identityDocument; // Documento de identidad
+  final ProfilePicture? selfieWithDocument; // Selfie sosteniendo el documento
 
   User({
     required this.id,
@@ -117,6 +122,9 @@ class User {
     this.scrollLimitReachedAt,
     this.likeLimitReachedAt,
     this.promoCode,
+    this.verificationStatus = 'false',
+    this.identityDocument,
+    this.selfieWithDocument,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -149,6 +157,14 @@ class User {
       seeking:
           json['seeking'] != null ? List<String>.from(json['seeking']) : [],
       relationshipGoal: json['relationshipGoal'],
+      // Campos de verificación
+      verificationStatus: json['verificationStatus'] ?? 'false',
+      identityDocument: json['identityDocument'] != null
+          ? ProfilePicture.fromJson(json['identityDocument'])
+          : null,
+      selfieWithDocument: json['selfieWithDocument'] != null
+          ? ProfilePicture.fromJson(json['selfieWithDocument'])
+          : null,
       likes: json['likes'] != null ? List<String>.from(json['likes']) : [],
       matches:
           json['matches'] != null ? List<String>.from(json['matches']) : [],

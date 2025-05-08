@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../models/user.dart';
+import 'dart:math';
 import 'user_profile_screen.dart'; // Para navegar al perfil del usuario
 
 class SingleUserView extends StatefulWidget {
@@ -180,8 +181,7 @@ class _SingleUserViewState extends State<SingleUserView>
               ),
             ),
 
-          // ─── Nombre, meta y biografía ──────────────────
-          // ─── Nombre, meta, biografía y ubicación ──────────────────
+          // ─── Panel con información del usuario ──────────────────
           Positioned(
             left: 20,
             right: 20,
@@ -198,37 +198,67 @@ class _SingleUserViewState extends State<SingleUserView>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Usuario + (Goal)
-                  RichText(
-                    text: TextSpan(
+                  // Nombre de usuario con overlay del logo verificado
+                  Container(
+                    margin: EdgeInsets.only(bottom: 5),
+                    child: Stack(
+                      clipBehavior: Clip.none,
                       children: [
-                        TextSpan(
-                          text: user.username,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 35,
-                            fontWeight: FontWeight.bold,
-                            shadows: [
-                              Shadow(blurRadius: 10, color: Colors.black)
-                            ],
+                        // Username
+                        Padding(
+                          padding: const EdgeInsets.only(right: 40.0), // Espacio para el badge
+                          child: RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: user.username,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 35,
+                                    fontWeight: FontWeight.bold,
+                                    shadows: [
+                                      Shadow(blurRadius: 10, color: Colors.black)
+                                    ],
+                                  ),
+                                ),
+                                if (displayGoal.isNotEmpty)
+                                  TextSpan(
+                                    text: " ($displayGoal)",
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.normal,
+                                      shadows: [
+                                        Shadow(blurRadius: 10, color: Colors.black)
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
-                        if (displayGoal.isNotEmpty)
-                          TextSpan(
-                            text: " ($displayGoal)",
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.normal,
-                              shadows: [
-                                Shadow(blurRadius: 10, color: Colors.black)
-                              ],
+                        
+                        // Logo de verificación
+                        if (user.verificationStatus == 'true')
+                          Positioned(
+                            left: -23,
+                            top: -24,
+                            child: Transform.rotate(
+                              angle: pi / -8, // 90 grados
+                              child: Container(
+                                width: 45,
+                                height: 45,
+                                child: Image.asset(
+                                  'assets/images/logo.png',
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
                             ),
                           ),
                       ],
                     ),
                   ),
-
+                  
                   // Biografía
                   if (user.biography != null && user.biography!.isNotEmpty)
                     Padding(
@@ -246,7 +276,6 @@ class _SingleUserViewState extends State<SingleUserView>
                       ),
                     ),
 
-                  // Ubicación (si existe ciudad o país)
                   if ((user.city != null && user.city!.isNotEmpty) ||
                       (user.country != null && user.country!.isNotEmpty))
                     Padding(

@@ -13,6 +13,7 @@ import 'PromoCodeScreen.dart';
 import 'login_screen.dart';
 import 'AcercaDeScreen.dart';
 import 'my_matches_screen.dart';
+import 'verification_screen.dart';
 
 /// Estilo común para todos los botones "Cancelar", "Modificar", "Actualizar", etc.
 final ButtonStyle kAppButtonStyle = TextButton.styleFrom(
@@ -48,6 +49,11 @@ class SettingsScreen extends StatelessWidget {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const SeguridadScreen()),
+      );
+    } else if (option == tr("identity_verification")) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const VerificationScreen()),
       );
     } else if (option == tr("promo_code")) {
       Navigator.push(
@@ -171,11 +177,12 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<Map<String, dynamic>> options = [
       {"title": tr("my_matches"), "icon": Icons.favorite},
+      {"title": tr("identity_verification"), "icon": Icons.verified_user},
       {"title": tr("notifications"), "icon": Icons.notifications},
       {"title": tr("languages"), "icon": Icons.language},
       {"title": tr("subscriptions_payments"), "icon": Icons.payment},
-      {"title": tr("security"), "icon": Icons.security},
       {"title": tr("promo_code"), "icon": Icons.card_giftcard},
+      {"title": tr("security"), "icon": Icons.security},
       {"title": tr("app_permissions"), "icon": Icons.apps},
       {"title": tr("about"), "icon": Icons.info},
       {"title": tr("logout"), "icon": Icons.logout},

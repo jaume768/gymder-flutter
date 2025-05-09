@@ -80,9 +80,6 @@ class _AcercaDeScreenState extends State<AcercaDeScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 30),
-                  _buildSection(
-                      tr("app_description"), tr("app_description_text")),
                   const SizedBox(height: 20),
                   _buildSectionTitle(tr("legal_information")),
                   _buildClickableItem(

@@ -198,59 +198,32 @@ class _SingleUserViewState extends State<SingleUserView>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Nombre de usuario con overlay del logo verificado
                   Container(
                     margin: EdgeInsets.only(bottom: 5),
-                    child: Stack(
-                      clipBehavior: Clip.none,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Username
-                        Padding(
-                          padding: const EdgeInsets.only(right: 40.0), // Espacio para el badge
-                          child: RichText(
-                            text: TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: user.username,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 35,
-                                    fontWeight: FontWeight.bold,
-                                    shadows: [
-                                      Shadow(blurRadius: 10, color: Colors.black)
-                                    ],
-                                  ),
-                                ),
-                                if (displayGoal.isNotEmpty)
-                                  TextSpan(
-                                    text: " ($displayGoal)",
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.normal,
-                                      shadows: [
-                                        Shadow(blurRadius: 10, color: Colors.black)
-                                      ],
-                                    ),
-                                  ),
-                              ],
-                            ),
+                        Text(
+                          user.username,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 35,
+                            fontWeight: FontWeight.bold,
+                            shadows: [
+                              Shadow(blurRadius: 10, color: Colors.black)
+                            ],
                           ),
                         ),
-
                         if (user.verificationStatus == 'true')
-                          Positioned(
-                            left: -23,
-                            top: -24,
-                            child: Transform.rotate(
-                              angle: pi / -8, // 90 grados
-                              child: Container(
-                                width: 45,
-                                height: 45,
-                                child: Image.asset(
-                                  'assets/images/logo.png',
-                                  fit: BoxFit.contain,
-                                ),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: Container(
+                              width: 30,
+                              height: 30,
+                              child: Image.asset(
+                                'assets/images/logo.png',
+                                fit: BoxFit.contain,
                               ),
                             ),
                           ),

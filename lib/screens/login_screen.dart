@@ -55,7 +55,6 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      // Llamada al provider para hacer login con Google
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final result = await authProvider.loginWithGoogle(idToken);
 
@@ -108,9 +107,9 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 Image.asset(
                   'assets/images/logo.png',
-                  height: 270,
+                  height: 260,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 0),
                 Text(
                   "login_title".tr(),
                   style: const TextStyle(
@@ -282,7 +281,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 5),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [

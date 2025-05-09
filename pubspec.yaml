@@ -59,12 +59,36 @@ flutter:
     - assets/images/logo.png
     - assets/images/google_logo.png
     - assets/images/muscle.svg
-    - assets/images/tutorial/1.jpg
-    - assets/images/tutorial/2.jpg
-    - assets/images/tutorial/3.jpg
-    - assets/images/tutorial/4.jpg
-    - assets/images/tutorial/5.jpg
-    - assets/images/tutorial/6.jpg
+    - assets/images/tutorial/es/1.jpg
+    - assets/images/tutorial/es/2.jpg
+    - assets/images/tutorial/es/3.jpg
+    - assets/images/tutorial/es/4.jpg
+    - assets/images/tutorial/es/5.jpg
+    - assets/images/tutorial/es/6.jpg
+    - assets/images/tutorial/en/1.jpg
+    - assets/images/tutorial/en/2.jpg
+    - assets/images/tutorial/en/3.jpg
+    - assets/images/tutorial/en/4.jpg
+    - assets/images/tutorial/en/5.jpg
+    - assets/images/tutorial/en/6.jpg
+    - assets/images/tutorial/it/1.jpg
+    - assets/images/tutorial/it/2.jpg
+    - assets/images/tutorial/it/3.jpg
+    - assets/images/tutorial/it/4.jpg
+    - assets/images/tutorial/it/5.jpg
+    - assets/images/tutorial/it/6.jpg
+    - assets/images/tutorial/fr/1.jpg
+    - assets/images/tutorial/fr/2.jpg
+    - assets/images/tutorial/fr/3.jpg
+    - assets/images/tutorial/fr/4.jpg
+    - assets/images/tutorial/fr/5.jpg
+    - assets/images/tutorial/fr/6.jpg
+    - assets/images/tutorial/de/1.jpg
+    - assets/images/tutorial/de/2.jpg
+    - assets/images/tutorial/de/3.jpg
+    - assets/images/tutorial/de/4.jpg
+    - assets/images/tutorial/de/5.jpg
+    - assets/images/tutorial/de/6.jpg
     - assets/images/gymswipe_premium.png
     - assets/images/rayo.svg
     - assets/images/default_profile.png

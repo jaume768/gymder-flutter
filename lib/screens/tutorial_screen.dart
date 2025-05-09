@@ -72,21 +72,41 @@ class _TutorialScreenState extends State<TutorialScreen> {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
                         child: Image.asset(
-                          'assets/images/tutorial/${index + 1}.jpg',
+                          'assets/images/tutorial/${context.locale.languageCode}/${index + 1}.jpg',
                           fit: BoxFit.contain,
                         ),
                       ),
-                    ),
-                    // Indicadores de página
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 40.0),
                     ),
                   ],
                 );
               },
             ),
             
-            // Botón de saltar en la esquina superior derecha
+            // Indicadores de página (puntos) en posición más alta
+            Positioned(
+              bottom: 120.0, // Posición más alta
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  _totalPages,
+                  (i) => AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.symmetric(horizontal: 8.0),
+                    width: _currentPage == i ? 12.0 : 10.0,
+                    height: _currentPage == i ? 12.0 : 10.0,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _currentPage == i 
+                          ? Colors.white 
+                          : Colors.grey,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
             Positioned(
               top: 16.0,
               right: 16.0,

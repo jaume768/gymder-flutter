@@ -87,6 +87,20 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
     }
   }
 
+  // Verifica si un mensaje está sin leer (enviado por otra persona y no visto)
+  bool _isMessageUnread(Map<String, dynamic>? lastMsg) {
+    if (lastMsg == null) return false;
+    
+    // Verificar si el mensaje fue enviado por la otra persona
+    final isSentByOther = lastMsg['sender'].toString() != currentUserId;
+    
+    // Verificar si el campo seenAt es null (nunca visto)
+    final seenAt = lastMsg['seenAt'];
+    
+    // El mensaje está sin leer si fue enviado por la otra persona y nunca ha sido visto
+    return isSentByOther && seenAt == null;
+  }
+
   Future<Map<String, Map<String, dynamic>>> _fetchAllLastMessages(
       String token, List<User> matches) async {
     final url = Uri.parse(
@@ -344,13 +358,28 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
                                             ? const Icon(Icons.person, size: 30)
                                             : null,
                                       ),
-                                      title: Text(
-                                        matchedUser.username,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                      title: Row(
+                                        children: [
+                                          Text(
+                                            matchedUser.username,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          // Indicador de mensaje no leído
+                                          if (_isMessageUnread(lastMessages[matchedUser.id]))
+                                            Container(
+                                              margin: const EdgeInsets.only(left: 8),
+                                              width: 12,
+                                              height: 12,
+                                              decoration: const BoxDecoration(
+                                                color: Colors.blue,
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                        ],
                                       ),
                                       subtitle: Text(
                                         () {
@@ -366,9 +395,14 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
                                           }
                                           return tr("tap_to_chat");
                                         }(),
-                                        style: const TextStyle(
-                                          color: Colors.white70,
+                                        style: TextStyle(
+                                          color: _isMessageUnread(lastMessages[matchedUser.id])
+                                              ? Colors.white
+                                              : Colors.white70,
                                           fontSize: 16,
+                                          fontWeight: _isMessageUnread(lastMessages[matchedUser.id])
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
                                         ),
                                       ),
                                       onTap: () {

@@ -22,6 +22,8 @@ class MyProfileScreen extends StatefulWidget {
 }
 
 class _MyProfileScreenState extends State<MyProfileScreen> {
+  // Variable para controlar si el perfil ha sido modificado
+  bool _profileWasModified = false;
   // Mapas que convierten el texto en español del API a claves para tr(...)
   static const Map<String, String> _genderKeyMap = {
     'Masculino': 'male',
@@ -95,8 +97,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   }
 
   Future<bool> _onWillPop() async {
-    // Al hacer swipe-back o back físico, devolvemos true
-    Navigator.pop(context, true);
+    // Solo devolvemos true si el perfil fue modificado
+    Navigator.pop(context, _profileWasModified);
     return false;
   }
 
@@ -125,7 +127,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           appBar: AppBar(
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () => Navigator.pop(context, _profileWasModified),
             ),
             title: Text(
               tr('personal_information'),
@@ -171,11 +173,20 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                         right: 0,
                         child: GestureDetector(
                           onTap: () {
-                            Navigator.push(
+                            Navigator.push<bool>(
                               context,
                               MaterialPageRoute(
                                   builder: (_) => const EditProfileScreen()),
-                            );
+                            ).then((wasModified) {
+                              // Si el perfil fue modificado en la pantalla de edición, actualizamos el estado
+                              if (wasModified == true) {
+                                setState(() {
+                                  _profileWasModified = true;
+                                });
+                                // Refrescar usuario al regresar de la edición
+                                Provider.of<AuthProvider>(context, listen: false).refreshUser();
+                              }
+                            });
                           },
                           child: Container(
                             decoration: const BoxDecoration(

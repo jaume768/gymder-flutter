@@ -425,7 +425,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           backgroundColor: Colors.green,
         ),
       );
-      Navigator.pop(context);
+      // Devolver true para indicar que el perfil ha sido modificado
+      Navigator.pop(context, true);
     } catch (e) {
       setState(() {
         errorMessage = e.toString();
@@ -462,6 +463,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            // Al presionar la flecha hacia atrás, retornamos false indicando que no hubo cambios
+            Navigator.pop(context, false);
+          },
+        ),
       ),
       backgroundColor: const Color.fromRGBO(20, 20, 20, 0),
       floatingActionButton: showSave

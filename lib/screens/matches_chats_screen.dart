@@ -419,8 +419,24 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
                                               matchedUserId: matchedUser.id,
                                             ),
                                           ),
-                                        ).then((_) {
-                                          _fetchMyMatches();
+                                        ).then((_) async {
+                                          // Refrescar los matches y mensajes cuando se regresa del chat
+                                          await _fetchMyMatches();
+                                          
+                                          // Actualizar inmediatamente el estado del mensaje del usuario con el que se chateó
+                                          if (mounted) {
+                                            setState(() {
+                                              // Si existe un mensaje para este match, marcarlo como leído
+                                              if (lastMessages.containsKey(matchedUser.id)) {
+                                                final msgData = lastMessages[matchedUser.id];
+                                                if (msgData != null) {
+                                                  // Actualizar el campo seenAt para que ya no aparezca como no leído
+                                                  msgData['seenAt'] = DateTime.now().toIso8601String();
+                                                  lastMessages[matchedUser.id] = msgData;
+                                                }
+                                              }
+                                            });
+                                          }
                                         });
                                       },
                                     ),

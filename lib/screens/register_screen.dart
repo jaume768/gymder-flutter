@@ -123,7 +123,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   List<Widget> get _steps => widget.fromGoogle ? _googleSteps : _manualSteps;
 
   int get _totalSteps => _steps.length;
-  
+
   // Mapeos de traducción para opciones de selección
   Map<String, String> getGenderTranslations() {
     return {
@@ -1076,36 +1076,72 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Widget _buildStep0() {
+    final brandColor = Theme.of(context).colorScheme.secondary;
+
     return _buildStepTemplate(
       title: tr("welcome"),
       subtitle: tr("enter_email_password"),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 20),
+          // Espaciado tras título/subtítulo
+          const SizedBox(height: 32),
+
+          // Campo Email
           TextFormField(
             style: const TextStyle(color: Colors.white),
-            decoration: _inputDecoration(tr("email_only"), fieldName: 'email'),
             keyboardType: TextInputType.emailAddress,
+            decoration: _inputDecoration(tr("email_only"), fieldName: 'email').copyWith(
+              floatingLabelBehavior: FloatingLabelBehavior.auto,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              enabledBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: Colors.white54),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: brandColor, width: 2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: Colors.redAccent),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: Colors.redAccent),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              errorText: fieldErrors['email'],
+            ),
             onChanged: (value) => email = value,
             onEditingComplete: () {
               if (email.isNotEmpty && !emailRegex.hasMatch(email)) {
-                setState(() {
-                  fieldErrors['email'] = tr("invalid_email_format");
-                });
+                setState(() => fieldErrors['email'] = tr("invalid_email_format"));
               } else if (email.isNotEmpty) {
-                setState(() {
-                  fieldErrors.remove('email');
-                });
+                setState(() => fieldErrors.remove('email'));
                 _checkEmailAvailability(email);
               }
               FocusScope.of(context).nextFocus();
             },
           ),
-          const SizedBox(height: 20),
+
+          // Espaciado entre campos
+          const SizedBox(height: 16),
+
+          // Campo Contraseña
           TextFormField(
             style: const TextStyle(color: Colors.white),
-            decoration: _inputDecoration(tr("password"), fieldName: 'password')
-                .copyWith(
+            obscureText: _obscurePassword,
+            decoration: _inputDecoration(tr("password"), fieldName: 'password').copyWith(
+              floatingLabelBehavior: FloatingLabelBehavior.auto,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              enabledBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: Colors.white54),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: brandColor, width: 2),
+                borderRadius: BorderRadius.circular(12),
+              ),
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscurePassword ? Icons.visibility_off : Icons.visibility,
@@ -1114,111 +1150,110 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
               ),
             ),
-            obscureText: _obscurePassword,
             onChanged: (value) => password = value,
           ),
 
-          const SizedBox(height: 30),
+          // Espaciado antes del checkbox
+          const SizedBox(height: 24),
+
+          // Checkbox + texto legal como RichText para evitar quiebres extraños
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Checkbox(
                 value: acceptedTerms,
-                onChanged: (value) {
+                onChanged: (v) {
                   setState(() {
-                    acceptedTerms = value ?? false;
-                    if (acceptedTerms) {
-                      fieldErrors.remove('terms');
-                    }
+                    acceptedTerms = v ?? false;
+                    if (acceptedTerms) fieldErrors.remove('terms');
                   });
                 },
                 fillColor: MaterialStateProperty.resolveWith<Color>(
-                  (Set<MaterialState> states) {
-                    if (states.contains(MaterialState.selected)) {
-                      return Colors.blueAccent;
-                    }
-                    return Colors.grey;
-                  },
+                      (states) =>
+                  states.contains(MaterialState.selected) ? brandColor : Colors.white54,
                 ),
               ),
+              const SizedBox(width: 8),
               Expanded(
-                child: Wrap(
-                  children: [
-                    Text(
-                      tr("accept_terms"),
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 14),
-                    ),
-                    const SizedBox(width: 5),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const TermsConditionsScreen(),
-                          ),
-                        );
-                      },
-                      child: Text(
-                        tr("terms_conditions"),
+                child: RichText(
+                  text: TextSpan(
+                    style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+                    text: tr("accept_terms") + " ",
+                    children: [
+                      TextSpan(
+                        text: tr("terms_conditions"),
                         style: const TextStyle(
-                          color: Colors.blueAccent,
-                          fontSize: 14,
-                          decoration: TextDecoration.underline,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const TermsConditionsScreen(),
+                              ),
+                            );
+                          },
                       ),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      tr("and"),
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 14),
-                    ),
-                    const SizedBox(width: 5),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const PrivacyPolicyScreen(),
-                          ),
-                        );
-                      },
-                      child: Text(
-                        tr("privacy_policy"),
+                      TextSpan(text: " " + tr("and") + " "),
+                      TextSpan(
+                        text: tr("privacy_policy"),
                         style: const TextStyle(
-                          color: Colors.blueAccent,
-                          fontSize: 14,
-                          decoration: TextDecoration.underline,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const PrivacyPolicyScreen(),
+                              ),
+                            );
+                          },
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
+
           if (fieldErrors.containsKey('terms'))
             Padding(
-              padding: const EdgeInsets.only(top: 8, left: 40),
+              padding: const EdgeInsets.only(top: 8, left: 16),
               child: Text(
                 fieldErrors['terms']!,
                 style: const TextStyle(color: Colors.redAccent, fontSize: 12),
               ),
             ),
+
+          // Error general
           if (errorMessage.isNotEmpty && _currentStep == 0)
             Padding(
               padding: const EdgeInsets.only(top: 16),
-              child: Text(errorMessage,
-                  style: const TextStyle(color: Colors.redAccent)),
+              child: Center(
+                child: Text(
+                  errorMessage,
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+              ),
             ),
-          const SizedBox(height: 20),
+
+          // Espaciado antes del enlace de login
+          const SizedBox(height: 24),
+
+          // Enlace “¿Ya tienes una cuenta?”
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 tr("already_have_account"),
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.white, fontSize: 14),
               ),
+              const SizedBox(width: 4),
               TextButton(
                 onPressed: () {
                   Navigator.push(
@@ -1226,11 +1261,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     MaterialPageRoute(builder: (_) => const LoginScreen()),
                   );
                 },
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(48, 48),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                ),
                 child: Text(
                   tr("login"),
                   style: const TextStyle(
                     color: Colors.white,
-                    decoration: TextDecoration.underline,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
@@ -1316,54 +1356,87 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Widget _buildStep2() {
+    final now = DateTime.now();
+
+    // Texto que muestra la fecha seleccionada o el placeholder
+    final dateText = birthDate == null
+        ? tr("boton_birthdate_button")
+        : DateFormat.yMMMMd(context.locale.toString()).format(birthDate!);
+
     return _buildStepTemplate(
       title: tr("select_birthdate"),
       subtitle: tr("select_your_birthdate"),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () async {
-              final now = DateTime.now();
-              final pickedDate = await showDatePicker(
-                context: context,
-                initialDate: DateTime(now.year - 18),
-                firstDate: DateTime(1900),
-                lastDate: now,
-              );
-              if (pickedDate != null) {
-                // Calcular la edad a partir de la fecha de nacimiento
-                final now = DateTime.now();
-                int calculatedAge = now.year - pickedDate.year;
-                if (now.month < pickedDate.month ||
-                    (now.month == pickedDate.month &&
-                        now.day < pickedDate.day)) {
-                  calculatedAge--;
-                }
+          const SizedBox(height: 32),
 
-                setState(() {
-                  birthDate = pickedDate;
-                  age = calculatedAge;
-                });
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-            ),
-            child: Text(
-              birthDate == null
-                  ? tr("select_birthdate")
-                  : tr("welcome") +
-                      ": ${birthDate!.day}/${birthDate!.month}/${birthDate!.year}",
-              style: const TextStyle(color: Colors.black),
+          Semantics(
+            button: true,
+            label: birthDate == null
+                ? tr("boton_birthdate_button")
+                : tr("selected_date", args: [dateText]),
+            child: SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime(now.year - 18, now.month, now.day),
+                    firstDate: DateTime(1900),
+                    lastDate: now,
+                    builder: (ctx, child) => Theme(
+                      data: Theme.of(ctx).copyWith(
+                        colorScheme: const ColorScheme.dark(
+                          primary: Colors.white,
+                          onPrimary: Colors.black,
+                          onSurface: Colors.white70,
+                        ),
+                        dialogBackgroundColor: Colors.grey[900],
+                      ),
+                      child: child!,
+                    ),
+                  );
+                  if (picked != null) {
+                    // Calcular edad
+                    int calcAge = now.year - picked.year;
+                    if (now.month < picked.month ||
+                        (now.month == picked.month && now.day < picked.day)) {
+                      calcAge--;
+                    }
+                    setState(() {
+                      birthDate = picked;
+                      age = calcAge;
+                    });
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                ),
+                child: Text(
+                  dateText,
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ),
           ),
-          if (errorMessage.isNotEmpty && _currentStep == 2)
-            Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: Text(errorMessage,
-                  style: const TextStyle(color: Colors.redAccent)),
+
+          if (errorMessage.isNotEmpty && _currentStep == 2) ...[
+            const SizedBox(height: 16),
+            Text(
+              errorMessage,
+              style: const TextStyle(color: Colors.redAccent, fontSize: 14),
             ),
+          ],
         ],
       ),
     );
@@ -1382,30 +1455,74 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return _buildStepTemplate(
       title: tr("select_gender"),
       subtitle: tr("select_gender"),
-      child: DropdownButtonFormField<String>(
-        decoration:
-            _dropdownDecoration(tr("select_gender"), fieldName: 'gender'),
-        value: gender.isEmpty ? null : gender,
-        style: const TextStyle(color: Colors.white),
-        selectedItemBuilder: (context) {
-          return genders.map((item) {
-            return Text(translationMap[item] ?? item, style: const TextStyle(color: Colors.white));
-          }).toList();
-        },
-        items: genders.map((g) {
-          return DropdownMenuItem(
-            value: g, // El valor sigue siendo la opción en español
-            child: Text(translationMap[g] ?? g, style: const TextStyle(color: Colors.white)),
-          );
-        }).toList(),
-        onChanged: (value) {
-          setState(() {
-            gender = value ?? '';
-          });
-        },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Espaciado tras título/subtítulo
+          const SizedBox(height: 32),
+
+          // Grupo de RadioListTile dentro de una Card para selección de género
+          Semantics(
+            container: true,
+            label: tr("select_gender"),
+            hint: tr("select_gender"),
+            child: Card(
+              color: Colors.transparent,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                side: BorderSide(color: Colors.white54),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: genders.map((g) {
+                  final isSelected = (gender == g);
+                  return Column(
+                    children: [
+                      RadioListTile<String>(
+                        value: g,
+                        groupValue: gender,
+                        onChanged: (value) {
+                          setState(() {
+                            gender = value!;
+                          });
+                        },
+                        activeColor: Colors.blueAccent,
+                        title: Text(
+                          translationMap[g] ?? g,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : Colors.white70,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                        tileColor: isSelected
+                            ? Colors.blueAccent.withOpacity(0.3)
+                            : Colors.transparent,
+                        shape: const RoundedRectangleBorder(),
+                        controlAffinity: ListTileControlAffinity.trailing,
+                      ),
+                      if (g != genders.last)
+                        const Divider(color: Colors.white24, height: 1),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+
+          // Mensaje de error si no hay selección
+          if (errorMessage.isNotEmpty && _currentStep == 3) ...[
+            const SizedBox(height: 16),
+            Text(
+              errorMessage,
+              style: const TextStyle(color: Colors.redAccent, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ],
       ),
     );
   }
+
 
   Widget _buildStep4() {
     final seekingOptions = [
@@ -1413,43 +1530,74 @@ class _RegisterScreenState extends State<RegisterScreen> {
       'Femenino',
       'No Binario',
       'Prefiero no decirlo',
-      'Otro'
+      'Otro',
     ];
-    final translationMap = getGenderTranslations(); // Usamos el mismo que el género
+    final translationMap = getGenderTranslations();
 
     return _buildStepTemplate(
       title: tr("whom_to_meet"),
       subtitle: tr("select_one_or_more"),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 10.0,
-            runSpacing: 10.0,
-            children: seekingOptions.map((option) {
-              final isSelected = seeking.contains(option);
-              return FilterChip(
-                label: Text(
-                  translationMap[option] ?? option,
-                  style: TextStyle(
-                    color: isSelected ? Colors.black : Colors.white,
+          const SizedBox(height: 32),
+
+          // Semántica para lectores de pantalla
+          Semantics(
+            container: true,
+            label: tr("whom_to_meet"),
+            hint: tr("select_one_or_more"),
+            child: GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              childAspectRatio: 3.5,
+              children: seekingOptions.map((opt) {
+                final selected = seeking.contains(opt);
+                return GestureDetector(
+                  onTap: () => setState(() {
+                    if (selected)
+                      seeking.remove(opt);
+                    else
+                      seeking.add(opt);
+                  }),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    decoration: BoxDecoration(
+                      color: selected ? Colors.blueAccent : Colors.transparent,
+                      border: Border.all(
+                        color: selected ? Colors.blueAccent : Colors.white54,
+                        width: 1.5,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      translationMap[opt] ?? opt,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: selected ? Colors.white : Colors.white70,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
-                ),
-                selected: isSelected,
-                backgroundColor: Colors.grey[900],
-                selectedColor: Colors.blueAccent,
-                onSelected: (bool selected) {
-                  setState(() {
-                    if (selected) {
-                      seeking.add(option); // Guardamos el valor en español
-                    } else {
-                      seeking.remove(option);
-                    }
-                  });
-                },
-              );
-            }).toList(),
+                );
+              }).toList(),
+            ),
           ),
+
+          // (Opcional) error si no hay selección
+          if (errorMessage.isNotEmpty && _currentStep == 4) ...[
+            const SizedBox(height: 16),
+            Text(
+              errorMessage,
+              style: const TextStyle(color: Colors.redAccent, fontSize: 14),
+            ),
+          ],
         ],
       ),
     );
@@ -1462,31 +1610,70 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return _buildStepTemplate(
       title: tr("what_are_you_looking_for"),
       subtitle: tr("connection_purpose"),
-      child: DropdownButtonFormField<String>(
-        decoration: _dropdownDecoration(tr("select_objective"),
-            fieldName: 'relationshipGoal'),
-        style: const TextStyle(color: Colors.white),
-        hint: Text(
-          tr("select_objective"),
-          style: const TextStyle(color: Colors.white70),
-        ),
-        selectedItemBuilder: (context) {
-          return goals.map((item) {
-            return Text(translationMap[item] ?? item, style: const TextStyle(color: Colors.white));
-          }).toList();
-        },
-        value: relationshipGoal.isEmpty ? null : relationshipGoal,
-        items: goals.map((g) {
-          return DropdownMenuItem(
-            value: g, // El valor sigue siendo la opción en español
-            child: Text(translationMap[g] ?? g, style: const TextStyle(color: Colors.white)),
-          );
-        }).toList(),
-        onChanged: (value) {
-          setState(() {
-            relationshipGoal = value ?? '';
-          });
-        },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Más espacio tras subtítulo
+          const SizedBox(height: 32),
+
+          // Agrupamos los RadioListTile dentro de una Card
+          Semantics(
+            container: true,
+            label: tr("what_are_you_looking_for"),
+            hint: tr("select_objective"),
+            child: Card(
+              color: Colors.transparent,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                side: BorderSide(color: Colors.white54),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: goals.map((g) {
+                  final selected = (relationshipGoal == g);
+                  return Column(
+                    children: [
+                      RadioListTile<String>(
+                        value: g,
+                        groupValue: relationshipGoal,
+                        onChanged: (value) {
+                          setState(() {
+                            relationshipGoal = value!;
+                          });
+                        },
+                        activeColor: Colors.blueAccent,
+                        title: Text(
+                          translationMap[g] ?? g,
+                          style: TextStyle(
+                            color: selected ? Colors.white : Colors.white70,
+                            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                        tileColor: selected
+                            ? Colors.blueAccent.withOpacity(0.3)
+                            : Colors.transparent,
+                        shape: const RoundedRectangleBorder(),
+                        controlAffinity: ListTileControlAffinity.trailing,
+                      ),
+                      if (g != goals.last)
+                        const Divider(color: Colors.white24, height: 1),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+
+          // Error si no se ha seleccionado nada
+          if (errorMessage.isNotEmpty && _currentStep == 5) ...[
+            const SizedBox(height: 16),
+            Text(
+              errorMessage,
+              style: const TextStyle(color: Colors.redAccent, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -1611,6 +1798,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Widget _buildStep7() {
+    final brandColor = Theme.of(context).colorScheme.secondary;
     final gymStages = ['Volumen', 'Definición', 'Mantenimiento'];
     final translationMap = getGymStageTranslations();
 
@@ -1618,64 +1806,119 @@ class _RegisterScreenState extends State<RegisterScreen> {
       title: tr("gym_stage_height_weight"),
       subtitle: tr("select_your_gym_stage_height_weight"),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          DropdownButtonFormField<String>(
-            decoration: _dropdownDecoration(tr("stage"), fieldName: 'gymStage'),
-            style: const TextStyle(color: Colors.white),
-            selectedItemBuilder: (context) {
-              return gymStages.map((stage) {
-                return Text(translationMap[stage] ?? stage, style: const TextStyle(color: Colors.white));
-              }).toList();
-            },
-            value: gymStage.isEmpty ? null : gymStage,
-            items: gymStages.map((stage) {
-              return DropdownMenuItem(
-                value: stage, // El valor sigue siendo la etapa en español
-                child: Text(translationMap[stage] ?? stage, style: const TextStyle(color: Colors.white)),
-              );
-            }).toList(),
-            onChanged: (value) {
-              setState(() {
-                gymStage = value ?? '';
-              });
-            },
-          ),
-          const SizedBox(height: 20),
-          TextFormField(
-            style: const TextStyle(color: Colors.white),
-            decoration: _inputDecoration(tr("height_cm"), fieldName: 'height'),
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            onChanged: (value) {
-              setState(() {
-                height = parseHeight(value);
-              });
-            },
-          ),
-          const SizedBox(height: 20),
-          TextFormField(
-            style: const TextStyle(color: Colors.white),
-            decoration: _inputDecoration(tr("weight_kg"), fieldName: 'weight'),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-            ],
-            onChanged: (value) {
-              setState(() {
-                weight = double.tryParse(value);
-              });
-            },
-          ),
-          if (errorMessage.isNotEmpty && _currentStep == 7)
-            Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: Text(errorMessage,
-                  style: const TextStyle(color: Colors.redAccent)),
+          // Espaciado tras título/subtítulo
+          const SizedBox(height: 12),
+
+          // Segmented control para "Etapa de gimnasio"
+          Semantics(
+            container: true,
+            label: tr("stage"),
+            hint: tr("select_your_gym_stage_height_weight"),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SegmentedButton<String>(
+                segments: gymStages.map((stage) {
+                  return ButtonSegment<String>(
+                    value: stage,
+                    label: Text(
+                      translationMap[stage] ?? stage,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  );
+                }).toList(),
+                selected: gymStage.isEmpty ? <String>{} : <String>{gymStage},
+                onSelectionChanged: (newSelection) {
+                  setState(() {
+                    gymStage = newSelection.first;
+                  });
+                },
+                multiSelectionEnabled: false,
+                showSelectedIcon: false, // Quitamos el check
+                style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.resolveWith((states) {
+                    return states.contains(MaterialState.selected)
+                        ? Colors.blueAccent
+                        : Colors.transparent;
+                  }),
+                  side: MaterialStateProperty.resolveWith((states) {
+                    final color = states.contains(MaterialState.selected)
+                        ? Colors.blueAccent
+                        : Colors.white54;
+                    return BorderSide(color: color, width: 1.5);
+                  }),
+                  foregroundColor: MaterialStateProperty.resolveWith((states) {
+                    return states.contains(MaterialState.selected)
+                        ? Colors.white
+                        : Colors.white70;
+                  }),
+                  padding: MaterialStateProperty.all(
+                    const EdgeInsets.symmetric(horizontal: 11, vertical: 12),
+                  ),
+                  shape: MaterialStateProperty.all(
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
             ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Altura: Text + Slider + Stepper
+          Text(tr("height_cm"), style: const TextStyle(color: Colors.white70)),
+          const SizedBox(height: 8),
+          if (height != null)
+            Text("${height!.round()} cm",
+                style: const TextStyle(color: Colors.white, fontSize: 16)),
+          Slider(
+            value: (height ?? 170).clamp(100, 250),
+            min: 100,
+            max: 250,
+            divisions: 150,
+            label: "${(height ?? 170).round()}",
+            onChanged: (v) => setState(() => height = v),
+            activeColor: Colors.blueAccent,
+            inactiveColor: Colors.white24,
+          ),
+
+          const SizedBox(height: 24),
+
+          // Peso: Text + Slider + Stepper
+          Text(tr("weight_kg"), style: const TextStyle(color: Colors.white70)),
+          const SizedBox(height: 8),
+          if (weight != null)
+            Text("${weight!.round()} kg",
+                style: const TextStyle(color: Colors.white, fontSize: 16)),
+          Slider(
+            value: (weight ?? 70).clamp(40, 200),
+            min: 40,
+            max: 200,
+            divisions: 160,
+            label: "${(weight ?? 70).round()}",
+            onChanged: (v) => setState(() => weight = v),
+            activeColor: Colors.blueAccent,
+            inactiveColor: Colors.white24,
+          ),
+
+          // Mensajes de error inline
+          if (errorMessage.isNotEmpty && _currentStep == 7) ...[
+            const SizedBox(height: 16),
+            Text(
+              errorMessage,
+              style: const TextStyle(color: Colors.redAccent, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ],
       ),
     );
   }
+
+
 
   Widget _buildStep8Lifts() {
     return _buildStepTemplate(

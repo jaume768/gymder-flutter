@@ -86,6 +86,8 @@
   "no_blocked_users": "No tienes usuarios bloqueados",
   "unblock": "Desbloquear",
   "login_title": "GymSwipe Login",
+  "boton_birthdate_button": "Seleccionar fecha de nacimiento",
+  "selected_date": "Fecha seleccionada: {0}",
   "login": "Iniciar sesión",
   "email_or_username": "Correo o Nombre de Usuario",
   "password": "Contraseña",

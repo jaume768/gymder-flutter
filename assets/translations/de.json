@@ -385,6 +385,8 @@
   "what_do_you_want": "Was möchtest du tun?",
   "loading_chats": "Chats werden geladen...",
   "image": "Bild",
+  "select_birthdate_button": "Geburtsdatum auswählen",
+  "selected_date": "Ausgewähltes Datum: {0}",
   "confirm_password_new": "bestätigen",
   "error_unblocking_user": "Fehler beim Entsperren",
   "explicit_content_detected": "Expliziter oder unangemessener Inhalt erkannt",

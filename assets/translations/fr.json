@@ -408,6 +408,8 @@
   "weight_out_of_range": "Le poids est hors de portée",
   "loading_chats": "Chargement des discussions...",
   "confirm_password_new": "Confirmer",
+  "select_birthdate_button": "Sélectionner la date de naissance",
+  "selected_date": "Date sélectionnée : {0}",
   "quicklike_not_allowed_title": "Fonction non disponible",
   "quicklike_not_allowed_legustas": "Vous ne pouvez pas utiliser Quick Like dans l’onglet « J’aime ».",
   "height_must_be_between_100_250": "La taille doit être comprise entre 100 et 250 cm",

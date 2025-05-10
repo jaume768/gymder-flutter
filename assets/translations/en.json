@@ -254,6 +254,8 @@
   "cannot_open_app_settings": "Could not open app settings",
   "objective": "Goal",
   "error_changing_password": "",
+  "select_birthdate_button": "Select birthdate",
+  "selected_date": "Selected date: {0}",
   "photographs": "Photographs:",
   "messages": "Messages",
   "loading_chats": "Loading chats...",

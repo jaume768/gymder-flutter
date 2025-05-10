@@ -405,6 +405,8 @@
   "type_a_message": "Scrivi un messaggio...",
   "online": "Online",
   "loading_chats": "Caricamento delle chat...",
+  "select_birthdate_button": "Seleziona data di nascita",
+  "selected_date": "Data selezionata: {0}",
   "image": "Immagine",
   "error_unblocking_user": "Errore sblocco utente",
   "confirm_password_new": "Conferma",

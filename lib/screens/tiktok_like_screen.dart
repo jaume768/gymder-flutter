@@ -123,6 +123,9 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
   // Variable para almacenar los filtros activos que se usarán en la paginación
   Map<String, String> _activeFilters = {};
 
+  // Variable para rastrear cuándo comenzó la última solicitud de carga
+  DateTime? _lastFetchStartTime;
+
   @override
   bool get wantKeepAlive => true;
 
@@ -655,13 +658,24 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
   }
 
   Future<void> _fetchMoreUsers() async {
+    // Agregar un timeout para evitar bloqueos permanentes en _isFetchingMore
     if (_isFetchingMore) {
-      print("Ya se está ejecutando una carga de usuarios, ignorando solicitud");
-      return;
+      print("Ya se está ejecutando una carga de usuarios, verificando cuánto tiempo ha pasado");
+      // Si han pasado más de 20 segundos, consideramos que la carga anterior falló
+      final lastFetchTime = _lastFetchStartTime;
+      if (lastFetchTime != null && DateTime.now().difference(lastFetchTime).inSeconds > 20) {
+        print("La carga anterior parece haberse bloqueado. Reiniciando estado...");
+        // Forzar reseteo del estado de carga
+        setState(() => _isFetchingMore = false);
+      } else {
+        return; // La carga anterior todavía está en proceso y no ha pasado demasiado tiempo
+      }
     }
 
-    print(
-        "Iniciando carga de más usuarios. Tenemos ${_randomUsers.length} usuarios actualmente");
+    // Registrar cuándo comenzó esta carga
+    _lastFetchStartTime = DateTime.now();
+    
+    print("Iniciando carga de más usuarios. Tenemos ${_randomUsers.length} usuarios actualmente");
     setState(() {
       _isFetchingMore = true;
     });
@@ -690,8 +704,7 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
 
       // Añadir parámetros de paginación
       filters['limit'] = _limit.toString();
-      filters['skip'] = _randomUsers.length
-          .toString(); // Usar el número actual de usuarios como skip
+      filters['skip'] = _randomUsers.length.toString(); 
 
       print("Solicitando usuarios con filtros: $filters");
       final result = await matchService.getSuggestedMatchesWithFilters(filters);
@@ -729,6 +742,17 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
             } else {
               print(
                   "No se encontraron nuevos usuarios para añadir (todos los recibidos ya estaban cargados)");
+              
+              // Si no hay nuevos usuarios pero el backend devuelve éxito, intentar hacer una solicitud
+              // con parámetros diferentes para obtener más resultados
+              if (matchesData.isEmpty && _activeFilters.isNotEmpty) {
+                // Programar una solicitud sin filtros para obtener más usuarios
+                Future.delayed(Duration(milliseconds: 500), () {
+                  if (mounted) {
+                    _tryFetchMoreWithoutFilters();
+                  }
+                });
+              }
             }
 
             _isFetchingMore = false;
@@ -740,6 +764,18 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
           setState(() {
             _isFetchingMore = false;
           });
+          
+          // Mostrar snackbar con error
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(tr('error_loading_more_profiles') ?? "Error al cargar más perfiles"),
+              duration: Duration(seconds: 2),
+              action: SnackBarAction(
+                label: tr('retry') ?? "Reintentar",
+                onPressed: () => _fetchMoreUsers(),
+              ),
+            ),
+          );
         }
       }
     } catch (e) {
@@ -748,6 +784,78 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
         setState(() {
           _isFetchingMore = false;
         });
+        
+        // Mostrar snackbar de error con opción de reintento
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(tr('error_loading_more_profiles') ?? "Error al cargar más perfiles"),
+            duration: Duration(seconds: 2),
+            action: SnackBarAction(
+              label: tr('retry') ?? "Reintentar",
+              onPressed: () => _fetchMoreUsers(),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  // Método auxiliar para intentar cargar más usuarios sin filtros cuando no hay más resultados con filtros
+  Future<void> _tryFetchMoreWithoutFilters() async {
+    if (_isFetchingMore) return;
+    
+    setState(() => _isFetchingMore = true);
+    
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = await authProvider.getToken();
+      if (token == null) {
+        setState(() => _isFetchingMore = false);
+        return;
+      }
+      
+      final matchService = MatchService(token: token);
+      
+      // Solicitar sin filtros pero con skip
+      final Map<String, String> basicFilters = {
+        'limit': _limit.toString(),
+        'skip': _randomUsers.length.toString(),
+      };
+      
+      print("Intentando cargar más usuarios sin filtros");
+      final result = await matchService.getSuggestedMatchesWithFilters(basicFilters);
+      
+      if (result['success'] == true && mounted) {
+        final matchesData = result['matches'] as List<dynamic>;
+        final newUsers = matchesData.map((data) => User.fromJson(data)).toList();
+        
+        setState(() {
+          final uniqueNewUsers = newUsers.where((user) => 
+            !_loadedProfileIds.contains(user.id)).toList();
+            
+          if (uniqueNewUsers.isNotEmpty) {
+            _randomUsers.addAll(uniqueNewUsers);
+            
+            for (var user in uniqueNewUsers) {
+              _loadedProfileIds.add(user.id);
+            }
+            
+            // Aplicar shuffle para mezclar los resultados
+            _randomUsers.shuffle();
+            
+            print("Añadidos ${uniqueNewUsers.length} usuarios adicionales sin filtros");
+          }
+          
+          _isFetchingMore = false;
+        });
+      } else {
+        print("No se encontraron perfiles adicionales sin filtros");
+        setState(() => _isFetchingMore = false);
+      }
+    } catch (e) {
+      print('Error en carga sin filtros: $e');
+      if (mounted) {
+        setState(() => _isFetchingMore = false);
       }
     }
   }

@@ -5,6 +5,7 @@ import 'package:app/screens/premium_purchase_page.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -98,7 +99,7 @@ class SettingsScreen extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.exit_to_app, size: 48, color: Colors.blueAccent),
+              Icon(Icons.exit_to_app, size: 48, color: Colors.redAccent),
               const SizedBox(height: 12),
               Text(
                 tr("logout_confirm_title"),
@@ -143,7 +144,7 @@ class SettingsScreen extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () => Navigator.pop(context, true),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueAccent,
+                        backgroundColor: Colors.redAccent,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(28),
                         ),
@@ -164,7 +165,6 @@ class SettingsScreen extends StatelessWidget {
     );
 
     if (confirmed == true) {
-      // Aquí cerramos la sesión
       Provider.of<AuthProvider>(context, listen: false).logoutUser();
       Navigator.pushReplacement(
         context,
@@ -175,18 +175,12 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> options = [
-      {"title": tr("my_matches"), "icon": Icons.favorite},
-      {"title": tr("identity_verification"), "icon": Icons.verified_user},
-      {"title": tr("notifications"), "icon": Icons.notifications},
-      {"title": tr("languages"), "icon": Icons.language},
-      {"title": tr("subscriptions_payments"), "icon": Icons.payment},
-      {"title": tr("promo_code"), "icon": Icons.card_giftcard},
-      {"title": tr("security"), "icon": Icons.security},
-      {"title": tr("app_permissions"), "icon": Icons.apps},
-      {"title": tr("about"), "icon": Icons.info},
-      {"title": tr("logout"), "icon": Icons.logout},
-    ];
+    // Contamos cuántas opciones totales hay
+    const int totalOptions =
+        4 /* Cuenta */ + 5 /* Preferencias */ + 1 /* Acerca de */;
+    // Altura estimada por ListTile + Divider
+    const double optionHeight = 72.0;
+    final double totalContentHeight = totalOptions * optionHeight;
 
     return Scaffold(
       appBar: AppBar(
@@ -198,47 +192,111 @@ class SettingsScreen extends StatelessWidget {
       backgroundColor: const Color.fromRGBO(20, 20, 20, 1.0),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          // Calculamos la altura aproximada que necesitarán todas las opciones
-          // Altura estimada de cada elemento (ListTile + Divider)
-          final itemHeight = 72.0; // ~56 para ListTile + ~16 para Divider
-          final totalContentHeight = options.length * itemHeight;
-          
-          // Determinamos si se necesita scroll basado en si el contenido excede la altura disponible
-          final needsScroll = totalContentHeight > constraints.maxHeight;
-          
+          final bool needsScroll = totalContentHeight > constraints.maxHeight;
           return SingleChildScrollView(
-            // Solo permitir scroll cuando sea necesario
-            physics: needsScroll 
-                ? const AlwaysScrollableScrollPhysics() 
+            physics: needsScroll
+                ? const AlwaysScrollableScrollPhysics()
                 : const NeverScrollableScrollPhysics(),
-            child: Column(
-              children: List.generate(options.length * 2 - 1, (index) {
-                // Para los índices pares, mostramos un ListTile (la opción)
-                if (index.isEven) {
-                  final optionIndex = index ~/ 2;
-                  final option = options[optionIndex];
-                  return ListTile(
-                    leading: Icon(option["icon"], color: Colors.white70),
-                    title: Text(option["title"],
-                        style: const TextStyle(color: Colors.white)),
-                    trailing: const Icon(Icons.arrow_forward_ios,
-                        color: Colors.white70, size: 16),
-                    onTap: () => _optionSelected(context, option["title"]),
-                  );
-                } 
-                // Para los índices impares, mostramos un divisor
-                else {
-                  return const Divider(color: Colors.white24);
-                }
-              }),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // --- Sección: Cuenta ---
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      tr("account"),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildOptionTile(context, tr("my_matches"), Icons.favorite),
+                  _buildOptionTile(context, tr("identity_verification"),
+                      Icons.verified_user),
+                  _buildOptionTile(context, tr("security"), Icons.security),
+                  _buildOptionTile(context, tr("logout"), Icons.logout,
+                      titleColor: Colors.redAccent,
+                      iconColor: Colors.redAccent),
+
+                  const SizedBox(height: 24),
+
+                  // --- Sección: Preferencias ---
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      tr("preferences"),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildOptionTile(
+                      context, tr("notifications"), Icons.notifications),
+                  _buildOptionTile(context, tr("languages"), Icons.language),
+                  _buildOptionTile(
+                      context, tr("subscriptions_payments"), Icons.payment),
+                  _buildOptionTile(
+                      context, tr("promo_code"), Icons.card_giftcard),
+                  _buildOptionTile(context, tr("app_permissions"), Icons.apps),
+
+                  const SizedBox(height: 24),
+
+                  // --- Sección: Acerca de ---
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      tr("about"),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildOptionTile(context, tr("about"), Icons.info),
+                ],
+              ),
             ),
           );
         },
       ),
     );
   }
+
+  Widget _buildOptionTile(
+    BuildContext context,
+    String title,
+    IconData icon, {
+    Color titleColor = Colors.white,
+    Color iconColor = Colors.white,
+  }) {
+    return Column(
+      children: [
+        ListTile(
+          leading: Icon(icon, color: iconColor.withOpacity(0.87)),
+          title: Text(title, style: TextStyle(color: titleColor)),
+          trailing:
+              Icon(Icons.chevron_right, color: iconColor.withOpacity(0.87)),
+          onTap: () => _optionSelected(context, title),
+          visualDensity: VisualDensity.compact,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+        ),
+        const Divider(color: Colors.white24, thickness: 1, height: 1),
+      ],
+    );
+  }
 }
 
+/// PANTALLA DE NOTIFICACIONES
 class NotificacionesScreen extends StatefulWidget {
   const NotificacionesScreen({super.key});
   @override
@@ -250,8 +308,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
   bool _notificarMensajes = true;
   bool _notificarLikes = true;
   bool _loading = true;
-
-  final FirebaseMessaging _fcm = FirebaseMessaging.instance;
+  final _fcm = FirebaseMessaging.instance;
 
   @override
   void initState() {
@@ -260,65 +317,95 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
   }
 
   Future<void> _loadPreferences() async {
-    // 1) Obtener token y luego preferencias del backend
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final token = await auth.getToken();
+    final token = await Provider.of<AuthProvider>(context, listen: false).getToken();
     if (token == null) return;
-
     final result = await UserService(token: token).getNotificationSettings();
-    if (result['success'] == true) {
-      setState(() {
+    setState(() {
+      if (result['success'] == true) {
         _notificarMatches = result['settings']['matches'] as bool;
         _notificarMensajes = result['settings']['messages'] as bool;
         _notificarLikes = result['settings']['likes'] as bool;
-        _loading = false;
-      });
-    } else {
-      // Manejar error...
-      setState(() => _loading = false);
-    }
-
-    // 2) Suscribirte o no a topics según lo leído
+      }
+      _loading = false;
+    });
+    // Sincronizar topics FCM
     _updateSubscription('new_matches', _notificarMatches);
     _updateSubscription('messages', _notificarMensajes);
     _updateSubscription('new_likes', _notificarLikes);
   }
 
-  Future<void> _updatePreference(String key, bool value) async {
+  Future<void> _toggleOption(String key, bool newValue) async {
+    HapticFeedback.selectionClick();
     setState(() {
       switch (key) {
         case 'matches':
-          _notificarMatches = value;
+          _notificarMatches = newValue;
           break;
         case 'messages':
-          _notificarMensajes = value;
+          _notificarMensajes = newValue;
           break;
         case 'likes':
-          _notificarLikes = value;
+          _notificarLikes = newValue;
           break;
       }
     });
-    // 1) Guardar en tu backend
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final token = await auth.getToken();
+    final token = await Provider.of<AuthProvider>(context, listen: false).getToken();
     if (token != null) {
-      await UserService(token: token).setNotificationSetting(key, value);
+      await UserService(token: token).setNotificationSetting(key, newValue);
     }
-    // 2) Suscribir / desuscribir topic FCM
     final topic = {
       'matches': 'new_matches',
       'messages': 'messages',
       'likes': 'new_likes',
     }[key]!;
-    _updateSubscription(topic, value);
+    _updateSubscription(topic, newValue);
   }
 
   void _updateSubscription(String topic, bool subscribe) {
-    if (subscribe) {
-      _fcm.subscribeToTopic(topic);
-    } else {
-      _fcm.unsubscribeFromTopic(topic);
-    }
+    if (subscribe) _fcm.subscribeToTopic(topic);
+    else _fcm.unsubscribeFromTopic(topic);
+  }
+
+  Widget _buildCardOption({
+    required IconData icon,
+    required String labelKey,
+    required bool value,
+    required VoidCallback onTap,
+  }) {
+    final colorOn = Colors.blueAccent.withOpacity(0.15);
+    final colorOff = const Color(0xFF2C2C2C);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: value ? colorOn : colorOff,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white70),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                tr(labelKey),
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+              ),
+            ),
+            Switch(
+              value: value,
+              activeColor: Colors.blueAccent,
+              inactiveThumbColor: Colors.white54,
+              inactiveTrackColor: Colors.white24,
+              onChanged: (_) => onTap(),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -326,57 +413,65 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
     if (_loading) {
       return const Scaffold(
         backgroundColor: Color.fromRGBO(20, 20, 20, 1),
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(child: CircularProgressIndicator(color: Colors.blueAccent)),
       );
     }
+
+    final options = [
+      {
+        'icon': Icons.favorite,
+        'key': 'matches',
+        'label': 'notify_new_matches',
+        'value': _notificarMatches,
+      },
+      {
+        'icon': Icons.message,
+        'key': 'messages',
+        'label': 'notify_messages',
+        'value': _notificarMensajes,
+      },
+      {
+        'icon': Icons.thumb_up,
+        'key': 'likes',
+        'label': 'notify_likes',
+        'value': _notificarLikes,
+      },
+    ];
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(tr("notifications"),
-            style: const TextStyle(color: Colors.white)),
+        title: Text(tr("notifications"), style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Colors.blueAccent),
       ),
       backgroundColor: const Color.fromRGBO(20, 20, 20, 1),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          // Lista de items que mostraremos
-          final notificationItems = [
-            SwitchListTile(
-              title: Text(tr("notify_new_matches"),
-                  style: const TextStyle(color: Colors.white)),
-              value: _notificarMatches,
-              activeColor: Colors.blueAccent,
-              onChanged: (v) => _updatePreference('matches', v),
-            ),
-            SwitchListTile(
-              title: Text(tr("notify_messages"),
-                  style: const TextStyle(color: Colors.white)),
-              value: _notificarMensajes,
-              activeColor: Colors.blueAccent,
-              onChanged: (v) => _updatePreference('messages', v),
-            ),
-            SwitchListTile(
-              title: Text(tr("notify_likes"),
-                  style: const TextStyle(color: Colors.white)),
-              value: _notificarLikes,
-              activeColor: Colors.blueAccent,
-              onChanged: (v) => _updatePreference('likes', v),
-            ),
-          ];
-          
-          // Calculamos altura aproximada del contenido
-          final itemHeight = 60.0; // Altura estimada de cada switch
-          final totalContentHeight = notificationItems.length * itemHeight;
-          
-          // Determinamos si se necesita scroll
-          final needsScroll = totalContentHeight > constraints.maxHeight;
-          
+          final cards = options.map((opt) {
+            return _buildCardOption(
+              icon: opt['icon'] as IconData,
+              labelKey: opt['label'] as String,
+              value: opt['value'] as bool,
+              onTap: () => _toggleOption(opt['key'] as String, !(opt['value'] as bool)),
+            );
+          }).toList();
+
+          // scroll condicional
+          const singleCardHeight = 72.0;
+          final totalHeight = cards.length * singleCardHeight;
+          final needsScroll = totalHeight > constraints.maxHeight;
+
           return SingleChildScrollView(
-            // Física de scroll condicional
             physics: needsScroll
                 ? const AlwaysScrollableScrollPhysics()
                 : const NeverScrollableScrollPhysics(),
-            child: Column(children: notificationItems),
+            child: Column(
+              children: [
+                const SizedBox(height: 16),
+                ...cards,
+                const SizedBox(height: 24),
+              ],
+            ),
           );
         },
       ),
@@ -387,83 +482,142 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
 /// PANTALLA DE IDIOMAS
 class IdiomasScreen extends StatefulWidget {
   const IdiomasScreen({Key? key}) : super(key: key);
+
   @override
   _IdiomasScreenState createState() => _IdiomasScreenState();
 }
 
 class _IdiomasScreenState extends State<IdiomasScreen> {
-  late String idiomaSeleccionado;
-  final List<String> idiomas = [
+  late String _idiomaSeleccionado;
+  late String _idiomaPendiente;
+
+  final List<String> _idiomas = [
     "Español",
     "English",
     "Français",
     "Deutsch",
     "Italiano",
   ];
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final code = context.locale.languageCode;
-    idiomaSeleccionado = {
+    _idiomaSeleccionado = {
       'es': 'Español',
       'en': 'English',
       'fr': 'Français',
       'de': 'Deutsch',
       'it': 'Italiano',
     }[code]!;
+    _idiomaPendiente = _idiomaSeleccionado;
+  }
+
+  void _applyLanguageChange() {
+    if (_idiomaPendiente != _idiomaSeleccionado) {
+      final newCode = {
+        'Español': 'es',
+        'English': 'en',
+        'Français': 'fr',
+        'Deutsch': 'de',
+        'Italiano': 'it',
+      }[_idiomaPendiente]!;
+
+      context.setLocale(Locale(newCode));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const SplashScreen()),
+      );
+    } else {
+      Navigator.pop(context);
+    }
+  }
+
+  Widget _buildOptionCard(String idioma) {
+    final isSelected = _idiomaPendiente == idioma;
+    return InkWell(
+      onTap: () => setState(() => _idiomaPendiente = idioma),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white12 : Colors.transparent,
+          border: Border.all(
+            color: isSelected ? Colors.blueAccent : Colors.white24,
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                idioma.tr(),
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+              ),
+            ),
+            if (isSelected)
+              Icon(Icons.check, color: Colors.blueAccent),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title:
-            Text(tr("languages"), style: const TextStyle(color: Colors.white)),
+        title: Text(tr("languages"), style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
+        centerTitle: true,
       ),
-      backgroundColor: const Color.fromRGBO(20, 20, 20, 1.0),
+      backgroundColor: const Color.fromRGBO(20, 20, 20, 1),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          // Generamos los items de idiomas
-          final languageItems = idiomas.map((idioma) {
-            return RadioListTile(
-              title:
-                  Text(idioma.tr(), style: const TextStyle(color: Colors.white)),
-              value: idioma,
-              groupValue: idiomaSeleccionado,
-              activeColor: Colors.blueAccent,
-              onChanged: (String? value) {
-                setState(() => idiomaSeleccionado = value!);
-                final newCode = {
-                  'Español': 'es',
-                  'English': 'en',
-                  'Français': 'fr',
-                  'Deutsch': 'de',
-                  'Italian': 'it',
-                }[value]!;
-                context.setLocale(Locale(newCode));
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SplashScreen()),
-                );
-              },
-            );
-          }).toList();
-          
-          // Calculamos altura aproximada del contenido
-          final itemHeight = 55.0; // Altura estimada de cada opción de idioma
-          final totalContentHeight = idiomas.length * itemHeight;
-          
-          // Determinamos si se necesita scroll
-          final needsScroll = totalContentHeight > constraints.maxHeight;
-          
-          return SingleChildScrollView(
-            // Física de scroll condicional
-            physics: needsScroll
-                ? const AlwaysScrollableScrollPhysics()
-                : const NeverScrollableScrollPhysics(),
-            child: Column(children: languageItems),
+          final optionCards = _idiomas.map(_buildOptionCard).toList();
+
+          // Calcula si necesita scroll (deja 72px para el botón)
+          const itemHeight = 56.0;
+          final totalHeight = optionCards.length * itemHeight;
+          final needsScroll = totalHeight > constraints.maxHeight - 72;
+
+          final list = Column(children: optionCards);
+
+          return SafeArea(
+            bottom: false,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  bottom: 72,
+                  child: needsScroll
+                      ? SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: list,
+                  )
+                      : list,
+                ),
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: 16,
+                  child: ElevatedButton(
+                    onPressed: _applyLanguageChange,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: Text(
+                      tr("save"),
+                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ),
+                )
+              ],
+            ),
           );
         },
       ),
@@ -683,7 +837,7 @@ class PermisosAppScreen extends StatelessWidget {
         builder: (context, constraints) {
           // Preparamos la lista de widgets de permisos
           final permissionItems = <Widget>[];
-          
+
           for (int i = 0; i < permisos.length; i++) {
             // Añadimos cada item de permiso
             final permiso = permisos[i];
@@ -701,23 +855,23 @@ class PermisosAppScreen extends StatelessWidget {
                 ),
               ),
             );
-            
+
             // Añadimos el separador si no es el último elemento
             if (i < permisos.length - 1) {
               permissionItems.add(const Divider(color: Colors.white24));
             }
           }
-          
+
           // Calculamos altura aproximada del contenido
           final itemHeight = 90.0; // Altura estimada de cada item de permiso
           final dividerHeight = 16.0;
-          // Altura total: cada item + cada divisor (excepto el último) 
-          final totalContentHeight = (permisos.length * itemHeight) + 
+          // Altura total: cada item + cada divisor (excepto el último)
+          final totalContentHeight = (permisos.length * itemHeight) +
               ((permisos.length - 1) * dividerHeight);
-          
+
           // Determinamos si se necesita scroll
           final needsScroll = totalContentHeight > constraints.maxHeight;
-          
+
           return SingleChildScrollView(
             // Física de scroll condicional
             physics: needsScroll

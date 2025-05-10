@@ -385,6 +385,8 @@
   "what_do_you_want": "Was möchtest du tun?",
   "loading_chats": "Chats werden geladen...",
   "image": "Bild",
+  "account": "Konto",
+  "preferences": "Einstellungen",
   "select_birthdate_button": "Geburtsdatum auswählen",
   "selected_date": "Ausgewähltes Datum: {0}",
   "confirm_password_new": "bestätigen",

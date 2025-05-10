@@ -179,6 +179,23 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
         _loadedProfileIds
           ..clear()
           ..addAll(_randomUsers.map((u) => u.id));
+        
+        // Resetear índices para volver al inicio
+        _currentPageIndex = 0;
+        previousPageIndex = 0;
+        _savedRandomPosition = 0;
+      });
+      
+      // Usar post-frame callback para resetear el PageController después de que el estado se actualice
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _randomUsers.isNotEmpty) {
+          _verticalPageController.jumpToPage(0);
+          // Precargar la primera imagen para mejorar la experiencia
+          _preloadImagesForUser(_randomUsers[0]);
+          if (_randomUsers.length > 1) {
+            _preloadImagesForUser(_randomUsers[1]);
+          }
+        }
       });
     }
   }

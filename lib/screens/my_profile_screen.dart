@@ -228,9 +228,9 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                       child: Transform.rotate(
                         angle: 3.14159 / 1000,
                         child: Image.asset(
-                          'assets/images/logo.png',
-                          width: 40,
-                          height: 40,
+                          'assets/images/verificado.png',
+                          width: 23,
+                          height: 23,
                           fit: BoxFit.contain,
                         ),
                       ),

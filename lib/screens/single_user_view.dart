@@ -217,12 +217,12 @@ class _SingleUserViewState extends State<SingleUserView>
                         ),
                         if (user.verificationStatus == 'true')
                           Padding(
-                            padding: const EdgeInsets.only(left: 8.0),
+                            padding: const EdgeInsets.only(left: 6.0),
                             child: Container(
-                              width: 30,
-                              height: 30,
+                              width: 23,
+                              height: 23,
                               child: Image.asset(
-                                'assets/images/logo.png',
+                                'assets/images/verificado.png',
                                 fit: BoxFit.contain,
                               ),
                             ),

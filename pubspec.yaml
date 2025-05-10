@@ -57,6 +57,7 @@ flutter:
 
   assets:
     - assets/images/logo.png
+    - assets/images/verificado.png
     - assets/images/google_logo.png
     - assets/images/muscle.svg
     - assets/images/tutorial/es/1.jpg

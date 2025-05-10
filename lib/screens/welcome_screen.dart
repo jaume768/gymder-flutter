@@ -1,7 +1,9 @@
 // lib/screens/welcome_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:easy_localization/easy_localization.dart';
+
 import 'login_screen.dart';
 import 'register_screen.dart';
 
@@ -18,7 +20,8 @@ class WelcomeScreen extends StatelessWidget {
       Locale('de'),
       Locale('it'),
     ];
-    // Texto para cada locale
+
+    // Nombre para cada locale
     String localeName(Locale l) {
       switch (l.languageCode) {
         case 'es':
@@ -30,7 +33,7 @@ class WelcomeScreen extends StatelessWidget {
         case 'de':
           return 'Deutsch';
         case 'it':
-          return 'Italian';
+          return 'Italiano';
         default:
           return l.languageCode;
       }
@@ -42,71 +45,64 @@ class WelcomeScreen extends StatelessWidget {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // fondo
+          // --- Fondo con imagen ---
           Image.asset(
             'assets/images/welcome_bg.jpg',
             fit: BoxFit.cover,
           ),
-          Container(color: Colors.black38),
 
+          // --- Overlay semitransparente con degradado ---
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withOpacity(0.6),
+                  Colors.transparent,
+                  Colors.black.withOpacity(0.6),
+                ],
+                stops: const [0.0, 0.5, 1.0],
+              ),
+            ),
+          ),
+
+          // --- Logo en la esquina superior izquierda ---
           SafeArea(
             child: Align(
               alignment: Alignment.topLeft,
               child: Padding(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.only(left: 16.0,top: 10.0),
                 child: Image.asset(
                   'assets/images/logo.png',
-                  height: 55,
+                  height: 48,
+                  fit: BoxFit.contain,
                 ),
               ),
             ),
           ),
-          // dropdown de idioma en la esquina superior derecha
+
+          // --- Selector de idioma en la esquina superior derecha ---
           SafeArea(
             child: Align(
               alignment: Alignment.topRight,
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.only(right: 16.0,top: 10.0),
                 child: PopupMenuButton<Locale>(
-                  // offset para que aparezca justo debajo
-                  offset: const Offset(0, 48),
-                  // color y forma del menú
+                  icon: const Icon(Icons.public, color: Colors.white, size: 24),
+                  tooltip: tr('select_language'),
+                  onSelected: (locale) {
+                    HapticFeedback.lightImpact();
+                    context.setLocale(locale);
+                  },
                   color: const Color(0xFF1E1E28),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  // El “botón” personalizado
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E1E28),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.public, color: Colors.white, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          localeName(current),
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 16),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.keyboard_arrow_down,
-                            color: Colors.white),
-                      ],
-                    ),
-                  ),
-                  onSelected: (locale) {
-                    context.setLocale(locale);
-                  },
-                  itemBuilder: (context) => locales.map((locale) {
+                  itemBuilder: (_) => locales.map((locale) {
                     final selected = locale == current;
                     return PopupMenuItem<Locale>(
                       value: locale,
-                      // destaque en azul si está seleccionado
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                             vertical: 8, horizontal: 4),
@@ -130,33 +126,21 @@ class WelcomeScreen extends StatelessWidget {
             ),
           ),
 
-          // resto de la pantalla
+          // --- Contenido principal (título, tagline, CTAs) ---
           Column(
             children: [
               const Spacer(),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40),
-                child: Center(
+
+              // Título
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 300),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Text(
-                    tr('GymSwipe'), // asegúrate de tener esta clave en tus archivos .json
+                    tr('GymSwipe'),
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 35,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40),
-                child: Center(
-                  child: Text(
-                    tr('banner_text'),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
+                      fontSize: 32,
                       fontWeight: FontWeight.bold,
                     ),
                     textAlign: TextAlign.center,
@@ -164,14 +148,35 @@ class WelcomeScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              // Crear cuenta
+
+              // Tagline
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 300),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Text(
+                    tr('banner_text'),
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 16,
+                      fontWeight: FontWeight.normal,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // Botón primario: Crear cuenta
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: SizedBox(
                   width: double.infinity,
-                  height: 48,
+                  height: 50,
                   child: ElevatedButton(
                     onPressed: () {
+                      HapticFeedback.lightImpact();
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -180,6 +185,7 @@ class WelcomeScreen extends StatelessWidget {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
+                      elevation: 4,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(24),
                       ),
@@ -187,7 +193,7 @@ class WelcomeScreen extends StatelessWidget {
                     child: Text(
                       tr('create_account').toUpperCase(),
                       style: const TextStyle(
-                        color: Colors.black,
+                        color: Colors.black87,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -195,21 +201,28 @@ class WelcomeScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
-              // Iniciar sesión
+              const SizedBox(height: 16),
+
+              // Botón secundario: Iniciar sesión
               TextButton(
                 onPressed: () {
+                  HapticFeedback.lightImpact();
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const LoginScreen()),
                   );
                 },
+                style: TextButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                ),
                 child: Text(
                   tr('log_in').toUpperCase(),
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 14,
-                    decoration: TextDecoration.underline,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),

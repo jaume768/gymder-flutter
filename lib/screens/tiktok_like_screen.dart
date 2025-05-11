@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -86,6 +87,7 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
   bool _isFetchingMore = false;
   final int _limit = 20;
   List<User> _likedUsers = [];
+  bool _isLoading = true;
   int _lastFetchThreshold = 0;
 
   int _currentPageIndex = 0;
@@ -129,43 +131,60 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
   @override
   bool get wantKeepAlive => true;
 
+  Future<void> _markInitialProfilesAsSeen() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = await auth.getToken();
+    if (token == null) return;
+    final matchService = MatchService(token: token);
+    await matchService.updateSeenProfiles(_loadedProfileIds.toList());
+    // opcional: _seenProfileIds.addAll(_loadedProfileIds);
+  }
+
+  @override
   @override
   void initState() {
     super.initState();
-    _verticalPageController = PageController(keepPage: true);
-
-    _setupFCM();
-
-    // Inicializar lista de usuarios y registrar sus IDs
-    _randomUsers = List.from(widget.users);
-    for (var user in _randomUsers) {
-      _loadedProfileIds.add(user.id);
-    }
-    _checkLikeLimitStatus();
-
-    // Establecer el umbral de carga inicial
-    _lastFetchThreshold = (_randomUsers.length / 2).floor();
-
-    // No barajar la lista inicialmente, lo haremos después de verificar el límite
-    previousPageIndex = 0;
-
-    // Inicializar completamente la pantalla
-    _initializeScreen().then((_) {
-      // Preload página 0 y 1
-      if (_randomUsers.isNotEmpty) {
-        _preloadImagesForUser(_randomUsers[0]);
-        if (_randomUsers.length > 1) {
-          _preloadImagesForUser(_randomUsers[1]);
+    _verticalPageController = PageController();
+    _verticalPageController.addListener(() async {
+      final idx = _verticalPageController.page?.round() ?? 0;
+      if (idx != previousPageIndex) {
+        previousPageIndex = idx;
+        final seenId = _randomUsers[idx].id;
+        // 1) Añádelo a tu set local
+        _seenProfileIds.add(seenId);
+        // 2) Envía al servidor
+        final auth = Provider.of<AuthProvider>(context, listen: false);
+        final token = await auth.getToken();
+        if (token != null) {
+          await MatchService(token: token).updateSeenProfiles([seenId]);
         }
       }
     });
-    _verticalPageController.addListener(() {
-      final currentPage = _verticalPageController.page?.round() ?? 0;
-      if (currentPage != previousPageIndex) {
-        previousPageIndex = currentPage;
-        _updateScrollCount();
-      }
+    Future.wait([_loadInitialBatch(), _fetchLikedUsers()]).whenComplete(() {
+      setState(() => _isLoading = false);
     });
+    _setupFCM();
+  }
+
+  Future<void> _loadInitialBatch() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = await auth.getToken();
+    if (token == null) return;
+    final matchService = MatchService(token: token);
+
+    // Pedimos la primera página (skip = 0)
+    final filters = Map<String, String>.from(_activeFilters);
+    filters['limit'] = '20';
+    filters['skip'] = '0';
+
+    final res = await matchService.getSuggestedMatchesWithFilters(filters);
+    if (res['success'] == true) {
+      setState(() {
+        _randomUsers =
+            res['matches'].map<User>((j) => User.fromJson(j)).toList();
+        _loadedProfileIds = _randomUsers.map((u) => u.id).toSet();
+      });
+    }
   }
 
   Future<void> reloadProfiles() async {
@@ -182,13 +201,13 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
         _loadedProfileIds
           ..clear()
           ..addAll(_randomUsers.map((u) => u.id));
-        
+
         // Resetear índices para volver al inicio
         _currentPageIndex = 0;
         previousPageIndex = 0;
         _savedRandomPosition = 0;
       });
-      
+
       // Usar post-frame callback para resetear el PageController después de que el estado se actualice
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _randomUsers.isNotEmpty) {
@@ -298,127 +317,141 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
   }
 
   Future<void> useSuperLike() async {
-    if (!showRandom) {
-      _showQuickLikeNotAllowedDialog();
+    if (_isProcessing) return;
+    setState(() => _isProcessing = true);
+    // 1) Confirmación de Quick-Like
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black54,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(tr("confirm_quicklike_title"),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              Text(tr("confirm_quicklike_message"),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70, fontSize: 16)),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.white38),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () => Navigator.of(ctx).pop(false),
+                      child: Text(tr("cancel"),
+                          style: const TextStyle(color: Colors.white70)),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () => Navigator.of(ctx).pop(true),
+                      child: Text(tr("yes"),
+                          style: const TextStyle(color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // Si el usuario canceló, reseteamos y salimos
+    if (confirmed != true) {
+      setState(() => _isProcessing = false);
       return;
     }
 
-    // 2) Lógica original de useSuperLike()
-    if (_isProcessing) return;
-    setState(() => _isProcessing = true);
-
-    try {
-      // Confirmación
-      final confirmed = await showDialog<bool>(
-        context: context,
-        barrierDismissible: true,
-        barrierColor: Colors.black54,
-        builder: (ctx) => Dialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          insetPadding:
-              const EdgeInsets.symmetric(horizontal: 40, vertical: 80),
-          backgroundColor: Colors.transparent,
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(tr("confirm_quicklike_title"),
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
-                Text(tr("confirm_quicklike_message"),
-                    textAlign: TextAlign.center,
-                    style:
-                        const TextStyle(color: Colors.white70, fontSize: 16)),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.white38),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30)),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        onPressed: () => Navigator.of(ctx).pop(false),
-                        child: Text(tr("cancel"),
-                            style: const TextStyle(color: Colors.white70)),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueAccent,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30)),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        onPressed: () => Navigator.of(ctx).pop(true),
-                        child: Text(tr("yes"),
-                            style: const TextStyle(color: Colors.white)),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-      if (confirmed != true) return;
-
-      // Llamada al servicio, procesamiento de respuesta, modal de match, etc.
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-      final token = await auth.getToken();
-      if (token == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(tr("token_not_found"))),
-        );
-        return;
-      }
-      final service = UserService(token: token);
-      final target = _randomUsers[_currentPageIndex];
-      final res = await service.superLikeUser(target.id);
-
-      if (res['success'] == true) {
-        await auth.refreshUser();
-
-        final matched = res['matchedUser'] as Map<String, dynamic>?;
-        if (matched != null) {
-          // ... mostrar diálogo de match ...
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(tr("superlike_sent"))),
-          );
-        }
-
-        // Actualizar scroll, remover usuario y navegar al siguiente...
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(res['message'] ?? tr("error"))),
-        );
-      }
-    } catch (e) {
-      print("Error en useSuperLike: $e");
+    // 2) Petición al backend principal
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = await auth.getToken();
+    if (token == null) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(tr("error"))));
-    } finally {
+          .showSnackBar(SnackBar(content: Text(tr("token_not_found"))));
       setState(() => _isProcessing = false);
+      return;
     }
+
+    final service = UserService(token: token);
+    // ponemos un timeout por si el servidor no responde
+    Map<String, dynamic>? res;
+    try {
+      res = await service
+          .superLikeUser(_randomUsers[_currentPageIndex].id)
+          .timeout(Duration(seconds: 8));
+    } catch (_) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(tr("error_timeout"))));
+      setState(() => _isProcessing = false);
+      return;
+    }
+
+    if (res['success'] != true) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(res['message'] ?? tr("error"))));
+      setState(() => _isProcessing = false);
+      return;
+    }
+
+    // 3) Muestro match o SnackBar
+    final matchedMap = res['matchedUser'] as Map<String, dynamic>?;
+    if (matchedMap != null) {
+      final matchedUser = User.fromJson(matchedMap);
+      _mostrarModalMatch(context, auth.user!, matchedUser);
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(tr("superlike_sent"))));
+    }
+
+    // 4) Saco el perfil de la lista y animo al siguiente
+    setState(() {
+      _randomUsers.removeAt(_currentPageIndex);
+      if (_currentPageIndex >= _randomUsers.length)
+        _currentPageIndex = _randomUsers.length - 1;
+      _isProcessing = false; // 🎯 Reset aquí
+    });
+
+    if (_randomUsers.isNotEmpty) {
+      _verticalPageController.animateToPage(
+        _currentPageIndex.clamp(0, _randomUsers.length - 1),
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+    }
+
+    // 5) Ahora, en background, refresco el user
+    unawaited(auth.refreshUser());
   }
 
   Future<void> _checkLikeLimitStatus() async {
@@ -658,53 +691,20 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
   }
 
   Future<void> _fetchMoreUsers() async {
-    // Agregar un timeout para evitar bloqueos permanentes en _isFetchingMore
-    if (_isFetchingMore) {
-      print("Ya se está ejecutando una carga de usuarios, verificando cuánto tiempo ha pasado");
-      // Si han pasado más de 20 segundos, consideramos que la carga anterior falló
-      final lastFetchTime = _lastFetchStartTime;
-      if (lastFetchTime != null && DateTime.now().difference(lastFetchTime).inSeconds > 20) {
-        print("La carga anterior parece haberse bloqueado. Reiniciando estado...");
-        // Forzar reseteo del estado de carga
-        setState(() => _isFetchingMore = false);
-      } else {
-        return; // La carga anterior todavía está en proceso y no ha pasado demasiado tiempo
-      }
-    }
-
-    // Registrar cuándo comenzó esta carga
-    _lastFetchStartTime = DateTime.now();
-    
-    print("Iniciando carga de más usuarios. Tenemos ${_randomUsers.length} usuarios actualmente");
-    setState(() {
-      _isFetchingMore = true;
-    });
+    if (_isFetchingMore) return;
+    setState(() => _isFetchingMore = true);
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final token = await authProvider.getToken();
-      if (token == null) {
-        setState(() {
-          _isFetchingMore = false;
-        });
-        return;
-      }
+      if (token == null) return;
 
       final matchService = MatchService(token: token);
 
-      // Crear una lista de los IDs que ya tenemos cargados
-      final loadedIds = List<String>.from(_loadedProfileIds);
-
-      // Primero, registrar los perfiles vistos para que no se repitan
-      await matchService.updateSeenProfiles(loadedIds);
-
-      // Preparar los filtros para la solicitud
-      final Map<String, String> filters =
-          Map<String, String>.from(_activeFilters);
-
-      // Añadir parámetros de paginación
+      // Preparamos filtros
+      final Map<String, String> filters = Map.from(_activeFilters);
       filters['limit'] = _limit.toString();
-      filters['skip'] = _randomUsers.length.toString(); 
+      // *Ya no enviamos `skip`*
 
       print("Solicitando usuarios con filtros: $filters");
       final result = await matchService.getSuggestedMatchesWithFilters(filters);
@@ -732,17 +732,21 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
                 _loadedProfileIds.add(user.id);
               }
 
-              // Si hay filtros activos, NO hacer shuffle para mantener el orden de relevancia
-              if (_activeFilters.isEmpty && _randomUsers.isNotEmpty) {
-                _randomUsers.shuffle();
+              // Ahora sí marcamos como vistos los nuevos perfiles que acabamos de obtener
+              if (uniqueNewUsers.isNotEmpty) {
+                matchService.updateSeenProfiles(
+                    uniqueNewUsers.map((u) => u.id).toList());
               }
+
+              // NO hacemos shuffle después de cada carga para mantener coherencia de índices
+              // Esto permite que el PageController mantenga las referencias correctas
 
               print(
                   "Añadidos ${uniqueNewUsers.length} nuevos usuarios únicos. Total: ${_randomUsers.length}");
             } else {
               print(
                   "No se encontraron nuevos usuarios para añadir (todos los recibidos ya estaban cargados)");
-              
+
               // Si no hay nuevos usuarios pero el backend devuelve éxito, intentar hacer una solicitud
               // con parámetros diferentes para obtener más resultados
               if (matchesData.isEmpty && _activeFilters.isNotEmpty) {
@@ -754,21 +758,16 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
                 });
               }
             }
-
-            _isFetchingMore = false;
           });
         }
       } else {
         print("Error al cargar más usuarios: ${result['message']}");
         if (mounted) {
-          setState(() {
-            _isFetchingMore = false;
-          });
-          
           // Mostrar snackbar con error
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(tr('error_loading_more_profiles') ?? "Error al cargar más perfiles"),
+              content: Text(tr('error_loading_more_profiles') ??
+                  "Error al cargar más perfiles"),
               duration: Duration(seconds: 2),
               action: SnackBarAction(
                 label: tr('retry') ?? "Reintentar",
@@ -781,14 +780,11 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
     } catch (e) {
       print('Error fetching more users: $e');
       if (mounted) {
-        setState(() {
-          _isFetchingMore = false;
-        });
-        
         // Mostrar snackbar de error con opción de reintento
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(tr('error_loading_more_profiles') ?? "Error al cargar más perfiles"),
+            content: Text(tr('error_loading_more_profiles') ??
+                "Error al cargar más perfiles"),
             duration: Duration(seconds: 2),
             action: SnackBarAction(
               label: tr('retry') ?? "Reintentar",
@@ -797,63 +793,78 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
           ),
         );
       }
+    } finally {
+      // IMPORTANTE: Siempre reseteamos _isFetchingMore al finalizar, sin importar el resultado
+      if (mounted) {
+        setState(() {
+          _isFetchingMore = false;
+        });
+      }
     }
   }
 
   // Método auxiliar para intentar cargar más usuarios sin filtros cuando no hay más resultados con filtros
   Future<void> _tryFetchMoreWithoutFilters() async {
     if (_isFetchingMore) return;
-    
+
     setState(() => _isFetchingMore = true);
-    
+
     try {
+      print(
+          "Intentando cargar usuarios sin filtros después de no encontrar resultados");
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final token = await authProvider.getToken();
-      if (token == null) {
-        setState(() => _isFetchingMore = false);
-        return;
-      }
-      
+      if (token == null) return;
+
       final matchService = MatchService(token: token);
-      
-      // Solicitar sin filtros pero con skip
+
+      // NO marcamos como vistos antes de la solicitud
+      // Solicitar sin filtros pero con parámetros de paginación
       final Map<String, String> basicFilters = {
         'limit': _limit.toString(),
         'skip': _randomUsers.length.toString(),
       };
-      
-      print("Intentando cargar más usuarios sin filtros");
-      final result = await matchService.getSuggestedMatchesWithFilters(basicFilters);
-      
+
+      final result =
+          await matchService.getSuggestedMatchesWithFilters(basicFilters);
+
       if (result['success'] == true && mounted) {
         final matchesData = result['matches'] as List<dynamic>;
-        final newUsers = matchesData.map((data) => User.fromJson(data)).toList();
-        
+        final newUsers =
+            matchesData.map((data) => User.fromJson(data)).toList();
+
         setState(() {
-          final uniqueNewUsers = newUsers.where((user) => 
-            !_loadedProfileIds.contains(user.id)).toList();
-            
+          final uniqueNewUsers = newUsers
+              .where((user) => !_loadedProfileIds.contains(user.id))
+              .toList();
+
           if (uniqueNewUsers.isNotEmpty) {
             _randomUsers.addAll(uniqueNewUsers);
-            
+
             for (var user in uniqueNewUsers) {
               _loadedProfileIds.add(user.id);
             }
-            
-            // Aplicar shuffle para mezclar los resultados
-            _randomUsers.shuffle();
-            
-            print("Añadidos ${uniqueNewUsers.length} usuarios adicionales sin filtros");
+
+            // Ahora sí, marcar como vistos los nuevos perfiles
+            if (uniqueNewUsers.isNotEmpty) {
+              matchService
+                  .updateSeenProfiles(uniqueNewUsers.map((u) => u.id).toList());
+            }
+
+            // NO hacemos shuffle para mantener la coherencia de índices
+            print(
+                "Añadidos ${uniqueNewUsers.length} usuarios adicionales sin filtros");
+          } else {
+            print("No se encontraron nuevos usuarios sin filtros");
           }
-          
-          _isFetchingMore = false;
         });
       } else {
         print("No se encontraron perfiles adicionales sin filtros");
-        setState(() => _isFetchingMore = false);
       }
     } catch (e) {
       print('Error en carga sin filtros: $e');
+    } finally {
+      // IMPORTANTE: Siempre reseteamos _isFetchingMore al finalizar
       if (mounted) {
         setState(() => _isFetchingMore = false);
       }
@@ -1308,9 +1319,11 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
       builder: (ctx) {
         return Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: Container(
             constraints: const BoxConstraints(maxWidth: 400),
             decoration: BoxDecoration(
@@ -1342,7 +1355,8 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  tr('confirm_report_message', namedArgs: {'reason': reasonText}),
+                  tr('confirm_report_message',
+                      namedArgs: {'reason': reasonText}),
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.white70, fontSize: 16),
                 ),
@@ -1640,398 +1654,429 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: currentList.isEmpty
-                ? Center(
-                    child: Text(
-                      tr("no_users_to_show"),
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  )
-                : NotificationListener<ScrollNotification>(
-                    onNotification: (notification) {
-                      final isPremium =
-                          Provider.of<AuthProvider>(context, listen: false)
-                                  .user
-                                  ?.isPremium ==
-                              true;
-                      final currentPage =
-                          (_verticalPageController.page ?? 0).round();
-
-                      // 1) Capturar over-scroll en la primera página (índice 0)
-                      if (notification is OverscrollNotification &&
-                          notification.overscroll <
-                              0 && // arrastrando hacia abajo más allá de la página 0
-                          currentPage == 0 &&
-                          !isPremium) {
-                        // mostramos modal premium y consumimos el evento
-                        _showPremiumDialog(
-                          tr("premium_function"),
-                          tr("upgrade_to_premium_message"),
-                        );
-                        return true;
-                      }
-
-                      // 2) Capturar scroll normal con dragDetails
-                      if (notification is ScrollUpdateNotification &&
-                          notification.dragDetails != null) {
-                        final dy = notification.dragDetails!.delta.dy;
-
-                        // Intento de scroll hacia arriba en cualquier página:
-                        // dy > 0 → movimiento hacia abajo de dedo = intentar ir a perfil anterior
-                        if (dy > 0 && !isPremium) {
-                          _verticalPageController.jumpToPage(currentPage);
-                          _showPremiumDialog(
-                            tr("premium_function"),
-                            tr("upgrade_to_premium_message"),
-                          );
-                          return true;
-                        }
-
-                        // Bloquear scroll hacia adelante si llegaste al límite
-                        if (dy < 0 && _isScrollLimitReached) {
-                          _verticalPageController.jumpToPage(currentPage);
-                          _showScrollLimitDialog();
-                          return true;
-                        }
-                        return false;
-                      }
-
-                      // dejar pasar el resto de eventos de scroll
-                      return false;
-                    },
-                    child: PageView.builder(
-                      controller: _verticalPageController,
-                      scrollDirection: Axis.vertical,
-                      physics: _isProcessing
-                          ? const NeverScrollableScrollPhysics()
-                          : const PageScrollPhysics(),
-                      itemCount: currentList.length,
-                      onPageChanged: (newPage) {
-                        final isPremium =
-                            Provider.of<AuthProvider>(context, listen: false)
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Stack(
+              children: [
+                Positioned.fill(
+                  child: currentList.isEmpty
+                      ? Center(
+                          child: Text(
+                            tr("no_users_to_show"),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        )
+                      : NotificationListener<ScrollNotification>(
+                          onNotification: (notification) {
+                            final isPremium = Provider.of<AuthProvider>(context,
+                                        listen: false)
                                     .user
                                     ?.isPremium ==
                                 true;
+                            final currentPage =
+                                (_verticalPageController.page ?? 0).round();
 
-                        if (_isScrollLimitReached &&
-                            newPage > previousPageIndex) {
-                          _verticalPageController.jumpToPage(previousPageIndex);
-                          _showScrollLimitDialog();
-                          return;
-                        }
+                            // 1) Capturar over-scroll en la primera página (índice 0)
+                            if (notification is OverscrollNotification &&
+                                notification.overscroll < 0 &&
+                                currentPage == 0 &&
+                                !isPremium) {
+                              _showPremiumDialog(
+                                tr("premium_function"),
+                                tr("upgrade_to_premium_message"),
+                              );
+                              return true;
+                            }
 
-                        if (!(newPage > previousPageIndex &&
-                            _isScrollLimitReached)) {
-                          _resetScrollLimitDialogFlag();
-                        }
+                            // 2) Capturar scroll normal con dragDetails
+                            if (notification is ScrollUpdateNotification &&
+                                notification.dragDetails != null) {
+                              final dy = notification.dragDetails!.delta.dy;
 
-                        if (!isPremium && newPage < previousPageIndex) {
-                          _verticalPageController.jumpToPage(previousPageIndex);
-                          _showPremiumDialog(
-                            tr("premium_function"),
-                            tr("upgrade_to_premium_message"),
-                          );
-                          return;
-                        }
-
-                        _updateScrollCount();
-
-                        // Cambio válido: actualizamos índices y lógica
-                        setState(() {
-                          previousPageIndex = newPage;
-                          _currentPageIndex = newPage;
-                        });
-
-                        // Preload siguiente imagen
-                        final nextIndex = newPage + 1;
-                        if (nextIndex < currentList.length) {
-                          _preloadImagesForUser(currentList[nextIndex]);
-                        }
-
-                        // Si llegamos al final del listado aleatorio, pedimos más
-                        if (showRandom && newPage >= _randomUsers.length - 5) {
-                          _fetchMoreUsers();
-                        }
-                      },
-                      itemBuilder: (context, index) {
-                        final user = currentList[index];
-                        return SingleUserView(
-                          user: user,
-                          onDoubleTapLike: showRandom
-                              ? () => _handleLike(index)
-                              : () => _handleLikeFromLeGustas(index),
-                        );
-                      },
-                    ),
-                  ),
-          ),
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 10,
-            left: 0,
-            right: 0,
-            child: Row(
-              children: [
-                IconButton(
-                  onPressed: _showReportModal,
-                  icon: const Icon(Icons.warning, color: Colors.white),
-                ),
-                Expanded(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              showRandom ? Colors.white : Colors.black45,
-                          foregroundColor:
-                              showRandom ? Colors.black : Colors.white,
-                          elevation: 0,
-                        ),
-                        onPressed: () {
-                          if (!showRandom) {
-                            setState(() {
-                              showRandom = true;
-                            });
-
-                            // Restaurar la posición guardada de la lista aleatoria
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              if (_savedRandomPosition < _randomUsers.length) {
-                                _verticalPageController
-                                    .jumpToPage(_savedRandomPosition);
-                                _currentPageIndex = _savedRandomPosition;
-                                previousPageIndex = _savedRandomPosition;
+                              // Intento de scroll hacia arriba en cualquier página
+                              if (dy > 0 && !isPremium) {
+                                _verticalPageController.jumpToPage(currentPage);
+                                _showPremiumDialog(
+                                  tr("premium_function"),
+                                  tr("upgrade_to_premium_message"),
+                                );
+                                return true;
                               }
-                            });
-                          }
-                        },
-                        child: Text(tr("random")),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        "|",
-                        style: TextStyle(color: Colors.white, fontSize: 20),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              !showRandom ? Colors.white : Colors.black45,
-                          foregroundColor:
-                              !showRandom ? Colors.black : Colors.white,
-                          elevation: 0,
+
+                              // Bloquear scroll hacia adelante si llegaste al límite
+                              if (dy < 0 && _isScrollLimitReached) {
+                                _verticalPageController.jumpToPage(currentPage);
+                                _showScrollLimitDialog();
+                                return true;
+                              }
+                              return false;
+                            }
+
+                            return false;
+                          },
+                          child: PageView.builder(
+                            controller: _verticalPageController,
+                            scrollDirection: Axis.vertical,
+                            physics: _isProcessing
+                                ? const NeverScrollableScrollPhysics()
+                                : const PageScrollPhysics(),
+                            itemCount: currentList.length,
+                            onPageChanged: (newPage) {
+                              final isPremium = Provider.of<AuthProvider>(
+                                          context,
+                                          listen: false)
+                                      .user
+                                      ?.isPremium ==
+                                  true;
+
+                              if (_isScrollLimitReached &&
+                                  newPage > previousPageIndex) {
+                                _verticalPageController
+                                    .jumpToPage(previousPageIndex);
+                                _showScrollLimitDialog();
+                                return;
+                              }
+
+                              if (!(newPage > previousPageIndex &&
+                                  _isScrollLimitReached)) {
+                                _resetScrollLimitDialogFlag();
+                              }
+
+                              if (!isPremium && newPage < previousPageIndex) {
+                                _verticalPageController
+                                    .jumpToPage(previousPageIndex);
+                                _showPremiumDialog(
+                                  tr("premium_function"),
+                                  tr("upgrade_to_premium_message"),
+                                );
+                                return;
+                              }
+
+                              _updateScrollCount();
+
+                              setState(() {
+                                previousPageIndex = newPage;
+                                _currentPageIndex = newPage;
+                              });
+
+                              final nextIndex = newPage + 1;
+                              if (nextIndex < currentList.length) {
+                                _preloadImagesForUser(currentList[nextIndex]);
+                              }
+
+                              if (showRandom &&
+                                  !_isFetchingMore &&
+                                  newPage >= _randomUsers.length - 2) {
+                                _fetchMoreUsers();
+                              }
+                            },
+                            itemBuilder: (context, index) {
+                              final user = currentList[index];
+                              return SingleUserView(
+                                user: user,
+                                onDoubleTapLike: showRandom
+                                    ? () => _handleLike(index)
+                                    : () => _handleLikeFromLeGustas(index),
+                              );
+                            },
+                          ),
                         ),
-                        onPressed: () {
-                          final auth =
-                              Provider.of<AuthProvider>(context, listen: false);
-                          if (!(auth.user?.isPremium ?? false)) {
-                            _showPremiumDialog(
-                              tr("premium_function"),
-                              tr("premium_le_gustas_message"),
-                            );
-                          } else {
-                            // Guardar la posición actual de la lista aleatoria antes de cambiar
-                            if (showRandom) {
-                              _savedRandomPosition = _currentPageIndex;
-                            }
+                ),
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 10,
+                  left: 0,
+                  right: 0,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: _showReportModal,
+                        icon: const Icon(Icons.warning, color: Colors.white),
+                      ),
+                      Expanded(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    showRandom ? Colors.white : Colors.black45,
+                                foregroundColor:
+                                    showRandom ? Colors.black : Colors.white,
+                                elevation: 0,
+                              ),
+                              onPressed: () {
+                                if (!showRandom) {
+                                  setState(() {
+                                    showRandom = true;
+                                  });
 
-                            setState(() {
-                              showRandom = false;
-                            });
+                                  // Restaurar la posición guardada de la lista aleatoria
+                                  WidgetsBinding.instance
+                                      .addPostFrameCallback((_) {
+                                    if (_savedRandomPosition <
+                                        _randomUsers.length) {
+                                      _verticalPageController
+                                          .jumpToPage(_savedRandomPosition);
+                                      _currentPageIndex = _savedRandomPosition;
+                                      previousPageIndex = _savedRandomPosition;
+                                    }
+                                  });
+                                }
+                              },
+                              child: Text(tr("random")),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              "|",
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 20),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    !showRandom ? Colors.white : Colors.black45,
+                                foregroundColor:
+                                    !showRandom ? Colors.black : Colors.white,
+                                elevation: 0,
+                              ),
+                              onPressed: () {
+                                final auth = Provider.of<AuthProvider>(context,
+                                    listen: false);
+                                if (!(auth.user?.isPremium ?? false)) {
+                                  _showPremiumDialog(
+                                    tr("premium_function"),
+                                    tr("premium_le_gustas_message"),
+                                  );
+                                } else {
+                                  // Guardar la posición actual de la lista aleatoria antes de cambiar
+                                  if (showRandom) {
+                                    _savedRandomPosition = _currentPageIndex;
+                                  }
 
-                            // Restaurar al inicio de la lista "Le gustas"
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              _verticalPageController.jumpToPage(0);
-                              _currentPageIndex = 0;
-                              previousPageIndex = 0;
-                            });
+                                  setState(() {
+                                    showRandom = false;
+                                  });
 
-                            if (_likedUsers.isEmpty) {
-                              _fetchLikedUsers();
+                                  // Restaurar al inicio de la lista "Le gustas"
+                                  WidgetsBinding.instance
+                                      .addPostFrameCallback((_) {
+                                    _verticalPageController.jumpToPage(0);
+                                    _currentPageIndex = 0;
+                                    previousPageIndex = 0;
+                                  });
+
+                                  if (_likedUsers.isEmpty) {
+                                    _fetchLikedUsers();
+                                  }
+                                }
+                              },
+                              child: Text(tr("le_gustas_button", namedArgs: {
+                                "count": _likedUsers.length.toString()
+                              })),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () async {
+                          final hasLocation = (auth.user?.location != null) &&
+                              (auth.user?.location?.coordinates.length == 2) &&
+                              !(auth.user?.location?.coordinates[0] == 0 &&
+                                  auth.user?.location?.coordinates[1] == 0);
+                          final result = await showModalBottomSheet<dynamic>(
+                            context: context,
+                            backgroundColor: Colors.transparent,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(20),
+                              ),
+                            ),
+                            builder: (context) {
+                              return Container(
+                                decoration: const BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Color(0xFF0D0D0D),
+                                      Color(0xFF1C1C1C),
+                                    ],
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                  ),
+                                  borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(20),
+                                  ),
+                                ),
+                                child: FilterModalContent(
+                                  hasLocation: hasLocation,
+                                  initialAgeRange: _currentAgeRange,
+                                  initialWeightRange: _currentWeightRange,
+                                  initialHeightRange: _currentHeightRange,
+                                  initialGymStage: _currentGymStage,
+                                  initialRelationshipType:
+                                      _currentRelationshipType,
+                                  initialUseLocation: _currentUseLocation,
+                                  initialDistanceRange: _currentDistanceRange,
+                                  initialFilterByBasics: _currentFilterByBasics,
+                                  initialSquatRange: _currentSquatRange,
+                                  initialBenchRange: _currentBenchRange,
+                                  initialDeadliftRange: _currentDeadliftRange,
+                                ),
+                              );
+                            },
+                          );
+
+                          if (result != null && result is Map) {
+                            if (result['remove'] == true) {
+                              print('Quitando filtros');
+                              // Reiniciar los valores de filtro a los predeterminados
+                              setState(() {
+                                _currentAgeRange = const RangeValues(18, 50);
+                                _currentWeightRange =
+                                    const RangeValues(50, 100);
+                                _currentHeightRange =
+                                    const RangeValues(150, 200);
+                                _currentGymStage = 'Todos';
+                                _currentRelationshipType = 'Todos';
+                                _currentUseLocation = false;
+                                _currentDistanceRange =
+                                    const RangeValues(5, 50);
+                                _currentFilterByBasics = false;
+                                _currentSquatRange = const RangeValues(0, 300);
+                                _currentBenchRange = const RangeValues(0, 200);
+                                _currentDeadliftRange =
+                                    const RangeValues(0, 400);
+
+                                // Limpiar los filtros activos cuando se quitan filtros
+                                _activeFilters = {};
+                              });
+
+                              var allUsers =
+                                  await _fetchAllUsersWithoutFilter();
+                              if (allUsers != null) {
+                                setState(() {
+                                  _randomUsers = allUsers;
+                                  if (_randomUsers.isNotEmpty) {
+                                    _randomUsers.shuffle();
+                                  }
+                                  showRandom = true;
+                                });
+                              }
+                            } else if (result['matches'] != null) {
+                              List<User> matches =
+                                  List<User>.from(result['matches']);
+                              setState(() {
+                                // Guardar los valores del filtro actual
+                                print('Filtros aplicados:');
+                                print(
+                                    'Etapa de Gimnasio: ${result['gymStage']}');
+                                print(
+                                    'Tipo de Relación: ${result['relationshipType']}');
+                                print('Usuarios recibidos: ${matches.length}');
+
+                                _currentAgeRange = result['ageRange'];
+                                _currentWeightRange = result['weightRange'];
+                                _currentHeightRange = result['heightRange'];
+                                _currentGymStage = result['gymStage'];
+                                _currentRelationshipType =
+                                    result['relationshipType'];
+                                _currentUseLocation = result['useLocation'];
+                                _currentDistanceRange = result['distanceRange'];
+                                _currentFilterByBasics =
+                                    result['filterByBasics'] as bool;
+                                _currentSquatRange =
+                                    result['squatRange'] as RangeValues;
+                                _currentBenchRange =
+                                    result['benchRange'] as RangeValues;
+                                _currentDeadliftRange =
+                                    result['deadliftRange'] as RangeValues;
+
+                                // Guardar los filtros activos en el mapa para usarlos en paginación
+                                _activeFilters = {
+                                  'ageMin':
+                                      _currentAgeRange.start.round().toString(),
+                                  'ageMax':
+                                      _currentAgeRange.end.round().toString(),
+                                  'weightMin': _currentWeightRange.start
+                                      .round()
+                                      .toString(),
+                                  'weightMax': _currentWeightRange.end
+                                      .round()
+                                      .toString(),
+                                  'heightMin': _currentHeightRange.start
+                                      .round()
+                                      .toString(),
+                                  'heightMax': _currentHeightRange.end
+                                      .round()
+                                      .toString(),
+                                };
+
+                                // Añadir gymStage si no es "Todos"
+                                if (_currentGymStage != 'Todos') {
+                                  _activeFilters['gymStage'] = _currentGymStage;
+                                }
+
+                                // Añadir relationshipType si no es "Todos"
+                                if (_currentRelationshipType != 'Todos') {
+                                  _activeFilters['relationshipType'] =
+                                      _currentRelationshipType;
+                                }
+
+                                // Añadir filtros de localización si están activos
+                                if (_currentUseLocation) {
+                                  _activeFilters['useLocation'] = 'true';
+                                  _activeFilters['distanceMin'] =
+                                      _currentDistanceRange.start
+                                          .round()
+                                          .toString();
+                                  _activeFilters['distanceMax'] =
+                                      _currentDistanceRange.end
+                                          .round()
+                                          .toString();
+                                }
+
+                                // Añadir filtros de básicos si están activos
+                                if (_currentFilterByBasics) {
+                                  _activeFilters['filterByBasics'] = 'true';
+                                  _activeFilters['squatMin'] =
+                                      _currentSquatRange.start
+                                          .round()
+                                          .toString();
+                                  _activeFilters['squatMax'] =
+                                      _currentSquatRange.end.round().toString();
+                                  _activeFilters['benchMin'] =
+                                      _currentBenchRange.start
+                                          .round()
+                                          .toString();
+                                  _activeFilters['benchMax'] =
+                                      _currentBenchRange.end.round().toString();
+                                  _activeFilters['deadliftMin'] =
+                                      _currentDeadliftRange.start
+                                          .round()
+                                          .toString();
+                                  _activeFilters['deadliftMax'] =
+                                      _currentDeadliftRange.end
+                                          .round()
+                                          .toString();
+                                }
+                                _randomUsers = matches;
+                                // Si hay filtros activos, NO hacer shuffle para mantener el orden de relevancia
+                                if (_randomUsers.isNotEmpty &&
+                                    _activeFilters.isEmpty) {
+                                  _randomUsers.shuffle();
+                                }
+                                showRandom = true;
+                              });
                             }
                           }
                         },
-                        child: Text(tr("le_gustas_button", namedArgs: {
-                          "count": _likedUsers.length.toString()
-                        })),
+                        icon: const Icon(Icons.tune, color: Colors.white),
                       ),
                     ],
                   ),
                 ),
-                IconButton(
-                  onPressed: () async {
-                    final hasLocation = (auth.user?.location != null) &&
-                        (auth.user?.location?.coordinates.length == 2) &&
-                        !(auth.user?.location?.coordinates[0] == 0 &&
-                            auth.user?.location?.coordinates[1] == 0);
-                    final result = await showModalBottomSheet<dynamic>(
-                      context: context,
-                      backgroundColor: Colors.transparent,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(20),
-                        ),
-                      ),
-                      builder: (context) {
-                        return Container(
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Color(0xFF0D0D0D),
-                                Color(0xFF1C1C1C),
-                              ],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                            ),
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(20),
-                            ),
-                          ),
-                          child: FilterModalContent(
-                            hasLocation: hasLocation,
-                            initialAgeRange: _currentAgeRange,
-                            initialWeightRange: _currentWeightRange,
-                            initialHeightRange: _currentHeightRange,
-                            initialGymStage: _currentGymStage,
-                            initialRelationshipType: _currentRelationshipType,
-                            initialUseLocation: _currentUseLocation,
-                            initialDistanceRange: _currentDistanceRange,
-                            initialFilterByBasics: _currentFilterByBasics,
-                            initialSquatRange: _currentSquatRange,
-                            initialBenchRange: _currentBenchRange,
-                            initialDeadliftRange: _currentDeadliftRange,
-                          ),
-                        );
-                      },
-                    );
-
-                    if (result != null && result is Map) {
-                      if (result['remove'] == true) {
-                        print('Quitando filtros');
-                        // Reiniciar los valores de filtro a los predeterminados
-                        setState(() {
-                          _currentAgeRange = const RangeValues(18, 50);
-                          _currentWeightRange = const RangeValues(50, 100);
-                          _currentHeightRange = const RangeValues(150, 200);
-                          _currentGymStage = 'Todos';
-                          _currentRelationshipType = 'Todos';
-                          _currentUseLocation = false;
-                          _currentDistanceRange = const RangeValues(5, 50);
-                          _currentFilterByBasics = false;
-                          _currentSquatRange = const RangeValues(0, 300);
-                          _currentBenchRange = const RangeValues(0, 200);
-                          _currentDeadliftRange = const RangeValues(0, 400);
-
-                          // Limpiar los filtros activos cuando se quitan filtros
-                          _activeFilters = {};
-                        });
-
-                        var allUsers = await _fetchAllUsersWithoutFilter();
-                        if (allUsers != null) {
-                          setState(() {
-                            _randomUsers = allUsers;
-                            if (_randomUsers.isNotEmpty) {
-                              _randomUsers.shuffle();
-                            }
-                            showRandom = true;
-                          });
-                        }
-                      } else if (result['matches'] != null) {
-                        List<User> matches = List<User>.from(result['matches']);
-                        setState(() {
-                          // Guardar los valores del filtro actual
-                          print('Filtros aplicados:');
-                          print('Etapa de Gimnasio: ${result['gymStage']}');
-                          print(
-                              'Tipo de Relación: ${result['relationshipType']}');
-                          print('Usuarios recibidos: ${matches.length}');
-
-                          _currentAgeRange = result['ageRange'];
-                          _currentWeightRange = result['weightRange'];
-                          _currentHeightRange = result['heightRange'];
-                          _currentGymStage = result['gymStage'];
-                          _currentRelationshipType = result['relationshipType'];
-                          _currentUseLocation = result['useLocation'];
-                          _currentDistanceRange = result['distanceRange'];
-                          _currentFilterByBasics =
-                              result['filterByBasics'] as bool;
-                          _currentSquatRange =
-                              result['squatRange'] as RangeValues;
-                          _currentBenchRange =
-                              result['benchRange'] as RangeValues;
-                          _currentDeadliftRange =
-                              result['deadliftRange'] as RangeValues;
-
-                          // Guardar los filtros activos en el mapa para usarlos en paginación
-                          _activeFilters = {
-                            'ageMin': _currentAgeRange.start.round().toString(),
-                            'ageMax': _currentAgeRange.end.round().toString(),
-                            'weightMin':
-                                _currentWeightRange.start.round().toString(),
-                            'weightMax':
-                                _currentWeightRange.end.round().toString(),
-                            'heightMin':
-                                _currentHeightRange.start.round().toString(),
-                            'heightMax':
-                                _currentHeightRange.end.round().toString(),
-                          };
-
-                          // Añadir gymStage si no es "Todos"
-                          if (_currentGymStage != 'Todos') {
-                            _activeFilters['gymStage'] = _currentGymStage;
-                          }
-
-                          // Añadir relationshipType si no es "Todos"
-                          if (_currentRelationshipType != 'Todos') {
-                            _activeFilters['relationshipType'] =
-                                _currentRelationshipType;
-                          }
-
-                          // Añadir filtros de localización si están activos
-                          if (_currentUseLocation) {
-                            _activeFilters['useLocation'] = 'true';
-                            _activeFilters['distanceMin'] =
-                                _currentDistanceRange.start.round().toString();
-                            _activeFilters['distanceMax'] =
-                                _currentDistanceRange.end.round().toString();
-                          }
-
-                          // Añadir filtros de básicos si están activos
-                          if (_currentFilterByBasics) {
-                            _activeFilters['filterByBasics'] = 'true';
-                            _activeFilters['squatMin'] =
-                                _currentSquatRange.start.round().toString();
-                            _activeFilters['squatMax'] =
-                                _currentSquatRange.end.round().toString();
-                            _activeFilters['benchMin'] =
-                                _currentBenchRange.start.round().toString();
-                            _activeFilters['benchMax'] =
-                                _currentBenchRange.end.round().toString();
-                            _activeFilters['deadliftMin'] =
-                                _currentDeadliftRange.start.round().toString();
-                            _activeFilters['deadliftMax'] =
-                                _currentDeadliftRange.end.round().toString();
-                          }
-                          _randomUsers = matches;
-                          // Si hay filtros activos, NO hacer shuffle para mantener el orden de relevancia
-                          if (_randomUsers.isNotEmpty &&
-                              _activeFilters.isEmpty) {
-                            _randomUsers.shuffle();
-                          }
-                          showRandom = true;
-                        });
-                      }
-                    }
-                  },
-                  icon: const Icon(Icons.tune, color: Colors.white),
-                ),
               ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }

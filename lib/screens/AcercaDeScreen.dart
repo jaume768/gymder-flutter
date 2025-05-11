@@ -137,7 +137,7 @@ class _AcercaDeScreenState extends State<AcercaDeScreen> {
                   const SizedBox(height: 30),
                   Center(
                     child: Text(
-                      '© ${DateTime.now().year} GYMswipe - ' +
+                      '© ${DateTime.now().year} GymSwipe - ' +
                           tr("all_rights_reserved"),
                       style: const TextStyle(
                         color: Colors.white54,

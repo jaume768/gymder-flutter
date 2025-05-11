@@ -301,9 +301,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             const SizedBox(height: 8),
                             InkWell(
-                              onTap: () async {
+                              onTap: () {
                                 Navigator.pop(context);
-                                await _tikTokKey.currentState?.useSuperLike();
+                                Future.microtask(() {
+                                  _tikTokKey.currentState?.useSuperLike();
+                                });
                               },
                               borderRadius: BorderRadius.circular(12),
                               child: Container(

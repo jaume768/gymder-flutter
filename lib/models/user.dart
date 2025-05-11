@@ -1,4 +1,4 @@
-// lib/models/user.dart
+import 'package:meta/meta.dart';
 
 class ProfilePicture {
   final String url;
@@ -23,9 +23,9 @@ class Photo {
 
   factory Photo.fromJson(Map<String, dynamic> json) {
     return Photo(
-      id: json['_id'],
-      url: json['url'],
-      publicId: json['public_id'],
+      id: json['_id'] ?? '',
+      url: json['url'] ?? '',
+      publicId: json['public_id'] ?? '',
     );
   }
 }
@@ -39,16 +39,17 @@ class LocationData {
   factory LocationData.fromJson(Map<String, dynamic> json) {
     return LocationData(
       type: json['type'] ?? '',
-      coordinates: (json['coordinates'] != null)
-          ? List<double>.from(json['coordinates'].map((x) => x.toDouble()))
-          : [],
+      coordinates: json['coordinates'] != null
+          ? List<double>.from(
+              json['coordinates'].map((x) => (x as num).toDouble()))
+          : <double>[],
     );
   }
 }
 
 class User {
   final String id;
-  final String email;
+  final String? email;
   final String username;
   final bool isPremium;
   final DateTime? premiumExpiration;
@@ -67,29 +68,27 @@ class User {
   final LocationData? location;
   final String? biography;
   final String? city;
-  final int topLikeCount;
   final String? country;
+  final int topLikeCount;
   final int? age;
+  final int? height;
+  final int? weight;
   final int? squatWeight;
   final int? benchPressWeight;
   final int? deadliftWeight;
-  final int? height;
-  final int? weight;
   final int likeCount;
   final int scrollCount;
   final String? scrollLimitProfileId;
   final DateTime? scrollLimitReachedAt;
   final DateTime? likeLimitReachedAt;
   final String? promoCode;
-  
-  // Campos para verificación de identidad
-  final String verificationStatus; // 'false', 'pendiente' o 'true'
-  final ProfilePicture? identityDocument; // Documento de identidad
-  final ProfilePicture? selfieWithDocument; // Selfie sosteniendo el documento
+  final String verificationStatus;
+  final ProfilePicture? identityDocument;
+  final ProfilePicture? selfieWithDocument;
 
   User({
     required this.id,
-    required this.email,
+    this.email,
     required this.username,
     required this.isPremium,
     this.premiumExpiration,
@@ -97,25 +96,25 @@ class User {
     this.profilePicture,
     this.firstName,
     this.lastName,
-    required this.topLikeCount,
     this.gender,
-    this.biography,
     this.seeking,
     this.relationshipGoal,
     this.likes,
-    this.squatWeight,
-    this.benchPressWeight,
-    this.deadliftWeight,
     this.matches,
     this.blockedUsers,
     this.photos,
     this.googleId,
     this.location,
+    this.biography,
     this.city,
     this.country,
+    required this.topLikeCount,
     this.age,
     this.height,
     this.weight,
+    this.squatWeight,
+    this.benchPressWeight,
+    this.deadliftWeight,
     required this.likeCount,
     required this.scrollCount,
     this.scrollLimitProfileId,
@@ -128,85 +127,74 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
-    // Print debugging info for profile picture
-    print('User.fromJson: ${json['username']}');
-    if (json['profilePicture'] != null) {
-      print('Profile picture data: ${json['profilePicture']}');
-    } else {
-      print('Profile picture is null for user: ${json['username']}');
-    }
-
     return User(
-      id: json['id'] ?? json['_id'],
-      email: json['email'],
-      username: json['username'],
+      id: json['id'] ?? json['_id'] ?? '',
+      email: json['email'] as String?,
+      username: json['username'] ?? '',
       isPremium: json['isPremium'] ?? false,
       premiumExpiration: json['premiumExpiration'] != null
-          ? DateTime.parse(json['premiumExpiration'])
+          ? DateTime.tryParse(json['premiumExpiration'])
           : null,
-      goal: json['goal'],
+      goal: json['goal'] as String?,
       profilePicture: json['profilePicture'] != null
           ? ProfilePicture.fromJson(json['profilePicture'])
           : null,
-      firstName: json['firstName'],
-      lastName: json['lastName'],
-      gender: json['gender'],
+      firstName: json['firstName'] as String?,
+      lastName: json['lastName'] as String?,
+      gender: json['gender'] as String?,
+      seeking:
+          json['seeking'] != null ? List<String>.from(json['seeking']) : null,
+      relationshipGoal: json['relationshipGoal'] as String?,
+      likes: json['likes'] != null ? List<String>.from(json['likes']) : null,
+      matches:
+          json['matches'] != null ? List<String>.from(json['matches']) : null,
+      blockedUsers: json['blockedUsers'] != null
+          ? List<String>.from(json['blockedUsers'])
+          : null,
+      photos: json['photos'] != null
+          ? (json['photos'] as List).map((p) => Photo.fromJson(p)).toList()
+          : null,
+      googleId: json['googleId'] as String?,
+      location: json['location'] != null
+          ? LocationData.fromJson(json['location'])
+          : null,
+      biography: json['biography'] as String?,
+      city: json['city'] as String?,
+      country: json['country'] as String?,
+      topLikeCount: json['topLikeCount'] as int? ?? 0,
+      age: json['age'] is int
+          ? json['age']
+          : (json['age'] != null ? int.tryParse(json['age'].toString()) : null),
+      height: json['height'] is int
+          ? json['height']
+          : (json['height'] != null
+              ? int.tryParse(json['height'].toString())
+              : null),
+      weight: json['weight'] is int
+          ? json['weight']
+          : (json['weight'] != null
+              ? int.tryParse(json['weight'].toString())
+              : null),
       squatWeight: json['squatWeight'] as int?,
       benchPressWeight: json['benchPressWeight'] as int?,
       deadliftWeight: json['deadliftWeight'] as int?,
-      seeking:
-          json['seeking'] != null ? List<String>.from(json['seeking']) : [],
-      relationshipGoal: json['relationshipGoal'],
-      // Campos de verificación
-      verificationStatus: json['verificationStatus'] ?? 'false',
+      likeCount: json['likeCount'] as int? ?? 0,
+      scrollCount: json['scrollCount'] as int? ?? 0,
+      scrollLimitProfileId: json['scrollLimitProfileId'] as String?,
+      scrollLimitReachedAt: json['scrollLimitReachedAt'] != null
+          ? DateTime.tryParse(json['scrollLimitReachedAt'])
+          : null,
+      likeLimitReachedAt: json['likeLimitReachedAt'] != null
+          ? DateTime.tryParse(json['likeLimitReachedAt'])
+          : null,
+      promoCode: json['promoCode'] as String?,
+      verificationStatus: json['verificationStatus'] as String? ?? 'false',
       identityDocument: json['identityDocument'] != null
           ? ProfilePicture.fromJson(json['identityDocument'])
           : null,
       selfieWithDocument: json['selfieWithDocument'] != null
           ? ProfilePicture.fromJson(json['selfieWithDocument'])
           : null,
-      likes: json['likes'] != null ? List<String>.from(json['likes']) : [],
-      matches:
-          json['matches'] != null ? List<String>.from(json['matches']) : [],
-      blockedUsers: json['blockedUsers'] != null
-          ? List<String>.from(json['blockedUsers'])
-          : [],
-      photos: json['photos'] != null
-          ? List<Photo>.from(json['photos'].map((x) => Photo.fromJson(x)))
-          : [],
-      googleId: json['googleId'],
-      biography: json['biography'],
-      location: json['location'] != null
-          ? LocationData.fromJson(json['location'])
-          : null,
-      city: json['city'],
-      country: json['country'],
-      topLikeCount: json['topLikeCount'] as int? ?? 0,
-      age: json['age'] != null
-          ? (json['age'] is int
-              ? json['age']
-              : int.tryParse(json['age'].toString()))
-          : null,
-      height: json['height'] != null
-          ? (json['height'] is int
-              ? json['height']
-              : int.tryParse(json['height'].toString()))
-          : null,
-      weight: json['weight'] != null
-          ? (json['weight'] is int
-              ? json['weight']
-              : int.tryParse(json['weight'].toString()))
-          : null,
-      likeCount: json['likeCount'] as int? ?? 0,
-      scrollCount: json['scrollCount'] as int? ?? 0,
-      scrollLimitProfileId: json['scrollLimitProfileId'] as String?,
-      scrollLimitReachedAt: json['scrollLimitReachedAt'] != null
-          ? DateTime.parse(json['scrollLimitReachedAt'])
-          : null,
-      likeLimitReachedAt: json['likeLimitReachedAt'] != null
-          ? DateTime.parse(json['likeLimitReachedAt'])
-          : null,
-      promoCode: json['promoCode'],
     );
   }
 }

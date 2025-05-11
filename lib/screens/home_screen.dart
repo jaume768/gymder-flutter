@@ -79,8 +79,11 @@ class _HomeScreenState extends State<HomeScreen> {
             List<User>.from(result['matches'].map((x) => User.fromJson(x)));
         isLoading = false;
         // Creamos solo una vez el widget con la misma Key
-        _tikTokLikeScreen =
-            TikTokLikeScreen(key: _tikTokKey, users: suggestedMatches);
+        _tikTokLikeScreen = TikTokLikeScreen(
+          key: _tikTokKey,
+          users: suggestedMatches,
+          onBuyQuickLike: _buyTopLike,
+        );
         _matchesScreen = MatchesChatsScreen(key: UniqueKey());
       });
     } else {

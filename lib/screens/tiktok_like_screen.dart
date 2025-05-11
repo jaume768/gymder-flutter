@@ -72,7 +72,13 @@ class LimitedScrollPhysics extends ScrollPhysics {
 
 class TikTokLikeScreen extends StatefulWidget {
   final List<User> users;
-  const TikTokLikeScreen({Key? key, required this.users}) : super(key: key);
+  final VoidCallback onBuyQuickLike;    // ⚡️ nuevo callback
+
+  const TikTokLikeScreen({
+    Key? key,
+    required this.users,
+    required this.onBuyQuickLike,
+  }) : super(key: key);
 
   @override
   State<TikTokLikeScreen> createState() => TikTokLikeScreenState();
@@ -319,7 +325,89 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
   Future<void> useSuperLike() async {
     if (_isProcessing) return;
     setState(() => _isProcessing = true);
-    // 1) Confirmación de Quick-Like
+
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final currentUser = auth.user!;
+    // 0) Si no tiene QuickLikes
+    if (currentUser.topLikeCount <= 0) {
+      final buy = await showDialog<bool>(
+        context: context,
+        barrierDismissible: true,
+        barrierColor: Colors.black54,
+        builder: (ctx) => Dialog(
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20)),
+          backgroundColor: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(tr("no_quicklikes_title"),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                Text(tr("no_quicklikes_message"),
+                    textAlign: TextAlign.center,
+                    style:
+                    const TextStyle(color: Colors.white70, fontSize: 16)),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.white38),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30)),
+                          padding:
+                          const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        child: Text(tr("cancel"),
+                            style: const TextStyle(color: Colors.white70)),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueAccent,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30)),
+                          padding:
+                          const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        child: Text(tr("buy_more_quick_likes_modal"),
+                            style: const TextStyle(color: Colors.white)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      if (buy == true) {
+        // ⚡️ en lugar de PremiumPurchasePage, llamamos al callback:
+        widget.onBuyQuickLike();
+      }
+      setState(() => _isProcessing = false);
+      return;
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       barrierDismissible: true,
@@ -393,8 +481,6 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
       return;
     }
 
-    // 2) Petición al backend principal
-    final auth = Provider.of<AuthProvider>(context, listen: false);
     final token = await auth.getToken();
     if (token == null) {
       ScaffoldMessenger.of(context)

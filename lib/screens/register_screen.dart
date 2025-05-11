@@ -1808,14 +1808,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Espaciado tras título/subtítulo
           const SizedBox(height: 12),
 
-          // Segmented control para "Etapa de gimnasio"
-          Semantics(
-            container: true,
-            label: tr("stage"),
-            hint: tr("select_your_gym_stage_height_weight"),
+          // --- Aquí centramos el SegmentedButton ---
+          Center(
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: SegmentedButton<String>(
@@ -1824,7 +1820,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     value: stage,
                     label: Text(
                       translationMap[stage] ?? stage,
-                      style: const TextStyle(fontSize: 14),
+                      style: const TextStyle(fontSize: 13),
                     ),
                   );
                 }).toList(),
@@ -1835,7 +1831,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   });
                 },
                 multiSelectionEnabled: false,
-                showSelectedIcon: false, // Quitamos el check
+                showSelectedIcon: false,
+                emptySelectionAllowed: true,
                 style: ButtonStyle(
                   backgroundColor: MaterialStateProperty.resolveWith((states) {
                     return states.contains(MaterialState.selected)
@@ -1848,7 +1845,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         : Colors.white54;
                     return BorderSide(color: color, width: 1.5);
                   }),
-                  foregroundColor: MaterialStateProperty.resolveWith((states) {
+                  foregroundColor:
+                  MaterialStateProperty.resolveWith((states) {
                     return states.contains(MaterialState.selected)
                         ? Colors.white
                         : Colors.white70;
@@ -1868,7 +1866,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
           const SizedBox(height: 24),
 
-          // Altura: Text + Slider + Stepper
+          // Altura: Text + Slider
           Text(tr("height_cm"), style: const TextStyle(color: Colors.white70)),
           const SizedBox(height: 8),
           if (height != null)
@@ -1887,7 +1885,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
           const SizedBox(height: 24),
 
-          // Peso: Text + Slider + Stepper
+          // Peso: Text + Slider
           Text(tr("weight_kg"), style: const TextStyle(color: Colors.white70)),
           const SizedBox(height: 8),
           if (weight != null)
@@ -1904,7 +1902,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             inactiveColor: Colors.white24,
           ),
 
-          // Mensajes de error inline
           if (errorMessage.isNotEmpty && _currentStep == 7) ...[
             const SizedBox(height: 16),
             Text(

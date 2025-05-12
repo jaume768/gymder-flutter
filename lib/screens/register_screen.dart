@@ -1447,7 +1447,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       'Masculino',
       'Femenino',
       'No Binario',
-      'Prefiero no decirlo',
       'Otro',
     ];
     final translationMap = getGenderTranslations();
@@ -1529,7 +1528,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       'Masculino',
       'Femenino',
       'No Binario',
-      'Prefiero no decirlo',
       'Otro',
     ];
     final translationMap = getGenderTranslations();

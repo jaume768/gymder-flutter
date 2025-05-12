@@ -72,7 +72,7 @@ class LimitedScrollPhysics extends ScrollPhysics {
 
 class TikTokLikeScreen extends StatefulWidget {
   final List<User> users;
-  final VoidCallback onBuyQuickLike;    // ⚡️ nuevo callback
+  final VoidCallback onBuyQuickLike;    // nuevo callback
 
   const TikTokLikeScreen({
     Key? key,
@@ -402,7 +402,7 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
       );
 
       if (buy == true) {
-        // ⚡️ en lugar de PremiumPurchasePage, llamamos al callback:
+        // en lugar de PremiumPurchasePage, llamamos al callback:
         widget.onBuyQuickLike();
       }
       setState(() => _isProcessing = false);
@@ -514,7 +514,7 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
     final matchedMap = res['matchedUser'] as Map<String, dynamic>?;
     if (matchedMap != null) {
       final matchedUser = User.fromJson(matchedMap);
-      _mostrarModalMatch(context, auth.user!, matchedUser);
+      await _mostrarModalMatch(context, auth.user!, matchedUser);
     } else {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(tr("superlike_sent"))));
@@ -525,7 +525,7 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
       _randomUsers.removeAt(_currentPageIndex);
       if (_currentPageIndex >= _randomUsers.length)
         _currentPageIndex = _randomUsers.length - 1;
-      _isProcessing = false; // 🎯 Reset aquí
+      _isProcessing = false; // Reset aquí
     });
 
     if (_randomUsers.isNotEmpty) {
@@ -980,7 +980,7 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
     if (result['success'] == true) {
       // Si hay match, muestro modal…
       if (result['matchedUser'] != null) {
-        _mostrarModalMatch(context, auth.user!, user);
+        await _mostrarModalMatch(context, auth.user!, user);
       }
 
       if (_isScrollLimitReached && userIndex == _currentPageIndex) {
@@ -1051,7 +1051,7 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
         final currentUser =
             Provider.of<AuthProvider>(context, listen: false).user;
         if (result['matchedUser'] != null && currentUser != null) {
-          _mostrarModalMatch(context, currentUser, user);
+          await _mostrarModalMatch(context, currentUser, user);
         }
       }
     } else {
@@ -1073,7 +1073,8 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
       barrierDismissible: true,
       builder: (ctx) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        insetPadding:
+            const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         child: Container(
           decoration: BoxDecoration(
             gradient: const LinearGradient(
@@ -1198,12 +1199,12 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
     );
   }
 
-  void _mostrarModalMatch(
+  Future<void> _mostrarModalMatch(
     BuildContext context,
     User usuarioActual,
     User matchedUser,
-  ) {
-    showGeneralDialog(
+  ) async {
+    await showGeneralDialog(
       context: context,
       barrierDismissible: false,
       barrierLabel: "MatchDialog",
@@ -1735,7 +1736,7 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
   Widget build(BuildContext context) {
     super.build(context);
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    final isPremium = auth.user?.isPremium == true;
+    final isPremium = auth.user?.isPremium ?? false;
     final List<User> currentList = showRandom ? _randomUsers : _likedUsers;
 
     return Scaffold(
@@ -2095,22 +2096,11 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
                                   'heightMax': _currentHeightRange.end
                                       .round()
                                       .toString(),
+                                  'gymStage': _currentGymStage,
+                                  'relationshipGoal': _currentRelationshipType,
+                                  'useLocation': _currentUseLocation.toString(),
                                 };
-
-                                // Añadir gymStage si no es "Todos"
-                                if (_currentGymStage != 'Todos') {
-                                  _activeFilters['gymStage'] = _currentGymStage;
-                                }
-
-                                // Añadir relationshipType si no es "Todos"
-                                if (_currentRelationshipType != 'Todos') {
-                                  _activeFilters['relationshipType'] =
-                                      _currentRelationshipType;
-                                }
-
-                                // Añadir filtros de localización si están activos
                                 if (_currentUseLocation) {
-                                  _activeFilters['useLocation'] = 'true';
                                   _activeFilters['distanceMin'] =
                                       _currentDistanceRange.start
                                           .round()
@@ -2121,29 +2111,41 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
                                           .toString();
                                 }
 
-                                // Añadir filtros de básicos si están activos
+                                // Añadir básicos si el usuario realmente movió el slider
                                 if (_currentFilterByBasics) {
-                                  _activeFilters['filterByBasics'] = 'true';
-                                  _activeFilters['squatMin'] =
-                                      _currentSquatRange.start
-                                          .round()
-                                          .toString();
-                                  _activeFilters['squatMax'] =
-                                      _currentSquatRange.end.round().toString();
-                                  _activeFilters['benchMin'] =
-                                      _currentBenchRange.start
-                                          .round()
-                                          .toString();
-                                  _activeFilters['benchMax'] =
-                                      _currentBenchRange.end.round().toString();
-                                  _activeFilters['deadliftMin'] =
-                                      _currentDeadliftRange.start
-                                          .round()
-                                          .toString();
-                                  _activeFilters['deadliftMax'] =
-                                      _currentDeadliftRange.end
-                                          .round()
-                                          .toString();
+                                  if (_currentSquatRange.start > 0 ||
+                                      _currentSquatRange.end < 300) {
+                                    _activeFilters['squatMin'] =
+                                        _currentSquatRange.start
+                                            .round()
+                                            .toString();
+                                    _activeFilters['squatMax'] =
+                                        _currentSquatRange.end
+                                            .round()
+                                            .toString();
+                                  }
+                                  if (_currentBenchRange.start > 0 ||
+                                      _currentBenchRange.end < 200) {
+                                    _activeFilters['benchMin'] =
+                                        _currentBenchRange.start
+                                            .round()
+                                            .toString();
+                                    _activeFilters['benchMax'] =
+                                        _currentBenchRange.end
+                                            .round()
+                                            .toString();
+                                  }
+                                  if (_currentDeadliftRange.start > 0 ||
+                                      _currentDeadliftRange.end < 400) {
+                                    _activeFilters['deadliftMin'] =
+                                        _currentDeadliftRange.start
+                                            .round()
+                                            .toString();
+                                    _activeFilters['deadliftMax'] =
+                                        _currentDeadliftRange.end
+                                            .round()
+                                            .toString();
+                                  }
                                 }
                                 _randomUsers = matches;
                                 // Si hay filtros activos, NO hacer shuffle para mantener el orden de relevancia

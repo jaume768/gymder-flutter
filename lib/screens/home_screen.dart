@@ -277,7 +277,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             InkWell(
                               onTap: () {
                                 Navigator.pop(context);
-                                _buyTopLike();
+                                // Utilizamos el nuevo método que maneja tanto la animación como el like
+                                // dependiendo de si está en modo aleatorio o "Le gustas"
+                                if (_tikTokKey.currentState != null) {
+                                  // Este método se encarga de mostrar primero la animación y luego
+                                  // ejecutar la función de like apropiada según la pantalla actual
+                                  _tikTokKey.currentState!.handleLikeFromModal();
+                                }
                               },
                               borderRadius: BorderRadius.circular(12),
                               child: Container(
@@ -290,11 +296,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                     const EdgeInsets.symmetric(horizontal: 16),
                                 child: Row(
                                   children: [
-                                    Icon(Icons.credit_card,
+                                    Icon(Icons.favorite,
                                         color: Colors.white, size: 24),
                                     const SizedBox(width: 12),
                                     Text(
-                                      tr('buy_more_quick_likes'),
+                                      tr('dar_like'),
                                       style: const TextStyle(
                                           color: Colors.white, fontSize: 16),
                                     ),

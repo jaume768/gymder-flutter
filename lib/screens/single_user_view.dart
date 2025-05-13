@@ -16,12 +16,20 @@ class SingleUserView extends StatefulWidget {
     required this.user,
     required this.onDoubleTapLike,
   }) : super(key: key);
+  
+  // Método para acceder al estado desde fuera
+  void showLikeAnimation(BuildContext context) {
+    final state = context.findAncestorStateOfType<SingleUserViewState>();
+    if (state != null) {
+      state.showLikeAnimationInCenter();
+    }
+  }
 
   @override
-  State<SingleUserView> createState() => _SingleUserViewState();
+  State<SingleUserView> createState() => SingleUserViewState();
 }
 
-class _SingleUserViewState extends State<SingleUserView>
+class SingleUserViewState extends State<SingleUserView>
     with SingleTickerProviderStateMixin {
   late PageController _horizontalPageController;
   int _currentPhotoIndex = 0;
@@ -65,6 +73,8 @@ class _SingleUserViewState extends State<SingleUserView>
   void _handleDoubleTap() async {
     setState(() {
       _showHeart = true;
+      // Establecemos la posición en donde se hizo el doble tap
+      // Aquí ya debería estar asignado _heartPosition desde onDoubleTapDown
     });
     await Future.delayed(const Duration(milliseconds: 300));
     _heartAnimationController.forward(from: 0).then((_) {
@@ -77,6 +87,28 @@ class _SingleUserViewState extends State<SingleUserView>
       });
     });
     widget.onDoubleTapLike();
+  }
+  
+  // Método para mostrar la animación del corazón desde el centro de la pantalla
+  void showLikeAnimationInCenter() async {
+    // Calculamos el centro de la pantalla
+    final size = MediaQuery.of(context).size;
+    setState(() {
+      _heartPosition = Offset(size.width / 2, size.height / 2);
+      _showHeart = true;
+    });
+    
+    await Future.delayed(const Duration(milliseconds: 300));
+    _heartAnimationController.forward(from: 0).then((_) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          setState(() {
+            _showHeart = false;
+          });
+        }
+      });
+    });
+    // No llamamos a widget.onDoubleTapLike() ya que eso se maneja desde quien llama a este método
   }
 
   @override

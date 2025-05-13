@@ -987,10 +987,10 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
   void handleLikeFromModal() {
     // 1) Primero mostramos la animación
     showHeartAnimation();
-    
+
     // 2) Obtenemos el índice actual
     final currentIndex = getCurrentPageIndex();
-    
+
     // 3) Luego ejecutamos la lógica de dar like según el modo
     if (isInRandomMode()) {
       // Estamos en modo aleatorio
@@ -1000,8 +1000,6 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
       _handleLikeFromLeGustas(currentIndex);
     }
   }
-
-
 
   // Método público para dar like a un usuario en modo aleatorio
   void handleLike(int userIndex, {bool showAnimation = false}) {
@@ -1714,73 +1712,80 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
   void _showReportModal() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.black,
-      shape: RoundedRectangleBorder(
+      // 1) Sheet transparente para dejar ver tu propio fondo
+      backgroundColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  tr('report_user_title'),
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+      builder: (ctx) {
+        return Container(
+          // 2) Aquí aplicas el mismo degradado y borderRadius de los otros Dialogs
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    tr('report_user_title'),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-              ),
-              Divider(color: Colors.white54),
-              ListTile(
-                leading: Icon(Icons.photo, color: Colors.blueAccent),
-                title: Text(
-                  tr('inappropriate_photos'),
-                  style: TextStyle(color: Colors.white),
+                const Divider(color: Colors.white54),
+                ListTile(
+                  leading: const Icon(Icons.photo, color: Colors.blueAccent),
+                  title: Text(tr('inappropriate_photos'),
+                      style: const TextStyle(color: Colors.white)),
+                  onTap: () => _onSelectReportReason('inappropriate_photos'),
                 ),
-                onTap: () => _onSelectReportReason('inappropriate_photos'),
-              ),
-              ListTile(
-                leading: Icon(Icons.person_off, color: Colors.blueAccent),
-                title: Text(
-                  tr('fake_profile'),
-                  style: TextStyle(color: Colors.white),
+                ListTile(
+                  leading:
+                      const Icon(Icons.person_off, color: Colors.blueAccent),
+                  title: Text(tr('fake_profile'),
+                      style: const TextStyle(color: Colors.white)),
+                  onTap: () => _onSelectReportReason('fake_profile'),
                 ),
-                onTap: () => _onSelectReportReason('fake_profile'),
-              ),
-              ListTile(
-                leading: Icon(Icons.text_snippet, color: Colors.blueAccent),
-                title: Text(
-                  tr('offensive_content'),
-                  style: TextStyle(color: Colors.white),
+                ListTile(
+                  leading:
+                      const Icon(Icons.text_snippet, color: Colors.blueAccent),
+                  title: Text(tr('offensive_content'),
+                      style: const TextStyle(color: Colors.white)),
+                  onTap: () => _onSelectReportReason('offensive_content'),
                 ),
-                onTap: () => _onSelectReportReason('offensive_content'),
-              ),
-              ListTile(
-                leading: Icon(Icons.more_horiz, color: Colors.blueAccent),
-                title: Text(
-                  tr('other_reason'),
-                  style: TextStyle(color: Colors.white),
+                ListTile(
+                  leading:
+                      const Icon(Icons.more_horiz, color: Colors.blueAccent),
+                  title: Text(tr('other_reason'),
+                      style: const TextStyle(color: Colors.white)),
+                  onTap: () => _onSelectReportReason('other'),
                 ),
-                onTap: () => _onSelectReportReason('other'),
-              ),
-              SizedBox(height: 16),
-              TextButton(
-                style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
+                const SizedBox(height: 16),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
                   ),
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(tr('cancel')),
                 ),
-                onPressed: () => Navigator.pop(context),
-                child: Text(tr('cancel')),
-              ),
-              SizedBox(height: 16),
-            ],
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         );
       },

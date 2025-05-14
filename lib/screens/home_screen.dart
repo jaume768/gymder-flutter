@@ -156,6 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _onItemTapped(int index) {
     setState(() {
       if (index == 0) {
+        // Recrear la pantalla de chats siempre que se seleccione para garantizar datos actualizados
         _matchesScreen = MatchesChatsScreen(key: UniqueKey());
       }
       _selectedIndex = index;
@@ -166,6 +167,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Siempre recrear la pantalla de chats cuando está seleccionada para garantizar datos actualizados
+    if (_selectedIndex == 0) {
+      _matchesScreen = MatchesChatsScreen(key: UniqueKey());
+    }
+    
     final auth = Provider.of<AuthProvider>(context);
     final user = auth.user;
 

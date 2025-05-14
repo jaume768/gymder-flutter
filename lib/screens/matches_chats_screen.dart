@@ -1,3 +1,5 @@
+// lib/screens/matches_chats_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -24,12 +26,18 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
   String? currentUserId;
   Map<String, Map<String, dynamic>> lastMessages = {};
 
-  // Controlador de scroll (opcional)
   final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    _fetchMyMatches();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Recarga al volver al foco
     _fetchMyMatches();
   }
 
@@ -46,39 +54,48 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
       }
 
       currentUserId = authProvider.user?.id;
-
       final userService = UserService(token: token);
+
+      // 1) Traer todos los matches
       final result = await userService.getMatches(page: 0, limit: 1000);
-      if (result['success']) {
-        final matchesList = List<User>.from(
-          result['matches'].map((x) => User.fromJson(x)),
-        );
-        final lastMsgMap = await _fetchAllLastMessages(token, matchesList);
-        // Ordenar por último mensaje
-        matchesList.sort((a, b) {
-          final msgA = lastMsgMap[a.id];
-          final msgB = lastMsgMap[b.id];
-          if (msgA == null && msgB == null) return 0;
-          if (msgA == null) return 1;
-          if (msgB == null) return -1;
-          final dateA = DateTime.tryParse(msgA['createdAt']?.toString() ?? '');
-          final dateB = DateTime.tryParse(msgB['createdAt']?.toString() ?? '');
-          if (dateA == null && dateB == null) return 0;
-          if (dateA == null) return 1;
-          if (dateB == null) return -1;
-          return dateB.compareTo(dateA);
-        });
-        setState(() {
-          myMatches = matchesList;
-          lastMessages = lastMsgMap;
-          isLoading = false;
-        });
-      } else {
+      if (result['success'] != true) {
         setState(() {
           errorMessage = result['message'] ?? tr("error_fetching_matches");
           isLoading = false;
         });
+        return;
       }
+      final matchesList = List<User>.from(
+        result['matches'].map((x) => User.fromJson(x)),
+      );
+
+      // 2) Traer los últimos mensajes (solo los no ocultos)
+      final lastMsgMap = await _fetchAllLastMessages(token, matchesList);
+
+      // 3) Filtrar para mostrar solo los matches con conversación visible
+      final chatMatches =
+          matchesList.where((u) => lastMsgMap.containsKey(u.id)).toList();
+
+      // 4) Ordenar por fecha de último mensaje descendente
+      chatMatches.sort((a, b) {
+        final msgA = lastMsgMap[a.id];
+        final msgB = lastMsgMap[b.id];
+        if (msgA == null && msgB == null) return 0;
+        if (msgA == null) return 1;
+        if (msgB == null) return -1;
+        final dateA = DateTime.tryParse(msgA['createdAt']?.toString() ?? '');
+        final dateB = DateTime.tryParse(msgB['createdAt']?.toString() ?? '');
+        if (dateA == null && dateB == null) return 0;
+        if (dateA == null) return 1;
+        if (dateB == null) return -1;
+        return dateB.compareTo(dateA);
+      });
+
+      setState(() {
+        myMatches = chatMatches;
+        lastMessages = lastMsgMap;
+        isLoading = false;
+      });
     } catch (e) {
       setState(() {
         errorMessage = tr("unexpected_error") + ": $e";
@@ -87,17 +104,10 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
     }
   }
 
-  // Verifica si un mensaje está sin leer (enviado por otra persona y no visto)
   bool _isMessageUnread(Map<String, dynamic>? lastMsg) {
     if (lastMsg == null) return false;
-    
-    // Verificar si el mensaje fue enviado por la otra persona
     final isSentByOther = lastMsg['sender'].toString() != currentUserId;
-    
-    // Verificar si el campo seenAt es null (nunca visto)
     final seenAt = lastMsg['seenAt'];
-    
-    // El mensaje está sin leer si fue enviado por la otra persona y nunca ha sido visto
     return isSentByOther && seenAt == null;
   }
 
@@ -111,19 +121,17 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
     });
 
     final Map<String, Map<String, dynamic>> map = {};
-
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       if (data['success'] == true) {
-        final List<dynamic> lastMessages = data['lastMessages'];
-        for (var item in lastMessages) {
+        for (var item in data['lastMessages'] as List) {
           final matchId = item['_id'];
           final lastMsg = item['lastMsg'];
           map[matchId] = lastMsg;
         }
       }
     } else {
-      print('Error en la respuesta: ${response.statusCode}');
+      print('Error al obtener últimos mensajes: ${response.statusCode}');
     }
     return map;
   }
@@ -157,7 +165,7 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
         }
       } else {
         print(tr("error_hiding_conversation") +
-            ": ${response.statusCode}\nBody: ${response.body}");
+            ": ${response.statusCode} ${response.body}");
       }
     } catch (e) {
       print(tr("error_hiding_conversation") + ": $e");
@@ -323,7 +331,6 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
                             bottom: true,
                             child: ListView.builder(
                               controller: _scrollController,
-                              // añadimos padding bottom para que el último ítem siempre se vea
                               padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
                               itemCount: myMatches.length,
                               itemBuilder: (context, index) {
@@ -368,10 +375,11 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
-                                          // Indicador de mensaje no leído
-                                          if (_isMessageUnread(lastMessages[matchedUser.id]))
+                                          if (_isMessageUnread(
+                                              lastMessages[matchedUser.id]))
                                             Container(
-                                              margin: const EdgeInsets.only(left: 8),
+                                              margin: const EdgeInsets.only(
+                                                  left: 8),
                                               width: 12,
                                               height: 12,
                                               decoration: const BoxDecoration(
@@ -396,11 +404,13 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
                                           return tr("tap_to_chat");
                                         }(),
                                         style: TextStyle(
-                                          color: _isMessageUnread(lastMessages[matchedUser.id])
+                                          color: _isMessageUnread(
+                                                  lastMessages[matchedUser.id])
                                               ? Colors.white
                                               : Colors.white70,
                                           fontSize: 16,
-                                          fontWeight: _isMessageUnread(lastMessages[matchedUser.id])
+                                          fontWeight: _isMessageUnread(
+                                                  lastMessages[matchedUser.id])
                                               ? FontWeight.bold
                                               : FontWeight.normal,
                                         ),
@@ -419,25 +429,7 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
                                               matchedUserId: matchedUser.id,
                                             ),
                                           ),
-                                        ).then((_) async {
-                                          // Refrescar los matches y mensajes cuando se regresa del chat
-                                          await _fetchMyMatches();
-                                          
-                                          // Actualizar inmediatamente el estado del mensaje del usuario con el que se chateó
-                                          if (mounted) {
-                                            setState(() {
-                                              // Si existe un mensaje para este match, marcarlo como leído
-                                              if (lastMessages.containsKey(matchedUser.id)) {
-                                                final msgData = lastMessages[matchedUser.id];
-                                                if (msgData != null) {
-                                                  // Actualizar el campo seenAt para que ya no aparezca como no leído
-                                                  msgData['seenAt'] = DateTime.now().toIso8601String();
-                                                  lastMessages[matchedUser.id] = msgData;
-                                                }
-                                              }
-                                            });
-                                          }
-                                        });
+                                        ).then((_) => _fetchMyMatches());
                                       },
                                     ),
                                   ),

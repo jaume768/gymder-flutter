@@ -32,7 +32,7 @@ class FilterModalContent extends StatefulWidget {
     required this.initialGymStage,
     required this.initialRelationshipType,
     this.initialUseLocation = false,
-    this.initialDistanceRange = const RangeValues(5, 50),
+    this.initialDistanceRange = const RangeValues(0, 50),
 
     // Y aquí los incoporamos al constructor:
     required this.initialFilterByBasics,

@@ -375,6 +375,20 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
+                                          // Logo de verificación
+                                          if (matchedUser.verificationStatus == 'true')
+                                            Padding(
+                                              padding: const EdgeInsets.only(left: 6.0),
+                                              child: Transform.rotate(
+                                                angle: 3.14159 / 1000,
+                                                child: Image.asset(
+                                                  'assets/images/verificado.png',
+                                                  width: 18,
+                                                  height: 18,
+                                                  fit: BoxFit.contain,
+                                                ),
+                                              ),
+                                            ),
                                           if (_isMessageUnread(
                                               lastMessages[matchedUser.id]))
                                             Container(

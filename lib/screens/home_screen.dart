@@ -303,7 +303,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: Row(
                                   children: [
                                     Icon(Icons.favorite,
-                                        color: Colors.white, size: 24),
+                                        color: Colors.red, size: 24),
                                     const SizedBox(width: 12),
                                     Text(
                                       tr('dar_like'),

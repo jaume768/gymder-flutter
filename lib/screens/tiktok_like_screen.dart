@@ -2021,9 +2021,8 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
                                     previousPageIndex = 0;
                                   });
 
-                                  if (_likedUsers.isEmpty) {
-                                    _fetchLikedUsers();
-                                  }
+                                  // Actualizar la lista de "Le gustas" cada vez que entramos a esta sección
+                                  _fetchLikedUsers();
                                 }
                               },
                               child: Text(tr("le_gustas_button", namedArgs: {

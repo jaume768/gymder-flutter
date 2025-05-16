@@ -101,3 +101,4 @@ flutter_icons:
   ios: true
   image_path: "assets/images/icono.png"
   image_path_ios: "assets/images/icono.png"
+  remove_alpha_ios: true

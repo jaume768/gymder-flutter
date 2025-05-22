@@ -358,13 +358,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                       Icon(
                                         Icons.search,
                                         size: 22,
-                                        color: Colors.grey.shade600,
+                                        color: _selectedIndex == 3
+                                            ? Colors.white
+                                            : Colors.grey.shade600,
                                       ),
                                       Text(
                                         tr('search_profile'),
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: Colors.grey.shade600,
+                                          color: _selectedIndex == 3
+                                            ? Colors.white
+                                            : Colors.grey.shade600,
                                         ),
                                       ),
                                     ],

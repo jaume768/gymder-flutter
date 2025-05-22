@@ -1,5 +1,3 @@
-// lib/screens/home_screen.dart
-
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
@@ -32,7 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<User> suggestedMatches = [];
   bool isLoading = true;
   String errorMessage = '';
-  int _selectedIndex = 1;
+  int _selectedIndex = 2; // Índice por defecto (Home - el botón central)
 
   late TikTokLikeScreen _tikTokLikeScreen;
   late Widget _matchesScreen;
@@ -78,7 +76,6 @@ class _HomeScreenState extends State<HomeScreen> {
         suggestedMatches =
             List<User>.from(result['matches'].map((x) => User.fromJson(x)));
         isLoading = false;
-        // Creamos solo una vez el widget con la misma Key
         _tikTokLikeScreen = TikTokLikeScreen(
           key: _tikTokKey,
           users: suggestedMatches,
@@ -131,11 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       } else if (purchase.status == PurchaseStatus.error) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Error de compra: ${purchase.error?.message ?? 'Unknown error'}',
-            ),
-          ),
+          SnackBar(content: Text('Error de compra: ${purchase.error?.message ?? 'Unknown error'}')),
         );
       }
     }
@@ -153,38 +146,70 @@ class _HomeScreenState extends State<HomeScreen> {
     _iap.buyConsumable(purchaseParam: param);
   }
 
+  /// Gestión de taps en la barra inferior
   void _onItemTapped(int index) {
+    // Logs para debugging
+    print('Tap en el índice $index');
+    
+    // Manejo especial para el botón de perfil
+    if (index == 4) {
+      print('Navegando a perfil');
+      Navigator.push<bool>(
+        context,
+        MaterialPageRoute(builder: (_) => const MyProfileScreen()),
+      ).then((shouldRefresh) {
+        if (shouldRefresh == true) {
+          _tikTokKey.currentState?.reloadProfiles();
+        }
+      });
+      return;
+    }
+
+    // Para botones que aún no tienen pantalla implementada
+    if (index == 1 || index == 3) {
+      print('Botón en desarrollo: $index');
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(tr('screen_coming_soon'))));
+      return;
+    }
+
+    // Para pantallas implementadas (Mensajes y Home)
+    print('Cambiando a pantalla: $index');
     setState(() {
+      // Recrear la pantalla de chats siempre que se seleccione
       if (index == 0) {
-        // Recrear la pantalla de chats siempre que se seleccione para garantizar datos actualizados
         _matchesScreen = MatchesChatsScreen(key: UniqueKey());
       }
+
       _selectedIndex = index;
     });
   }
 
-  List<Widget> _widgetOptions() => [_matchesScreen, _tikTokLikeScreen];
+  List<Widget> _widgetOptions() => [
+        _matchesScreen, // 0: Mensajes/Chats
+        Container(), // 1: Estadísticas (placeholder)
+        _tikTokLikeScreen, // 2: Home (pantalla principal)
+        Container(), // 3: Buscar Perfil (placeholder)
+      ];
 
   @override
   Widget build(BuildContext context) {
-    // Siempre recrear la pantalla de chats cuando está seleccionada para garantizar datos actualizados
+    // Siempre recrear chats si está seleccionado
     if (_selectedIndex == 0) {
       _matchesScreen = MatchesChatsScreen(key: UniqueKey());
     }
-    
-    final auth = Provider.of<AuthProvider>(context);
-    final user = auth.user;
 
-    // Si el registro de Google quedó incompleto, redirige
+    final auth = Provider.of<AuthProvider>(context);
+    final user = auth.user!;
+
+    // Si registro incompleto, redirigir
     if (!widget.fromGoogle &&
-        user != null &&
         (user.gender == 'Pendiente' || user.relationshipGoal == 'Pendiente')) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => const RegisterScreen(fromGoogle: true),
-          ),
+              builder: (_) => const RegisterScreen(fromGoogle: true)),
         );
       });
       return const Scaffold(
@@ -212,221 +237,213 @@ class _HomeScreenState extends State<HomeScreen> {
                   index: _selectedIndex,
                   children: _widgetOptions(),
                 ),
-      bottomNavigationBar: _buildBottomBar(auth, user!),
+      bottomNavigationBar: _buildBottomBar(),
     );
   }
 
-  Widget _buildBottomBar(AuthProvider auth, User user) {
-    return Container(
-      color: Colors.transparent,
-      padding: const EdgeInsets.symmetric(vertical: 25),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+  // -------------------------------------
+  // BARRA DE NAVEGACIÓN INFERIOR
+  // -------------------------------------
+  Widget _buildBottomBar() {
+    return SizedBox(
+      height: 80,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          // Chats
-          GestureDetector(
-            onTap: () => _onItemTapped(0),
-            child: CircleAvatar(
-              radius: 27,
-              backgroundColor:
-                  _selectedIndex == 0 ? Colors.white : Colors.grey.shade800,
-              child: Icon(
-                Icons.chat_bubble,
-                color: _selectedIndex == 0 ? Colors.black : Colors.white,
-                size: 28,
-              ),
-            ),
-          ),
-
-          const SizedBox(width: 40),
-
-          // TikTok-like / SuperLike
-          GestureDetector(
-            onTap: () {
-              if (_selectedIndex == 0) {
-                _onItemTapped(1);
-              } else {
-                showModalBottomSheet(
-                  context: context,
-                  backgroundColor: Colors.transparent,
-                  barrierColor: Colors.black54,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(20)),
-                  ),
-                  builder: (_) => Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
+          // Fondo e íconos laterales
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 70,
+              color: Colors.black,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  children: [
+                    // Grupo izquierdo
+                    Expanded(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          // Estadísticas (placeholder)
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => _onItemTapped(1),
+                              borderRadius: BorderRadius.circular(8),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 6, horizontal: 6),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.bar_chart,
+                                      size: 22,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                    Text(
+                                      tr('statistics'),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
-                          borderRadius:
-                              BorderRadius.vertical(top: Radius.circular(20)),
-                        ),
-                        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
+                          const SizedBox(width: 6),
+                          // Mensajes/Chats
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => _onItemTapped(0),
+                              borderRadius: BorderRadius.circular(8),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 6, horizontal: 6),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.message,
+                                      size: 22,
+                                      color: _selectedIndex == 0
+                                          ? Colors.white
+                                          : Colors.grey.shade600,
+                                    ),
+                                    Text(
+                                      tr('messages'),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: _selectedIndex == 0
+                                            ? Colors.white
+                                            : Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Hueco botón central
+                    const SizedBox(width: 60),
+                    // Grupo derecho
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 25), // Margen izquierdo para todo el grupo
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
                           children: [
-                            Text(
-                              tr('what_do_you_want'),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            InkWell(
-                              onTap: () {
-                                Navigator.pop(context);
-                                // Utilizamos el nuevo método que maneja tanto la animación como el like
-                                // dependiendo de si está en modo aleatorio o "Le gustas"
-                                if (_tikTokKey.currentState != null) {
-                                  // Este método se encarga de mostrar primero la animación y luego
-                                  // ejecutar la función de like apropiada según la pantalla actual
-                                  _tikTokKey.currentState!.handleLikeFromModal();
-                                }
-                              },
-                              borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                height: 56,
-                                decoration: BoxDecoration(
-                                  color: Colors.black,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.favorite,
-                                        color: Colors.red, size: 24),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      tr('dar_like'),
-                                      style: const TextStyle(
-                                          color: Colors.white, fontSize: 16),
-                                    ),
-                                  ],
+                            // Buscar Perfil (placeholder)
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => _onItemTapped(3),
+                                borderRadius: BorderRadius.circular(8),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 6, horizontal: 6),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.search,
+                                        size: 22,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                      Text(
+                                        tr('search_profile'),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            InkWell(
-                              onTap: () {
-                                Navigator.pop(context);
-                                Future.microtask(() {
-                                  _tikTokKey.currentState?.useSuperLike();
-                                });
-                              },
-                              borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                height: 56,
-                                decoration: BoxDecoration(
-                                  color: Colors.blueAccent,
-                                  borderRadius: BorderRadius.circular(12),
+                            const SizedBox(width: 29),
+                            // Perfil
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => _onItemTapped(4),
+                                borderRadius: BorderRadius.circular(8),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 6, horizontal: 6),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.person,
+                                        size: 22,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                      Text(
+                                        tr('profile'),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
-                                child: Row(
-                                  children: [
-                                    SvgPicture.asset(
-                                      'assets/images/rayo.svg',
-                                      width: 34,
-                                      color: Colors.white,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      tr('use_quick_like'),
-                                      style: const TextStyle(
-                                          color: Colors.white, fontSize: 16),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: Text(
-                                tr('cancel'),
-                                style: const TextStyle(
-                                    color: Colors.white70, fontSize: 16),
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
-                );
-              }
-            },
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                CircleAvatar(
-                  radius: 37,
-                  backgroundColor:
-                      _selectedIndex == 1 ? Colors.white : Colors.grey.shade800,
-                  child: Icon(
-                    Icons.favorite,
-                    color: _selectedIndex == 1 ? Colors.black : Colors.white,
-                    size: 45,
-                  ),
-                ),
-                Positioned(
-                  right: -2,
-                  top: -8,
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [Color(0xFF00C6FF), Color(0xFF004A9F)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
                     ),
-                    child: Text(
-                      user.topLikeCount > 0 ? '${user.topLikeCount}' : '+',
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-
-          const SizedBox(width: 40),
-
-          // Perfil
-          GestureDetector(
-            onTap: () {
-              Navigator.push<bool>(
-                context,
-                MaterialPageRoute(builder: (_) => const MyProfileScreen()),
-              ).then((shouldRefresh) {
-                if (shouldRefresh == true) {
-                  // Llama al método público que actualiza la lista sin resetear el controller
-                  _tikTokKey.currentState?.reloadProfiles();
-                }
-              });
-            },
-            child: CircleAvatar(
-              radius: 27,
-              backgroundColor: Colors.grey.shade800,
-              child: const Icon(
-                Icons.person,
-                color: Colors.white,
-                size: 34,
+          // Botón central FAB-like
+          Positioned(
+            bottom: 5,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _onItemTapped(2),
+                  customBorder: const CircleBorder(),
+                  child: Container(
+                    width: 75,
+                    height: 75,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color:
+                          _selectedIndex == 2 ? Colors.white : Colors.grey.shade800,
+                      border: Border.all(
+                        color:
+                            _selectedIndex == 2 ? Colors.white : Colors.transparent,
+                        width: 2,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        width: 100,
+                        height: 100,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
           ),

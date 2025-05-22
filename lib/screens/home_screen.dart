@@ -410,7 +410,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-          // Botón central FAB-like
+          // Botón central FAB-like con modal
           Positioned(
             bottom: 5,
             left: 0,
@@ -419,29 +419,173 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () => _onItemTapped(2),
+                  onTap: () {
+                    if (_selectedIndex != 2) {
+                      _onItemTapped(2);
+                    } else {
+                      // Mostrar modal para dar like o quicklike
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: Colors.transparent,
+                        barrierColor: Colors.black54,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                        ),
+                        builder: (_) => Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                ),
+                                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                              ),
+                              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    tr('what_do_you_want'),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  InkWell(
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      // Usar el método que maneja la animación y el like
+                                      if (_tikTokKey.currentState != null) {
+                                        _tikTokKey.currentState!.handleLikeFromModal();
+                                      }
+                                    },
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      height: 56,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.favorite, color: Colors.red, size: 24),
+                                          const SizedBox(width: 12),
+                                          Text(
+                                            tr('dar_like'),
+                                            style: const TextStyle(color: Colors.white, fontSize: 16),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  InkWell(
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      Future.microtask(() {
+                                        _tikTokKey.currentState?.useSuperLike();
+                                      });
+                                    },
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      height: 56,
+                                      decoration: BoxDecoration(
+                                        color: Colors.blueAccent,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      child: Row(
+                                        children: [
+                                          SvgPicture.asset(
+                                            'assets/images/rayo.svg',
+                                            width: 34,
+                                            color: Colors.white,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Text(
+                                            tr('use_quick_like'),
+                                            style: const TextStyle(color: Colors.white, fontSize: 16),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: Text(
+                                      tr('cancel'),
+                                      style: const TextStyle(color: Colors.white70, fontSize: 16),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                  },
                   customBorder: const CircleBorder(),
-                  child: Container(
-                    width: 75,
-                    height: 75,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color:
-                          _selectedIndex == 2 ? Colors.white : Colors.grey.shade800,
-                      border: Border.all(
-                        color:
-                            _selectedIndex == 2 ? Colors.white : Colors.transparent,
-                        width: 2,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        width: 75,
+                        height: 75,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _selectedIndex == 2 ? Colors.white : Colors.grey.shade800,
+                          border: Border.all(
+                            color: _selectedIndex == 2 ? Colors.white : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Image.asset(
+                            'assets/images/logo.png',
+                            width: 100,
+                            height: 100,
+                          ),
+                        ),
                       ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(4),
-                      child: Image.asset(
-                        'assets/images/logo.png',
-                        width: 100,
-                        height: 100,
+                      // Contador de QuickLikes
+                      Consumer<AuthProvider>(
+                        builder: (context, auth, _) {
+                          final user = auth.user!;
+                          return Positioned(
+                            right: -3,
+                            top: -9,
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  colors: [Color(0xFF00C6FF), Color(0xFF004A9F)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                              ),
+                              child: Text(
+                                user.topLikeCount > 0 ? '${user.topLikeCount}' : '+',
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ),

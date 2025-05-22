@@ -77,6 +77,8 @@ class AuthProvider with ChangeNotifier {
     final result = await _authService.login(email: email, password: password);
 
     if (result['success'] == true) {
+      _token = result['token'];
+      await _authService.storage.write(key: 'token', value: _token);
       _user = result['user'];
       _isAuthenticated = true;
       notifyListeners();

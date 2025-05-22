@@ -802,4 +802,71 @@ class UserService {
       };
     }
   }
+
+  Future<Map<String, dynamic>> searchUsers({
+    required String term,
+    int page = 1,
+    int limit = 20,
+  }) async {
+    if (term.trim().isEmpty) {
+      return {'success': false, 'message': 'Search term cannot be empty', 'users': [], 'total': 0, 'hasMore': false};
+    }
+    final int skip = (page - 1) * limit;
+
+    final url = Uri.parse('$baseUrl/users/search?term=${Uri.encodeComponent(term)}&skip=$skip&limit=$limit');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          List<User> users = [];
+          if (data['users'] != null) {
+            users = (data['users'] as List)
+                .map((userData) => User.fromJson(userData))
+                .toList();
+          }
+          return {
+            'success': true,
+            'users': users,
+            'total': data['total'] ?? 0,
+            'hasMore': data['hasMore'] ?? false,
+          };
+        } else {
+          return {
+            'success': false,
+            'message': data['message'] ?? 'Failed to search users',
+            'users': [],
+            'total': 0,
+            'hasMore': false,
+          };
+        }
+      } else {
+        print('Error ${response.statusCode}: ${response.body}'); // For debugging
+        return {
+          'success': false,
+          'message': 'Error ${response.statusCode}: ${response.reasonPhrase}',
+          'users': [],
+          'total': 0,
+          'hasMore': false,
+        };
+      }
+    } catch (e) {
+      print('Error in searchUsers: $e'); // For debugging
+      return {
+        'success': false,
+        'message': 'An unexpected error occurred: ${e.toString()}',
+        'users': [],
+        'total': 0,
+        'hasMore': false,
+      };
+    }
+  }
 }

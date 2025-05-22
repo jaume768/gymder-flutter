@@ -14,6 +14,7 @@ import 'tiktok_like_screen.dart';
 import 'login_screen.dart';
 import 'matches_chats_screen.dart';
 import 'my_profile_screen.dart';
+import 'search_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool fromGoogle;
@@ -166,7 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     // Para botones que aún no tienen pantalla implementada
-    if (index == 1 || index == 3) {
+    if (index == 1) {
       print('Botón en desarrollo: $index');
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(tr('screen_coming_soon'))));
@@ -189,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _matchesScreen, // 0: Mensajes/Chats
         Container(), // 1: Estadísticas (placeholder)
         _tikTokLikeScreen, // 2: Home (pantalla principal)
-        Container(), // 3: Buscar Perfil (placeholder)
+        const SearchScreen(), // 3: Buscar Perfil
       ];
 
   @override

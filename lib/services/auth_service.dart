@@ -169,9 +169,11 @@ class AuthService {
 
       final data = jsonDecode(response.body);
       if (response.statusCode == 200) {
-        await storage.write(key: 'token', value: data['token']);
+        final token = data['token'];
+        await storage.write(key: 'token', value: token);
         return {
           'success': true,
+          'token': token,
           'user': User.fromJson(data['user']),
         };
       } else {

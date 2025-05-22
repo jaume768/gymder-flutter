@@ -22,6 +22,7 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
   bool isLoading = true;
   String errorMessage = '';
   List<User> myMatches = [];
+  List<User> allMyMatches = []; // To store all matches, with or without messages
 
   String? currentUserId;
   Map<String, Map<String, dynamic>> lastMessages = {};
@@ -57,27 +58,32 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
       final userService = UserService(token: token);
 
       // 1) Traer todos los matches
-      final result = await userService.getMatches(page: 0, limit: 1000);
-      if (result['success'] != true) {
+      final allMatchesResult = await userService.getMatches(page: 0, limit: 1000);
+      if (allMatchesResult['success'] != true) {
         setState(() {
-          errorMessage = result['message'] ?? tr("error_fetching_matches");
+          errorMessage = allMatchesResult['message'] ?? tr("error_fetching_matches");
           isLoading = false;
         });
         return;
       }
-      final matchesList = List<User>.from(
-        result['matches'].map((x) => User.fromJson(x)),
+      final fullMatchesList = List<User>.from(
+        allMatchesResult['matches'].map((x) => User.fromJson(x)),
       );
 
-      // 2) Traer los últimos mensajes (solo los no ocultos)
-      final lastMsgMap = await _fetchAllLastMessages(token, matchesList);
+      // 2) Traer los últimos mensajes Y los IDs de matches visibles
+      final messagesData = await _fetchAllLastMessages(token, fullMatchesList);
+      final Map<String, Map<String, dynamic>> lastMsgMap = messagesData['lastMsgMap'];
+      final List<String> visibleMatchUserIds = messagesData['visibleMatchUserIds'];
 
-      // 3) Filtrar para mostrar solo los matches con conversación visible
-      final chatMatches =
-          matchesList.where((u) => lastMsgMap.containsKey(u.id)).toList();
+      // 3) Filtrar fullMatchesList para obtener solo los matches visibles
+      List<User> visibleMatches = fullMatchesList.where((user) {
+        return visibleMatchUserIds.contains(user.id);
+      }).toList();
 
-      // 4) Ordenar por fecha de último mensaje descendente
-      chatMatches.sort((a, b) {
+      // 4) Ordenar visibleMatches:
+      //    - Primero, los que tienen mensajes, por fecha de último mensaje descendente.
+      //    - Luego, los que no tienen mensajes, quizás por nombre o fecha de match (si disponible).
+      visibleMatches.sort((a, b) {
         final msgA = lastMsgMap[a.id];
         final msgB = lastMsgMap[b.id];
         if (msgA == null && msgB == null) return 0;
@@ -85,16 +91,30 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
         if (msgB == null) return -1;
         final dateA = DateTime.tryParse(msgA['createdAt']?.toString() ?? '');
         final dateB = DateTime.tryParse(msgB['createdAt']?.toString() ?? '');
-        if (dateA == null && dateB == null) return 0;
-        if (dateA == null) return 1;
-        if (dateB == null) return -1;
-        return dateB.compareTo(dateA);
+
+        final bool hasMsgA = msgA != null;
+        final bool hasMsgB = msgB != null;
+
+        if (hasMsgA && hasMsgB) {
+          if (dateA == null && dateB == null) return 0;
+          if (dateA == null) return 1; // B primero
+          if (dateB == null) return -1; // A primero
+          return dateB.compareTo(dateA); // Más reciente primero
+        } else if (hasMsgA) {
+          return -1; // A (con mensaje) antes que B (sin mensaje)
+        } else if (hasMsgB) {
+          return 1; // B (con mensaje) antes que A (sin mensaje)
+        } else {
+          // Ambos sin mensajes. Ordenar por username como fallback.
+          return a.username.compareTo(b.username);
+        }
       });
 
       setState(() {
-        myMatches = chatMatches;
-        lastMessages = lastMsgMap;
+        myMatches = visibleMatches; // Usar la lista filtrada y ordenada
+        lastMessages = lastMsgMap; // Esto sigue siendo útil para mostrar el contenido del último mensaje
         isLoading = false;
+        errorMessage = ''; // Limpiar errores previos
       });
     } catch (e) {
       setState(() {
@@ -111,7 +131,7 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
     return isSentByOther && seenAt == null;
   }
 
-  Future<Map<String, Map<String, dynamic>>> _fetchAllLastMessages(
+  Future<Map<String, dynamic>> _fetchAllLastMessages(
       String token, List<User> matches) async {
     final url = Uri.parse(
         'https://gymder-api-production.up.railway.app/api/messages/lastConversations');
@@ -120,20 +140,27 @@ class _MatchesChatsScreenState extends State<MatchesChatsScreen> {
       'Authorization': 'Bearer $token',
     });
 
-    final Map<String, Map<String, dynamic>> map = {};
+    final Map<String, Map<String, dynamic>> lastMsgMap = {};
+    List<String> visibleMatchUserIds = [];
+
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       if (data['success'] == true) {
         for (var item in data['lastMessages'] as List) {
-          final matchId = item['_id'];
-          final lastMsg = item['lastMsg'];
-          map[matchId] = lastMsg;
+          final matchId = item['_id']?.toString(); // Ensure it's a string
+          if (matchId != null) {
+             final lastMsg = item['lastMsg'];
+             lastMsgMap[matchId] = Map<String, dynamic>.from(lastMsg);
+          }
+        }
+        if (data['visibleMatchUserIds'] != null) {
+          visibleMatchUserIds = List<String>.from(data['visibleMatchUserIds'].map((id) => id.toString()));
         }
       }
     } else {
       print('Error al obtener últimos mensajes: ${response.statusCode}');
     }
-    return map;
+    return {'lastMsgMap': lastMsgMap, 'visibleMatchUserIds': visibleMatchUserIds};
   }
 
   Future<void> _hideConversation(String otherUserId) async {

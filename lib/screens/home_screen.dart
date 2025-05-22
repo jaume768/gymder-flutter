@@ -334,7 +334,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     // Hueco botón central
-                    const SizedBox(width: 60),
+                    const SizedBox(width: 70),
                     // Grupo derecho
                     Expanded(
                       child: Padding(

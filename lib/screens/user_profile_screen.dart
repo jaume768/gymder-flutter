@@ -849,7 +849,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       final userService = UserService(token: token);
       final result = await userService.likeUser(widget.userId);
       
-      if (result['success']) {
+      // Imprimir la respuesta para depuración
+      print("Respuesta completa del like: $result");
+      
+      if (result['success'] == true) {
         // Actualizar estado de like y marcar que se ha realizado una acción
         setState(() {
           hasLiked = true;
@@ -857,12 +860,46 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           isLoading = false;
         });
         
-        // Si hay match, mostrar modal
+        // Revisar diferentes claves posibles para el match
         if (result['matchedUser'] != null) {
-          User matchedUser = User.fromJson(result['matchedUser']);
+          print("Encontrado matchedUser en la respuesta");
+          User matchedUser;
+          
+          // Verificar si matchedUser ya es un objeto User o si es un Map que necesita ser convertido
+          if (result['matchedUser'] is User) {
+            // Ya es un objeto User, usarlo directamente
+            matchedUser = result['matchedUser'] as User;
+          } else {
+            // Es un Map, convertirlo a User
+            matchedUser = User.fromJson(result['matchedUser']);
+          }
+          
+          // Asegurar que el modal se muestre antes de continuar
+          await _mostrarModalMatch(matchedUser);
+        } else if (result['match'] != null) {
+          print("Encontrado match en la respuesta");
+          User matchedUser;
+          
+          if (result['match'] is User) {
+            matchedUser = result['match'] as User;
+          } else {
+            matchedUser = User.fromJson(result['match']);
+          }
+          
+          await _mostrarModalMatch(matchedUser);
+        } else if (result['data'] != null && result['data']['matchedUser'] != null) {
+          print("Encontrado data.matchedUser en la respuesta");
+          User matchedUser;
+          
+          if (result['data']['matchedUser'] is User) {
+            matchedUser = result['data']['matchedUser'] as User;
+          } else {
+            matchedUser = User.fromJson(result['data']['matchedUser']);
+          }
+          
           await _mostrarModalMatch(matchedUser);
         }
-      } else if (result['message'] == 'like_limit_reached') {
+      } else if (result['message'] == 'like_limit_reached' || result['limitReached'] == true) {
         setState(() => isLoading = false);
         _showLikeLimitDialog();
       } else {
@@ -871,7 +908,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           SnackBar(content: Text(tr("error_liking_user"))),
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print("Error al dar like: $e");
+      print("Stack trace: $stackTrace");
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(tr("error_sending_like"))),
@@ -914,6 +953,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       final userService = UserService(token: token);
       final result = await userService.superLikeUser(widget.userId);
       
+      // Imprimir la respuesta para depuración
+      print("Respuesta completa del quick like: $result");
+      
       if (result['success'] == true) {
         setState(() {
           hasLiked = true;
@@ -921,11 +963,52 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           isLoading = false;
         });
         
-        // Si hay match, mostrar modal de match
+        // Revisar diferentes claves posibles para el match
+        bool matchFound = false;
+        
         if (result['matchedUser'] != null) {
-          final matchedUser = User.fromJson(result['matchedUser']);
+          print("Encontrado matchedUser en la respuesta de quick like");
+          User matchedUser;
+          
+          // Verificar si matchedUser ya es un objeto User o si es un Map que necesita ser convertido
+          if (result['matchedUser'] is User) {
+            // Ya es un objeto User, usarlo directamente
+            matchedUser = result['matchedUser'] as User;
+          } else {
+            // Es un Map, convertirlo a User
+            matchedUser = User.fromJson(result['matchedUser']);
+          }
+          
           await _mostrarModalMatch(matchedUser);
-        } else {
+          matchFound = true;
+        } else if (result['match'] != null) {
+          print("Encontrado match en la respuesta de quick like");
+          User matchedUser;
+          
+          if (result['match'] is User) {
+            matchedUser = result['match'] as User;
+          } else {
+            matchedUser = User.fromJson(result['match']);
+          }
+          
+          await _mostrarModalMatch(matchedUser);
+          matchFound = true;
+        } else if (result['data'] != null && result['data']['matchedUser'] != null) {
+          print("Encontrado data.matchedUser en la respuesta de quick like");
+          User matchedUser;
+          
+          if (result['data']['matchedUser'] is User) {
+            matchedUser = result['data']['matchedUser'] as User;
+          } else {
+            matchedUser = User.fromJson(result['data']['matchedUser']);
+          }
+          
+          await _mostrarModalMatch(matchedUser);
+          matchFound = true;
+        }
+        
+        // Si no hay match, mostrar mensaje de quick like enviado
+        if (!matchFound) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(tr("quick_like_sent"))),
           );

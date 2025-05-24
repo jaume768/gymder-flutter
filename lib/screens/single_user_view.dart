@@ -6,6 +6,7 @@ import 'package:easy_localization/easy_localization.dart';
 import '../models/user.dart';
 import 'dart:math';
 import 'user_profile_screen.dart'; // Para navegar al perfil del usuario
+import 'tiktok_like_screen.dart'; // Para acceder a TikTokLikeScreenState
 
 class SingleUserView extends StatefulWidget {
   final User user;
@@ -219,13 +220,23 @@ class SingleUserViewState extends State<SingleUserView>
             right: 20,
             bottom: 160,
             child: GestureDetector(
-              onTap: () {
-                Navigator.push(
+              onTap: () async {
+                // Navegar al perfil del usuario y esperar por el resultado
+                final didPerformAction = await Navigator.push<bool>(
                   context,
                   MaterialPageRoute(
                     builder: (_) => UserProfileScreen(userId: user.id),
                   ),
                 );
+                
+                // Si el usuario dio like o quick like, notificamos a la pantalla principal para refrescar
+                if (didPerformAction == true) {
+                  // Buscamos el ancestro TikTokLikeScreenState para refrescar los datos
+                  final tikTokScreenState = context.findAncestorStateOfType<TikTokLikeScreenState>();
+                  if (tikTokScreenState != null) {
+                    tikTokScreenState.reloadProfiles();
+                  }
+                }
               },
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

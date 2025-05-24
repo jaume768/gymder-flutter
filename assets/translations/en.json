@@ -204,6 +204,7 @@
   "match_created": "You created a new match!",
   "error_sending_quick_like": "Error sending Quick Like",
   "quick_like_sent": "Quick Like sent!",
+
   "search_hint": "Search by username, name...",
   "search_users_title": "Search Users",
   "error_occurred": "An error occurred",

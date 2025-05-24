@@ -398,6 +398,7 @@
   "error_sending_like": "Error al enviar el like",
   "quick_like_sent": "¡Quick Like enviado!",
   "error_sending_quick_like": "Error al enviar el Quick Like",
+  "like_limit_message": "Has alcanzado tu límite de likes diarios. Considera activar GymSwipe Premium para tener likes ilimitados.",
   "premium_function": "Función Premium",
   "buy_more_quick_likes": "Comprar más Quick Likes",
   "use_quick_like": "Usar Quick Like",

@@ -12,6 +12,7 @@ import 'package:easy_localization/easy_localization.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../services/user_service.dart';
+import 'chat_screen.dart';
 import 'photo_gallery_screen.dart';
 
 class UserProfileScreen extends StatefulWidget {
@@ -29,6 +30,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   bool hasLiked = false;
   bool isPremium = false;
   bool isMatch = false; // Variable para verificar si ya hay un match
+  bool didLikeOrQuickLike = false; // Flag para rastrear si el usuario ha dado like o quick like
 
   // Mapas que convierten el texto del API a claves para tr(...)
   static const Map<String, String> _genderKeyMap = {
@@ -305,7 +307,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(context, didLikeOrQuickLike),
         ),
         title: Text(tr("user_profile"),
             style: const TextStyle(color: Colors.white)),
@@ -511,6 +513,320 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
   
+  // Widget para avatar de match
+  Widget _buildMatchAvatar(String? imageUrl, {double radius = 50}) {
+    return Container(
+      width: radius * 2,
+      height: radius * 2,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: ClipOval(
+        child: imageUrl != null
+            ? CachedNetworkImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  color: Colors.grey[800],
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  color: Colors.grey[800],
+                  child: const Icon(Icons.person, color: Colors.white, size: 40),
+                ),
+              )
+            : Container(
+                color: Colors.grey[800],
+                child: const Icon(Icons.person, color: Colors.white, size: 40),
+              ),
+      ),
+    );
+  }
+  
+  // Modal que se muestra cuando se crea un match
+  Future<void> _mostrarModalMatch(User matchedUser) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUser = authProvider.user!;
+    
+    await showGeneralDialog(
+      context: context,
+      pageBuilder: (context, animation1, animation2) => Container(),
+      transitionDuration: const Duration(milliseconds: 400),
+      barrierDismissible: false,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      barrierColor: Colors.black54,
+      transitionBuilder: (ctx, anim1, anim2, child) {
+        return FadeTransition(
+          opacity: anim1,
+          child: ScaleTransition(
+            scale: CurvedAnimation(parent: anim1, curve: Curves.easeOutBack),
+            child: Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 400),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF111111), Color(0xFF222222)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.5),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Título e icono
+                    const Icon(
+                      Icons.favorite,
+                      color: Colors.pink,
+                      size: 56,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      tr("match_title"),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      tr("match_message", namedArgs: {"username": matchedUser.username ?? ""}),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white70, fontSize: 16),
+                    ),
+                    const SizedBox(height: 20),
+                    // Avatares
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildMatchAvatar(currentUser.profilePicture?.url, radius: 50),
+                        const SizedBox(width: 20),
+                        _buildMatchAvatar(matchedUser.profilePicture?.url, radius: 50),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    // Botones
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => ChatScreen(
+                              currentUserId: currentUser.id!,
+                              matchedUserId: matchedUser.id!,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        tr("send_message"),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.white38),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(
+                        tr("continue_browsing"),
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+  
+  // Mostrar diálogo para comprar Quick Likes
+  Future<bool?> _showBuyQuickLikeDialog() async {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black54,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                tr("no_quicklikes_title"),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                tr("no_quicklikes_message"),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70, fontSize: 16),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.white38),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () => Navigator.of(ctx).pop(false),
+                      child: Text(
+                        tr("cancel"),
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () => Navigator.of(ctx).pop(true),
+                      child: Text(
+                        tr("buy_more_quick_likes_modal"),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  // Mostrar diálogo de límite de likes alcanzado
+  void _showLikeLimitDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.favorite_border, size: 48, color: Colors.red[300]),
+              const SizedBox(height: 16),
+              Text(
+                tr("like_limit_reached"),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                tr("like_limit_message"),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70, fontSize: 16),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                ),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  // Aquí se puede navegar a la pantalla de compra de premium
+                },
+                child: Text(
+                  tr("buy_premium"),
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(
+                  tr("close"),
+                  style: TextStyle(color: Colors.white.withOpacity(0.7)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
   // Función para manejar el like
   Future<void> _handleLike() async {
     if (hasLiked) return; // Si ya ha dado like, no hacer nada
@@ -534,39 +850,31 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       final result = await userService.likeUser(widget.userId);
       
       if (result['success']) {
+        // Actualizar estado de like y marcar que se ha realizado una acción
         setState(() {
           hasLiked = true;
+          didLikeOrQuickLike = true; // Marcar que se ha dado like
           isLoading = false;
         });
         
-        // Si hay match, mostrar mensaje o navegar a otra pantalla
+        // Si hay match, mostrar modal
         if (result['matchedUser'] != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(tr("match_created"))),
-          );
+          User matchedUser = User.fromJson(result['matchedUser']);
+          await _mostrarModalMatch(matchedUser);
         }
+      } else if (result['message'] == 'like_limit_reached') {
+        setState(() => isLoading = false);
+        _showLikeLimitDialog();
       } else {
-        setState(() {
-          isLoading = false;
-        });
-        
-        // Si se alcanzó el límite de likes
-        if (result['limitReached'] == true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(tr("like_limit_reached"))),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result['message'] ?? tr("error_sending_like"))),
-          );
-        }
+        setState(() => isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(tr("error_liking_user"))),
+        );
       }
     } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
+        SnackBar(content: Text(tr("error_sending_like"))),
       );
     }
   }
@@ -581,12 +889,25 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final currentUser = authProvider.user;
       final token = await authProvider.getToken();
+      
       if (token == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(tr("auth_error"))),
         );
         setState(() => isLoading = false);
+        return;
+      }
+      
+      // Verificar si el usuario tiene Quick Likes disponibles
+      if (currentUser != null && currentUser.topLikeCount <= 0) {
+        setState(() => isLoading = false);
+        final buy = await _showBuyQuickLikeDialog();
+        if (buy == true) {
+          // Navegar a la pantalla de compra de Quick Likes
+          // Aquí se puede implementar la navegación a la pantalla de compra
+        }
         return;
       }
       
@@ -596,12 +917,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       if (result['success'] == true) {
         setState(() {
           hasLiked = true;
+          didLikeOrQuickLike = true; // Marcar que se ha dado quick like
           isLoading = false;
         });
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(tr("quick_like_sent"))),
-        );
+        // Si hay match, mostrar modal de match
+        if (result['matchedUser'] != null) {
+          final matchedUser = User.fromJson(result['matchedUser']);
+          await _mostrarModalMatch(matchedUser);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(tr("quick_like_sent"))),
+          );
+        }
       } else {
         setState(() {
           isLoading = false;

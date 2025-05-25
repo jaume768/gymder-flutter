@@ -918,9 +918,120 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
   
+  // Diálogo de confirmación para Quick Like
+  Future<bool> _showConfirmQuickLikeDialog() async {
+    return await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0D0D0D), Color(0xFF1C1C1C)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.5),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icono
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.flash_on,
+                  color: Colors.blue,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Título
+              Text(
+                tr("confirm_quicklike_title"),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Mensaje
+              Text(
+                tr("confirm_quicklike_message"),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Botones
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.white38),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: Text(
+                        tr("cancel"),
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: Text(
+                        tr("use_quick_like"),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ) ?? false; // Si el diálogo se cierra sin una respuesta, devuelve false
+  }
+
   // Función para manejar el Quick Like (para usuarios premium)
   Future<void> _handleQuickLike() async {
     if (hasLiked) return; // Si ya ha dado like, no hacer nada
+    
+    // Mostrar diálogo de confirmación primero
+    final confirmed = await _showConfirmQuickLikeDialog();
+    if (!confirmed) return; // Si el usuario cancela, no continuar
     
     setState(() {
       isLoading = true;

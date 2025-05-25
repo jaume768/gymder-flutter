@@ -274,6 +274,39 @@ class SingleUserViewState extends State<SingleUserView>
                     ),
                   ),
                   
+                  // Objetivo de fitness
+                  if (user.goal != null && user.goal!.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white30, width: 1),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.fitness_center,
+                            color: Colors.white70,
+                            size: 16,
+                            shadows: const [Shadow(blurRadius: 5, color: Colors.black)],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            displayGoal,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              shadows: [Shadow(blurRadius: 5, color: Colors.black)],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  
                   // Biografía
                   if (user.biography != null && user.biography!.isNotEmpty)
                     Padding(

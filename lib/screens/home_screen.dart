@@ -234,7 +234,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   index: _selectedIndex,
                   children: _widgetOptions(),
                 ),
-      bottomNavigationBar: _buildBottomBar(),
+      bottomNavigationBar: Padding( // Wrap with Padding
+      padding: const EdgeInsets.only(bottom: 0.0), // Adjust this value as needed
+      child: _buildBottomBar(),
+    ),
     );
   }
 
@@ -243,7 +246,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // -------------------------------------
   Widget _buildBottomBar() {
     return SizedBox(
-      height: 80,
+      height: 100,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -413,7 +416,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           // Botón central FAB-like con modal
           Positioned(
-            bottom: 5,
+            bottom: 10,
             left: 0,
             right: 0,
             child: Center(
@@ -538,8 +541,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     clipBehavior: Clip.none,
                     children: [
                       Container(
-                        width: 75,
-                        height: 75,
+                        width: 80,
+                        height: 80,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: _selectedIndex == 2 ? Colors.white : Colors.grey.shade800,

@@ -185,7 +185,6 @@ class _SearchScreenState extends State<SearchScreen> {
       child: TextField(
         controller: _searchController,
         onChanged: _onSearchChanged,
-        autofocus: true,
         decoration: InputDecoration(
           hintText: 'search_hint'.tr(),
           prefixIcon: const Icon(Icons.search, color: Colors.white70),

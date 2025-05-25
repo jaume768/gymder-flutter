@@ -16,7 +16,7 @@ android {
         applicationId = "com.gymswipe.app"
         minSdk = 24
         targetSdk = 34
-        versionCode 66
+        versionCode 67
         versionName "1.0.0"
     }
 

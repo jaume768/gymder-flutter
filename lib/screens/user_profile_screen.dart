@@ -12,6 +12,9 @@ import 'package:easy_localization/easy_localization.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../services/user_service.dart';
+import '../services/routine_service.dart';
+import '../models/routine.dart';
+import '../widgets/routines/read_only_routine_card.dart';
 import 'chat_screen.dart';
 import 'photo_gallery_screen.dart';
 
@@ -27,6 +30,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   bool isLoading = true;
   String errorMessage = '';
   User? user;
+  bool isCurrentUser = false;
+  
+  // Variables para rutinas
+  List<Routine> userRoutines = [];
+  bool isLoadingRoutines = true;
+  String routinesErrorMessage = '';
   bool hasLiked = false;
   bool isPremium = false;
   bool isMatch = false; // Variable para verificar si ya hay un match
@@ -61,6 +70,51 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   void initState() {
     super.initState();
     _fetchUserProfile();
+  }
+
+  Future<void> _fetchUserRoutines(String userId) async {
+    setState(() {
+      isLoadingRoutines = true;
+      routinesErrorMessage = '';
+    });
+
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final token = await authProvider.getToken();
+      
+      if (token == null) {
+        setState(() {
+          isLoadingRoutines = false;
+          routinesErrorMessage = tr('error_loading_routines');
+        });
+        return;
+      }
+
+      final routineService = RoutineService(token: token);
+      final result = await routineService.getUserRoutinesByUserId(userId);
+
+      if (result['success'] == true) {
+        final List<dynamic> routinesJson = result['routines'] ?? [];
+        final List<Routine> routines = routinesJson
+            .map((routineJson) => Routine.fromJson(routineJson))
+            .toList();
+
+        setState(() {
+          userRoutines = routines;
+          isLoadingRoutines = false;
+        });
+      } else {
+        setState(() {
+          isLoadingRoutines = false;
+          routinesErrorMessage = result['message'] ?? tr('error_loading_routines');
+        });
+      }
+    } catch (e) {
+      setState(() {
+        isLoadingRoutines = false;
+        routinesErrorMessage = e.toString();
+      });
+    }
   }
 
   Future<void> _fetchUserProfile() async {
@@ -139,6 +193,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             hasLiked = hasLikedStatus;
             isLoading = false;
           });
+          
+          // Verificar si es el usuario actual para cargar rutinas
+          final authProvider = Provider.of<AuthProvider>(context, listen: false);
+          isCurrentUser = user?.id == authProvider.user?.id;
+
+          _fetchUserRoutines(user!.id);
         } else {
           setState(() {
             errorMessage = tr("user_not_found");
@@ -349,8 +409,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         _relationshipGoalKeyMap[user!.relationshipGoal ?? 'Pendiente'] ??
             'pending';
 
+    // Calcular el número de pestañas basado en si hay rutinas o no
+    final int tabCount = userRoutines.isNotEmpty ? 3 : 2;
+    
     return DefaultTabController(
-      length: 2,
+      length: tabCount,
       child: Column(
         children: [
           const SizedBox(height: 16),
@@ -419,6 +482,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             tabs: [
               Tab(text: tr('about_me')),
               Tab(text: tr('photos_profile')),
+              if (userRoutines.isNotEmpty)
+                Tab(text: tr('routines')),
             ],
           ),
 
@@ -505,6 +570,21 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     },
                   ),
                 ),
+                
+                // ─── RUTINAS ─── (Solo se incluye si hay rutinas)
+                if (userRoutines.isNotEmpty)
+                  ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    itemCount: userRoutines.length,
+                    itemBuilder: (context, index) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: ReadOnlyRoutineCard(
+                          routine: userRoutines[index],
+                        ),
+                      );
+                    },
+                  ),
               ],
             ),
           ),
@@ -862,7 +942,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         
         // Revisar diferentes claves posibles para el match
         if (result['matchedUser'] != null) {
-          print("Encontrado matchedUser en la respuesta");
           User matchedUser;
           
           // Verificar si matchedUser ya es un objeto User o si es un Map que necesita ser convertido

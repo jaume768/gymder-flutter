@@ -7,7 +7,7 @@ class RoutineService {
 
   RoutineService({required this.token});
 
-  // Obtener todas las rutinas del usuario
+  // Obtener todas las rutinas del usuario actual
   Future<Map<String, dynamic>> getUserRoutines() async {
     try {
       final response = await http.get(
@@ -24,6 +24,27 @@ class RoutineService {
       return {
         'success': false,
         'message': 'Error al obtener rutinas: $e',
+      };
+    }
+  }
+  
+  // Obtener las rutinas de un usuario específico por su ID
+  Future<Map<String, dynamic>> getUserRoutinesByUserId(String userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/routines/user/$userId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final responseData = json.decode(response.body);
+      return responseData;
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error al obtener rutinas del usuario: $e',
       };
     }
   }

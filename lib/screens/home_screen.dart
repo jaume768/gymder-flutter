@@ -293,7 +293,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 20),
                           // Mensajes/Chats
                           Material(
                             color: Colors.transparent,

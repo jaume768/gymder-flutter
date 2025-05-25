@@ -134,6 +134,9 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
 
   // Variable para rastrear cuándo comenzó la última solicitud de carga
   DateTime? _lastFetchStartTime;
+  
+  // FocusNode para gestionar el foco del teclado
+  late FocusNode _screenFocusNode;
 
   @override
   bool get wantKeepAlive => true;
@@ -151,6 +154,7 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
   @override
   void initState() {
     super.initState();
+    _screenFocusNode = FocusNode();
     _verticalPageController = PageController();
     _verticalPageController.addListener(() async {
       final idx = _verticalPageController.page?.round() ?? 0;
@@ -1537,6 +1541,7 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
                         ),
                         onPressed: () async {
                           Navigator.pop(context);
+                          FocusScope.of(context).unfocus(); // Asegurar que el teclado se oculte
                           await _sendReport(reasonKey, details: details);
                         },
                         child: Text(
@@ -1600,6 +1605,7 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: TextField(
                           maxLines: 4,
+                          autofocus: false, // Evitar que se abra el teclado automáticamente
                           style: const TextStyle(color: Colors.white),
                           decoration: InputDecoration(
                             hintText: tr('describe_reason'),
@@ -1646,6 +1652,7 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
                                   ? null
                                   : () {
                                       Navigator.of(ctx).pop();
+                                      FocusScope.of(context).unfocus(); // Asegurar que el teclado se oculte
                                       _showConfirmReportDialog(
                                         'other',
                                         details: customText.trim(),
@@ -1795,6 +1802,7 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
   @override
   void dispose() {
     _verticalPageController.dispose();
+    _screenFocusNode.dispose();
     super.dispose();
   }
 
@@ -1805,8 +1813,20 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
     final isPremium = auth.user?.isPremium ?? false;
     final List<User> currentList = showRandom ? _randomUsers : _likedUsers;
 
-    return Scaffold(
-      backgroundColor: Colors.black,
+    // Añadir un callback post-frame para asegurar que no haya foco al cargar la pantalla
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        FocusScope.of(context).unfocus();
+      }
+    });
+    
+    return GestureDetector(
+      onTap: () {
+        // Quitar el foco de cualquier campo de texto al tocar la pantalla
+        FocusScope.of(context).unfocus();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Stack(
@@ -2232,6 +2252,7 @@ class TikTokLikeScreenState extends State<TikTokLikeScreen>
                 ),
               ],
             ),
+      ),
     );
   }
 }
